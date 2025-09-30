@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAdmin } from "@/app/hooks/useAdmin"
 import { useToast } from "@/hooks/use-toast"
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from '@/app/services/supabase-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -201,11 +201,8 @@ type RoleProfileEntry = {
 export default function MainDashboard() {
   const { toast } = useToast()
   
-  // Initialize Supabase client
-  const supabase = createClient(
-    'https://sxnaopzgaddvziplrlbe.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
-  )
+  // Initialize Supabase client (singleton pattern prevents multiple instances)
+  const supabase = getSupabaseClient()
   
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeSection, setActiveSection] = useState("dashboard")

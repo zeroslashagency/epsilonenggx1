@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYyNTI4NCwiZXhwIjoyMDcyMjAxMjg0fQ.example'
+import { getSupabaseAdminClient } from '@/app/services/supabase-client'
 
 // Get role profiles with their default permissions
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = getSupabaseAdminClient()
     
     // Get all roles with their permissions
     const { data: roles, error: rolesError } = await supabase
@@ -32,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Transform data into role profiles format
     const roleProfiles: Record<string, string[]> = {}
     
-    roles?.forEach(role => {
+    roles?.forEach((role: any) => {
       // Use default_permissions if available, otherwise fall back to role_permissions
       if (role.default_permissions && Array.isArray(role.default_permissions)) {
         roleProfiles[role.name] = role.default_permissions
@@ -62,7 +59,7 @@ export async function GET(request: NextRequest) {
 // Update role profiles with new default permissions
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = getSupabaseAdminClient()
     const body = await request.json()
     
     const { roles } = body
@@ -147,7 +144,7 @@ export async function PUT(request: NextRequest) {
 // Create a new role with default permissions
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = getSupabaseAdminClient()
     const body = await request.json()
     
     const { name, description, permissions = [] } = body
@@ -197,7 +194,7 @@ export async function POST(request: NextRequest) {
       if (permissionError) throw permissionError
 
       // Create role_permissions entries
-      const rolePermissionInserts = permissionData.map(permission => ({
+      const rolePermissionInserts = permissionData.map((permission: any) => ({
         role_id: newRole.id,
         permission_id: permission.id
       }))
