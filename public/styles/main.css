@@ -1,0 +1,359 @@
+/**
+ * Main CSS Styles
+ * Base styles, layout, and typography for the Production Scheduler
+ * Extracted from index.html (lines 11-1426)
+ */
+
+/* ===== RESET & BASE STYLES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #111827;
+            line-height: 1.6;
+        }
+
+/* ===== LAYOUT CONTAINERS ===== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .card h2 {
+            color: #111827;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+/* ===== FORM LAYOUTS ===== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Form input styling */
+        input, select, textarea {
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            color: #111827;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        input[type="text"], input[type="number"], input[type="date"], input[type="datetime-local"] {
+            width: 100%;
+        }
+
+        label {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        /* Button styling */
+        button {
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            color: #374151;
+        }
+
+        button:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+/* Part number suggestions */
+        .part-input-container {
+            position: relative;
+        }
+
+        .part-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+    border: 1px solid #ddd;
+            border-top: none;
+    border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+    padding: 8px 12px;
+            cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+    background-color: white;
+        }
+
+        .suggestion-item:hover {
+    background-color: #f5f5f5;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+/* Optional Overrides layout tuning */
+#optionalOverridesContent {
+    grid-template-columns: repeat(3, minmax(280px, 1fr));
+    column-gap: 24px;
+    row-gap: 18px;
+    align-items: start;
+}
+
+/* Make the two range groups span two columns so fields are wider */
+#orderBreakdownGroup { 
+    grid-column: 2 / span 2; 
+}
+
+#orderHolidayGroup { 
+    grid-column: 2 / span 2; 
+}
+
+.range-group {
+            display: flex;
+            align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.range-group input[type="datetime-local"] {
+    flex: 1 1 0;
+    min-width: 0; /* prevent overflow */
+}
+
+.range-group span {
+    white-space: nowrap;
+    color: #666;
+}
+
+/* ===== FORM ELEMENTS ===== */
+label {
+            font-weight: 500;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+input, select, textarea {
+    padding: 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* ===== TYPOGRAPHY ===== */
+        small {
+            color: #888;
+            font-size: 12px;
+            margin-top: 2px;
+            display: block;
+        }
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+    .container {
+            padding: 10px;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    #optionalOverridesContent {
+        grid-template-columns: 1fr;
+    }
+    
+    #orderBreakdownGroup, 
+    #orderHolidayGroup {
+        grid-column: 1;
+    }
+    
+    .card {
+            padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+            padding: 15px;
+    }
+    
+    .card h2 {
+        font-size: 1.2em;
+    }
+    
+    input, select, textarea {
+            padding: 10px;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-center {
+            text-align: center;
+        }
+        
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+.mb-5 { margin-bottom: 3rem; }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
+.mt-5 { margin-top: 3rem; }
+
+.p-0 { padding: 0; }
+.p-1 { padding: 0.25rem; }
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 1rem; }
+.p-4 { padding: 1.5rem; }
+.p-5 { padding: 3rem; }
+
+.d-none { display: none; }
+.d-block { display: block; }
+.d-flex { display: flex; }
+.d-grid { display: grid; }
+
+.flex-column { flex-direction: column; }
+.flex-row { flex-direction: row; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.align-center { align-items: center; }
+.align-start { align-items: flex-start; }
+.align-end { align-items: flex-end; }
+
+.w-100 { width: 100%; }
+.h-100 { height: 100%; }
+
+/* ===== LOADING STATES ===== */
+.loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+    color: #666;
+}
+
+.loading::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+    margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+/* ===== ACCESSIBILITY ===== */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Focus styles for keyboard navigation */
+*:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+    
+    body {
+    background: white;
+    }
+}

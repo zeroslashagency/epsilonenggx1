@@ -1,0 +1,407 @@
+/**
+ * Theme CSS Styles
+ * Color schemes, gradients, and visual themes
+ * Extracted from index.html
+ */
+
+/* ===== COLOR PALETTE ===== */
+:root {
+    /* Primary Colors */
+    --primary-color: #667eea;
+    --primary-hover: #5a6fd8;
+    --primary-light: rgba(102, 126, 234, 0.1);
+    
+    /* Secondary Colors */
+    --secondary-color: #764ba2;
+    --secondary-hover: #6a4190;
+    
+    /* Status Colors */
+    --success-color: #27ae60;
+    --success-hover: #229954;
+    --warning-color: #f39c12;
+    --warning-hover: #e67e22;
+    --danger-color: #e74c3c;
+    --danger-hover: #c0392b;
+    --info-color: #3498db;
+    --info-hover: #2980b9;
+    
+    /* Neutral Colors */
+    --white: #ffffff;
+    --light-gray: #f8f9fa;
+    --gray: #6c757d;
+    --dark-gray: #495057;
+    --black: #333333;
+    
+    /* Background Colors */
+    --bg-primary: #f5f7fa;
+    --bg-card: #ffffff;
+    --bg-hover: #f8f9fa;
+    
+    /* Border Colors */
+    --border-light: #e1e8ed;
+    --border-medium: #dee2e6;
+    --border-dark: #adb5bd;
+    
+    /* Text Colors */
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-muted: #888888;
+    --text-white: #ffffff;
+    
+    /* Shadow Colors */
+    --shadow-light: rgba(0,0,0,0.1);
+    --shadow-medium: rgba(0,0,0,0.15);
+    --shadow-dark: rgba(0,0,0,0.2);
+}
+
+/* ===== GRADIENTS ===== */
+.gradient-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+}
+
+.gradient-success {
+    background: linear-gradient(135deg, var(--success-color) 0%, #2ecc71 100%);
+}
+
+.gradient-warning {
+    background: linear-gradient(135deg, var(--warning-color) 0%, #f1c40f 100%);
+}
+
+.gradient-danger {
+    background: linear-gradient(135deg, var(--danger-color) 0%, #e74c3c 100%);
+}
+
+.gradient-info {
+    background: linear-gradient(135deg, var(--info-color) 0%, #3498db 100%);
+}
+
+/* ===== HEADER GRADIENTS ===== */
+.header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: var(--text-white);
+    box-shadow: 0 4px 15px var(--shadow-light);
+}
+
+/* ===== CARD THEMES ===== */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 10px var(--shadow-light);
+}
+
+.card-header {
+    background: var(--light-gray);
+    border-bottom: 1px solid var(--border-medium);
+    padding: 15px 20px;
+    margin: -25px -25px 20px -25px;
+    border-radius: 12px 12px 0 0;
+}
+
+/* ===== BUTTON THEMES ===== */
+.btn-primary {
+    background: var(--primary-color);
+    color: var(--text-white);
+    border: 1px solid var(--primary-color);
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: var(--text-white);
+    border: 1px solid var(--success-color);
+}
+
+.btn-success:hover {
+    background: var(--success-hover);
+    border-color: var(--success-hover);
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    color: var(--text-white);
+    border: 1px solid var(--danger-color);
+}
+
+.btn-danger:hover {
+    background: var(--danger-hover);
+    border-color: var(--danger-hover);
+}
+
+.btn-warning {
+    background: var(--warning-color);
+    color: var(--text-white);
+    border: 1px solid var(--warning-color);
+}
+
+.btn-warning:hover {
+    background: var(--warning-hover);
+    border-color: var(--warning-hover);
+}
+
+.btn-info {
+    background: var(--info-color);
+    color: var(--text-white);
+    border: 1px solid var(--info-color);
+}
+
+.btn-info:hover {
+    background: var(--info-hover);
+    border-color: var(--info-hover);
+}
+
+.btn-secondary {
+    background: var(--gray);
+    color: var(--text-white);
+    border: 1px solid var(--gray);
+}
+
+.btn-secondary:hover {
+    background: var(--dark-gray);
+    border-color: var(--dark-gray);
+}
+
+/* ===== TAB THEMES ===== */
+.tab-btn {
+    background: var(--light-gray);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-medium);
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: var(--text-white);
+    border-color: var(--primary-color);
+}
+
+.tab-btn:hover:not(.active) {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+/* ===== FORM THEMES ===== */
+input, select, textarea {
+    border: 2px solid var(--border-light);
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+/* ===== TABLE THEMES ===== */
+#resultsTable th {
+    background: var(--primary-color);
+    color: var(--text-white);
+}
+
+#resultsTable td {
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+}
+
+#resultsTable tr:hover {
+    background: var(--bg-hover);
+}
+
+/* ===== STATUS THEMES ===== */
+.status-pending {
+    background: var(--warning-color);
+    color: var(--text-white);
+}
+
+.status-scheduled {
+    background: var(--info-color);
+    color: var(--text-white);
+}
+
+.status-completed {
+    background: var(--success-color);
+    color: var(--text-white);
+}
+
+.status-overdue {
+    background: var(--danger-color);
+    color: var(--text-white);
+}
+
+/* ===== PRIORITY THEMES ===== */
+.priority-low {
+    background: var(--gray);
+    color: var(--text-white);
+}
+
+.priority-normal {
+    background: var(--success-color);
+    color: var(--text-white);
+}
+
+.priority-high {
+    background: var(--warning-color);
+    color: var(--text-white);
+}
+
+.priority-urgent {
+    background: var(--danger-color);
+    color: var(--text-white);
+}
+
+/* ===== ALERT THEMES ===== */
+.alert-success {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+    border-color: rgba(39, 174, 96, 0.2);
+}
+
+.alert-error {
+    background: rgba(231, 76, 60, 0.1);
+    color: var(--danger-color);
+    border-color: rgba(231, 76, 60, 0.2);
+}
+
+.alert-warning {
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--warning-color);
+    border-color: rgba(243, 156, 18, 0.2);
+}
+
+.alert-info {
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--info-color);
+    border-color: rgba(52, 152, 219, 0.2);
+}
+
+/* ===== CHIP THEMES ===== */
+.chip {
+    background: var(--primary-color);
+    color: var(--text-white);
+}
+
+.chip-success {
+    background: var(--success-color);
+}
+
+.chip-warning {
+    background: var(--warning-color);
+}
+
+.chip-danger {
+    background: var(--danger-color);
+}
+
+.chip-info {
+    background: var(--info-color);
+}
+
+/* ===== OPERATION DROPDOWN THEMES ===== */
+.operation-btn {
+    background: var(--info-color);
+    color: var(--text-white);
+    border-color: var(--info-color);
+}
+
+.operation-btn:hover:not(:disabled) {
+    background: var(--info-hover);
+    border-color: var(--info-hover);
+}
+
+.operation-btn:disabled {
+    background: var(--gray);
+    border-color: var(--gray);
+}
+
+.operation-dropdown {
+    background: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    box-shadow: 0 2px 8px var(--shadow-light);
+}
+
+.operation-dropdown-item:hover {
+    background: var(--bg-hover);
+}
+
+.operation-dropdown-footer {
+    background: var(--light-gray);
+    border-top: 1px solid var(--border-medium);
+}
+
+/* ===== MODAL THEMES ===== */
+.modal {
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background: var(--bg-card);
+    box-shadow: 0 4px 20px var(--shadow-dark);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* ===== TOGGLE SWITCH THEMES ===== */
+.toggle-slider {
+    background-color: var(--border-dark);
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary-color);
+}
+
+/* ===== PROGRESS BAR THEMES ===== */
+.progress {
+    background-color: var(--border-light);
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+}
+
+/* Dark theme support removed - using white theme only */
+
+/* ===== HIGH CONTRAST THEME ===== */
+@media (prefers-contrast: high) {
+    :root {
+        --primary-color: #0000ff;
+        --success-color: #008000;
+        --warning-color: #ff8c00;
+        --danger-color: #ff0000;
+        --info-color: #0080ff;
+        --border-light: #000000;
+        --text-primary: #000000;
+        --text-secondary: #000000;
+    }
+    
+    .btn {
+        border-width: 2px;
+    }
+    
+    input, select, textarea {
+        border-width: 2px;
+    }
+}
+
+/* Dark mode styles removed - using white theme only */
+
+/* ===== REDUCED MOTION ===== */
+/* Respect user's motion preferences but allow animations for better UX */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.2s !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.2s !important;
+    }
+    
+    .btn:hover {
+        transform: none;
+    }
+    
+    .operation-btn.open {
+        transform: none;
+    }
+}

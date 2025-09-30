@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Production Scheduler - Modular Version</title>
+    
+    <!-- External CSS Files -->
+    <link rel="stylesheet" href="/styles/main.css">
+    <link rel="stylesheet" href="/styles/components.css">
+    <link rel="stylesheet" href="/styles/theme.css">
+    
+    <!-- Supabase Auth UI CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@supabase/auth-ui-shared@0.0.11/dist/components.css" />
+    
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="/services/excel-exporter.js"></script>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; color: white; font-size: 1.5rem;">
+        Loading...
+    </div>
+
+    <script>
+        // Fallback: Hide loading overlay after 5 seconds if JavaScript fails
+        setTimeout(() => {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay && loadingOverlay.style.display !== 'none') {
+                console.warn('Loading overlay still visible after 5 seconds, hiding as fallback');
+                loadingOverlay.style.display = 'none';
+            }
+        }, 5000);
+    </script>
+
+    <div class="container">
+        <!-- Header Component -->
+        <div class="card">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Production Schedule Generator</h2>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div id="userRoleIndicator" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;"></div>
+                    <button class="btn btn-danger" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <div class="header">
+                <h1>🏭 Production Scheduler</h1>
+                <p>Advanced Manufacturing Scheduling System</p>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="card">
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('orders')">📋 Orders</button>
+                <button class="tab-btn" onclick="switchTab('advanced')">⚙️ Advanced Settings</button>
+            </div>
+        </div>
+
+          <!-- Orders Tab -->
+          <div class="card tab-content" id="ordersTab">
+              <div class="order-section-priority-bg" id="orderSectionPriorityBg"></div>
+              <h2>📝 Order Management</h2>
+            <form id="orderForm">
+                <h3>Mandatory Fields</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="partNumber">Part Number</label>
+                        <div class="part-input-container">
+                            <input type="text" id="partNumber" placeholder="Search part numbers..." required>
+                            <div class="part-suggestions" id="partSuggestions"></div>
+                        </div>
+                    </div>
+
+                    <div class="frappe-form-group">
+                        <label class="frappe-label" for="operationSeq">Operation Sequence</label>
+                        <div class="frappe-autocomplete">
+                            <input type="text" id="operationSeqDisplay" class="frappe-autocomplete-input" placeholder="Select a part number first" readonly onclick="toggleOperationDropdown()">
+                            <div id="operationDropdown" class="frappe-autocomplete-dropdown" style="display: none;">
+                                <!-- Dynamic operation options will be populated here -->
+                                <div class="frappe-autocomplete-empty">No operations available</div>
+                            </div>
+                        </div>
+                        <div class="frappe-autocomplete-selected" id="operationSelectedTags" style="display: none;">
+                            <!-- Selected operation tags will appear here -->
+                        </div>
+                        <input type="hidden" id="operationSeq" value="">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <div class="priority-toggle-container">
+                            <div class="three-way-toggle" id="priorityToggle">
+                                <input type="radio" id="priorityUrgent" name="priority" value="Urgent">
+                                <label class="toggle-option" for="priorityUrgent">
+                                    <span class="toggle-icon">🔴</span>
+                                    <span class="toggle-text">Urgent</span>
+                                </label>
+                                
+                                <input type="radio" id="priorityHigh" name="priority" value="High">
+                                <label class="toggle-option" for="priorityHigh">
+                                    <span class="toggle-icon">🟠</span>
+                                    <span class="toggle-text">High</span>
+                                </label>
+                                
+                                <input type="radio" id="priorityNormal" name="priority" value="Normal" checked>
+                                <label class="toggle-option" for="priorityNormal">
+                                    <span class="toggle-icon">🟡</span>
+                                    <span class="toggle-text">Normal</span>
+                                </label>
+                                
+                                <input type="radio" id="priorityLow" name="priority" value="Low">
+                                <label class="toggle-option" for="priorityLow">
+                                    <span class="toggle-icon">🟢</span>
+                                    <span class="toggle-text">Low</span>
+                                </label>
+                                
+                                <span class="glider"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dueDate">Due Date (Optional)</label>
+                        <input type="date" id="dueDate">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="orderQuantity">Order Quantity</label>
+                        <input type="number" id="orderQuantity" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Batch Mode Switch</label>
+                        <div class="three-way-toggle">
+                            <div class="toggle-option" data-mode="single-batch">
+                                <span class="toggle-icon">◀</span>
+                                <span class="toggle-text">Single</span>
+                            </div>
+                            
+                            <div class="toggle-option active" data-mode="auto-split">
+                                <span class="toggle-icon">⭕</span>
+                                <span class="toggle-text">Auto-Split</span>
+                            </div>
+                            
+                            <div class="toggle-option" data-mode="custom-batch-size">
+                                <span class="toggle-text" id="customSizeText">Custom</span>
+                                <span class="toggle-icon">▶</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom batch size input -->
+                        <div id="customBatchSizeContainer" style="display: none;">
+                            <label for="customBatchSize">Custom Batch Size:</label>
+                            <input type="number" id="customBatchSize" min="1" placeholder="Enter batch size">
+                        </div>
+                        <input type="radio" name="batchMode" value="single-batch" id="batchModeSingle" style="display: none;">
+                        <input type="radio" name="batchMode" value="auto-split" id="batchModeAuto" checked style="display: none;">
+                        <input type="radio" name="batchMode" value="custom-batch-size" id="batchModeCustom" style="display: none;">
+                    </div>
+                </div>
+
+                <div class="optional-overrides-section">
+                    <h3 class="collapsible-header" onclick="toggleOptionalOverrides()">
+                        <span id="overrideToggleIcon">▶</span> Optional Overrides 
+                        <small>(Click to expand advanced settings for this order)</small>
+                    </h3>
+                    <div class="form-grid" id="optionalOverridesContent" style="display: none;">
+                        <div class="form-group">
+                            <label for="orderBreakdownMachine">Breakdown Machine</label>
+                            <select id="orderBreakdownMachine">
+                                <option value="">Use Global Setting</option>
+                                <option value="VMC 1">VMC 1</option>
+                                <option value="VMC 2">VMC 2</option>
+                                <option value="VMC 3">VMC 3</option>
+                                <option value="VMC 4">VMC 4</option>
+                                <option value="VMC 5">VMC 5</option>
+                                <option value="VMC 6">VMC 6</option>
+                                <option value="VMC 7">VMC 7</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="orderBreakdownGroup">
+                            <label for="orderBreakdownStart">Breakdown Date-Time Range</label>
+                            <div class="range-group">
+                                <input type="datetime-local" id="orderBreakdownStart">
+                                <span>to</span>
+                                <input type="datetime-local" id="orderBreakdownEnd">
+                            </div>
+                            <small>Choose a start and end. The machine will rest during this range.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="orderStartDateTime">Order Start Date & Time (Per Order Rule)</label>
+                            <input type="datetime-local" id="orderStartDateTime" placeholder="mm/dd/yyyy, --:-- --">
+                            <small>📅 Please select the Start Date & Time for this order.<br>
+                            ⚠️ This sets the earliest allowed start time for setup/processing of this order. The scheduler must not schedule this order before the chosen time — even if machines are free.<br>
+                            <strong>Behavior rule:</strong> If Order Start Date-Time is defined → compare with Global Start Date-Time → actual order start = max(GlobalStart, OrderStart). If not defined → order is eligible immediately from Global Start Date-Time.<br>
+                            <strong>Example:</strong> Global Start Date-Time = 2025-09-10 03:00, Order Start Date-Time = 2025-09-10 06:00 → This order must wait until 06:00 to begin setup, even though global clock starts at 03:00.</small>
+                        </div>
+
+                        <div class="form-group" id="orderHolidayGroup">
+                            <label for="orderHolidayStart">Holiday</label>
+                            <div class="range-group">
+                                <input type="datetime-local" id="orderHolidayStart">
+                                <span>to</span>
+                                <input type="datetime-local" id="orderHolidayEnd">
+                            </div>
+                            <small>Choose a start and end. Time between will be treated as holiday for this order.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="orderSetupWindow">Setup Availability Window</label>
+                            <input type="text" id="orderSetupWindow" placeholder="08:00-18:00">
+                            <small>Format: HH:MM-HH:MM</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button id="orderSubmitBtn" type="submit" class="btn btn-primary">➕ Add Order</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">🗑️ Clear Form</button>
+                    <button id="editOrderBtn" type="button" class="btn btn-success" style="display:none;" onclick="updateOrder()">💾 Update Order</button>
+                    <button id="cancelEditBtn" type="button" class="btn btn-secondary" style="display:none;" onclick="cancelEdit()">✖️ Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Advanced Settings Tab -->
+        <div class="card tab-content" id="advancedTab" style="display: none;">
+            <h2>⚙️ Global Advanced Settings</h2>
+            <div class="advanced-grid-3">
+                <div class="form-group">
+                    <label for="startDateTime">Global Start Date & Time (Master Clock)</label>
+                    <input type="datetime-local" id="startDateTime" placeholder="mm/dd/yyyy, --:-- --">
+                </div>
+
+                <!-- Global Setup Window (People-Dependent) -->
+                <div class="form-group">
+                    <label for="setupAvailabilityWindow">Global Setup Window (People-Dependent)</label>
+                    <input type="text" id="setupAvailabilityWindow" value="06:00-22:00" placeholder="06:00-22:00">
+                    <small>Format: HH:MM-HH:MM. Auto-filled from Shift 1 and Shift 2 below (earliest start to latest end). You can still override manually.</small>
+                    <div class="shifts-container">
+                        <div class="form-group">
+                            <label for="shift1">Shift 1 (Controls Global Setup Window)</label>
+                            <input type="text" id="shift1" value="06:00-14:00" placeholder="06:00-14:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="shift2">Shift 2 (Controls Global Setup Window)</label>
+                            <input type="text" id="shift2" value="14:00-22:00" placeholder="14:00-22:00">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Production Window (Machine-Dependent)</label>
+                    <div class="shifts-container">
+                        <div class="form-group">
+                            <label for="prodShift1">Shift 1 (Morning)</label>
+                            <input type="text" id="prodShift1" value="06:00-14:00" placeholder="06:00-14:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="prodShift2">Shift 2 (Afternoon)</label>
+                            <input type="text" id="prodShift2" value="14:00-22:00" placeholder="14:00-22:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="prodShift3">Shift 3 (Night)</label>
+                            <input type="text" id="prodShift3" value="22:00-06:00" placeholder="22:00-06:00">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="advanced-grid-2">
+                <div class="form-group">
+                    <label for="holidays">Holiday Calendar (Global Pauses)</label>
+                    <div class="holiday-input-section">
+                        <div class="holiday-datetime-inputs">
+                            <div class="datetime-pair">
+                                <label for="holidayStart">Start DateTime:</label>
+                                <input type="datetime-local" id="holidayStart" placeholder="Start date and time">
+                            </div>
+                            <div class="datetime-pair">
+                                <label for="holidayEnd">End DateTime:</label>
+                                <input type="datetime-local" id="holidayEnd" placeholder="End date and time">
+                            </div>
+                            <div class="datetime-pair">
+                                <label for="holidayReason">Reason (Optional):</label>
+                                <input type="text" id="holidayReason" placeholder="e.g., National Holiday, Maintenance">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="addHoliday()">➕ Add Holiday</button>
+                    </div>
+
+                    <!-- Holiday List Display -->
+                    <div class="holiday-list-section">
+                        <h4>📅 Saved Holidays</h4>
+                        <div class="holiday-list-container" id="holidayListContainer">
+                            <table class="holiday-table" id="holidayTable">
+                                <thead>
+                                    <tr>
+                                        <th>Start DateTime</th>
+                                        <th>End DateTime</th>
+                                        <th>Type</th>
+                                        <th>Reason</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="holidayTableBody">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; color: #888;">No holidays added yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="breakdownMachines">Machine Breakdowns (Downtime Control)</label>
+                    <div class="breakdown-input-section">
+                        <div class="breakdown-machine-selection">
+                            <label for="breakdownMachineSelect">Select Machines:</label>
+                            <div class="machine-checkbox-group" id="machineCheckboxGroup">
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 1"> VMC 1</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 2"> VMC 2</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 3"> VMC 3</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 4"> VMC 4</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 5"> VMC 5</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 6"> VMC 6</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 7"> VMC 7</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 8"> VMC 8</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 9"> VMC 9</label>
+                                <label class="checkbox-item"><input type="checkbox" value="VMC 10"> VMC 10</label>
+                            </div>
+                        </div>
+                        
+                        <div class="breakdown-datetime-inputs">
+                            <div class="datetime-pair">
+                                <label for="breakdownStart">Start DateTime:</label>
+                                <input type="datetime-local" id="breakdownStart" placeholder="Start date and time" required>
+                            </div>
+                            <div class="datetime-pair">
+                                <label for="breakdownEnd">End DateTime:</label>
+                                <input type="datetime-local" id="breakdownEnd" placeholder="End date and time" required>
+                            </div>
+                            <div class="datetime-pair">
+                                <label for="breakdownReason">Reason (Optional):</label>
+                                <input type="text" id="breakdownReason" placeholder="e.g., Power Maintenance, Coolant Pump Failure">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="addBreakdown()">🔧 Add Breakdown</button>
+                    </div>
+                    
+                    <!-- Breakdown List Display -->
+                    <div class="breakdown-list-section">
+                        <h4>🔧 Saved Machine Breakdowns</h4>
+                        <div class="breakdown-list-container">
+                            <table class="breakdown-table" id="breakdownTable">
+                                <thead>
+                                    <tr>
+                                        <th>Machines</th>
+                                        <th>Start DateTime</th>
+                                        <th>End DateTime</th>
+                                        <th>Reason</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="breakdownTableBody">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; color: #888;">No breakdowns added yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Settings -->
+            <div style="margin-top: 20px;">
+                <button class="btn btn-success" onclick="saveAdvancedSettings()">💾 Save Settings</button>
+                <button class="btn btn-secondary" onclick="loadAdvancedSettings()">📂 Load Settings</button>
+            </div>
+        </div>
+
+        <!-- Saved Orders Table -->
+        <div class="card">
+            <div class="saved-orders-header">
+                <h2>📋 Saved Orders</h2>
+                <div>
+                    <button id="clearAllOrdersBtn" class="btn btn-danger" onclick="clearAllSavedOrders()">
+                        All Clear ❌
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Part Number</th>
+                            <th>Operation Seq</th>
+                            <th>Order Quantity</th>
+                            <th>Priority</th>
+                            <th>Due Date</th>
+                            <th>Batch Mode</th>
+                            <th>Breakdown Machine</th>
+                            <th>Breakdown DateTime</th>
+                            <th>Start DateTime</th>
+                            <th>Holiday</th>
+                            <th>Setup Window</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <tr>
+                            <td colspan="12" class="empty-state">No orders added yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Schedule Results -->
+        <div class="card" id="resultsCard" style="display: none;">
+            <h2>📊 Schedule Results</h2>
+            <div id="scheduleAlerts"></div>
+            <div class="table-container">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Part Number</th>
+                            <th>Order Qty</th>
+                            <th>Priority</th>
+                            <th>Batch ID</th>
+                            <th>Batch Qty</th>
+                            <th>Operation Seq</th>
+                            <th>Operation Name</th>
+                            <th>Machine</th>
+                            <th>Person</th>
+                            <th>Setup Start</th>
+                            <th>Setup End</th>
+                            <th>Run Start</th>
+                            <th>Run End</th>
+                            <th>Timing</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator" style="display: none;">
+            <div class="spinner"></div>
+            <p>Processing schedule...</p>
+        </div>
+
+        <!-- Floating Action Bar -->
+        <div class="floating-action-bar">
+            <div class="action-buttons">
+                <button class="btn btn-primary dashboard-button" onclick="showDashboard()" title="Dashboard">
+                    <svg class="svgIcon" viewBox="0 0 512 512" height="1em" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm50.7-186.9L162.4 380.6c-19.4 7.5-38.5-11.6-31-31l55.5-144.3c3.3-8.5 9.9-15.1 18.4-18.4l144.3-55.5c19.4-7.5 38.5 11.6 31 31L325.1 306.7c-3.2 8.5-9.9 15.1-18.4 18.4zM288 256a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"></path>
+                    </svg>
+                    Dashboard
+                </button>
+                
+                <!-- Simple Import Excel Button with Pop-up Animation -->
+                <button class="btn btn-info excel-import-btn" onclick="importFromExcel()" id="importBtn" title="Import Excel">
+                    ⬆️ Import Excel
+                </button>
+                
+                <!-- Animated Schedule Generate Button -->
+                <button class="schedule-button" onclick="runSchedule()" title="Schedule Generate">
+                    <div class="dots_border"></div>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="sparkle">
+                        <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M14.187 8.096L15 5.25L15.813 8.096C16.0231 8.83114 16.4171 9.50062 16.9577 10.0413C17.4984 10.5819 18.1679 10.9759 18.903 11.186L21.75 12L18.904 12.813C18.1689 13.0231 17.4994 13.4171 16.9587 13.9577C16.4181 14.4984 16.0241 15.1679 15.814 15.903L15 18.75L14.187 15.904C13.9769 15.1689 13.5829 14.4994 13.0423 13.9587C12.5016 13.4181 11.8321 13.0241 11.097 12.814L8.25 12L11.096 11.187C11.8311 10.9769 12.5006 10.5829 13.0413 10.0423C13.5819 9.50162 13.9759 8.83214 14.186 8.097L14.187 8.096Z"></path>
+                        <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M6 14.25L5.741 15.285C5.59267 15.8785 5.28579 16.4206 4.85319 16.8532C4.42059 17.2858 3.87853 17.5927 3.285 17.741L2.25 18L3.285 18.259C3.87853 18.4073 4.42059 18.7142 4.85319 19.1468C5.28579 19.5794 5.59267 20.1215 5.741 20.715L6 21.75L6.259 20.715C6.40725 20.1216 6.71398 19.5796 7.14639 19.147C7.5788 18.7144 8.12065 18.4075 8.714 18.259L9.75 18L8.714 17.741C8.12065 17.5925 7.5788 17.2856 7.14639 16.853C6.71398 16.4204 6.40725 15.8784 6.259 15.285L6 14.25Z"></path>
+                        <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M6.5 4L6.303 4.5915C6.24777 4.75718 6.15472 4.90774 6.03123 5.03123C5.90774 5.15472 5.75718 5.24777 5.5915 5.303L5 5.5L5.5915 5.697C5.75718 5.75223 5.90774 5.84528 6.03123 5.96877C6.15472 6.09226 6.24777 6.24282 6.303 6.4085L6.5 7L6.697 6.4085C6.75223 6.24282 6.84528 6.09226 6.96877 5.96877C7.09226 5.84528 7.24282 5.75223 7.4085 5.697L8 5.5L7.4085 5.303C7.24282 5.24777 7.09226 5.15472 6.96877 5.03123C6.84528 4.90774 6.75223 4.75718 6.697 4.5915L6.5 4Z"></path>
+                    </svg>
+                    <span class="text_button">Schedule Generate</span>
+                </button>
+                
+                <!-- Simple Export Excel Button with Pop-up Animation -->
+                <button class="btn btn-secondary excel-export-btn" onclick="exportToExcel()" id="exportBtn" disabled title="Export Excel">
+                    ⬇️ Export Excel
+                </button>
+                
+                <button class="btn btn-chart" onclick="showChart()" title="Chart">
+                    📊 Chart
+                </button>
+                <button class="btn btn-warning" onclick="clearSession()" id="clearBtn" title="Clear Session">
+                    🔄 Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Supabase client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- JavaScript Modules -->
+    <script src="/js/app-initializer.js?v=20250111b"></script>
+    <script src="/js/ui-handlers.js?v=20250111b"></script>
+    <script src="/js/order-manager.js?v=20250111b"></script>
+    <script src="/js/data-manager.js?v=20250111b"></script>
+    <script src="/js/main.js?v=20250111b"></script>
+    
+    <!-- External Services -->
+    <script src="/services/supabase-init.js?v=20250111b"></script>
+    <script src="/services/master-data.js?v=20250111b"></script>
+    <script src="/services/app.js?v=20250111b"></script>
+    <script src="/services/session-manager.js?v=20250111b"></script>
+    <script src="/services/scheduling/core/config.js?v=20250111c"></script>
+    <script src="/services/scheduling/core/logger.js?v=20250111c"></script>
+    <script src="/services/scheduling/batch/batch-processor.js?v=20250111c"></script>
+    <script src="/services/scheduling/machine/machine-selector.js?v=20250111c"></script>
+    <script src="/services/scheduling/operator/operator-manager.js?v=20250111c"></script>
+    <script src="/services/scheduling/timing/timing-calculator.js?v=20250111c"></script>
+    <script src="/services/scheduling/main/scheduling-engine-modular.js?v=20250111i"></script>
+    <script src="/utils/date-utils.js?v=20250111b"></script>
+    <script src="/utils/validation.js?v=20250111b"></script>
+</body>
+</html>

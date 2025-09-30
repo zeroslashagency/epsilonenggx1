@@ -1,0 +1,246 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const { searchParams } = new URL(request.url)
+    
+    const employeeCode = searchParams.get('employeeCode')
+    const date = searchParams.get('date')
+    const fromDate = searchParams.get('fromDate')
+    const toDate = searchParams.get('toDate')
+    const limit = parseInt(searchParams.get('limit') || '100')
+
+    let query = supabase
+      .from('employee_raw_logs')
+      .select('*')
+      .order('log_date', { ascending: false })
+
+    // Filter by employee code
+    if (employeeCode) {
+      query = query.eq('employee_code', employeeCode)
+    }
+
+    // Filter by specific date
+    if (date) {
+      query = query
+        .gte('log_date', `${date} 00:00:00`)
+        .lt('log_date', `${date} 23:59:59`)
+    }
+
+    // Filter by date range
+    if (fromDate && toDate) {
+      query = query
+        .gte('log_date', `${fromDate} 00:00:00`)
+        .lte('log_date', `${toDate} 23:59:59`)
+    }
+
+    // Apply limit
+    query = query.limit(limit)
+
+    const { data: rawLogs, error: logsError } = await query
+
+    if (logsError) throw logsError
+
+    // Get employee names
+    const { data: employees, error: empError } = await supabase
+      .from('employee_master_simple')
+      .select('*')
+      .order('employee_code')
+
+    if (empError) throw empError
+
+    // Get statistics
+    let statsQuery = supabase
+      .from('employee_raw_logs')
+      .select('employee_code, punch_direction, log_date')
+
+    if (date) {
+      statsQuery = statsQuery
+        .gte('log_date', `${date} 00:00:00`)
+        .lt('log_date', `${date} 23:59:59`)
+    }
+
+    const { data: allLogs, error: statsError } = await statsQuery
+
+    if (statsError) throw statsError
+
+    // Calculate basic statistics
+    const totalLogs = allLogs?.length || 0
+    const uniqueEmployees = new Set(allLogs?.map(log => log.employee_code)).size
+    const inPunches = allLogs?.filter(log => log.punch_direction === 'in').length || 0
+    const outPunches = allLogs?.filter(log => log.punch_direction === 'out').length || 0
+
+    // Detect potential issues (multiple INs without OUT)
+    const employeeIssues = {}
+    if (allLogs) {
+      for (const log of allLogs) {
+        if (!employeeIssues[log.employee_code]) {
+          employeeIssues[log.employee_code] = { ins: 0, outs: 0, lastPunch: null }
+        }
+        employeeIssues[log.employee_code][log.punch_direction === 'in' ? 'ins' : 'outs']++
+        employeeIssues[log.employee_code].lastPunch = log.punch_direction
+      }
+    }
+
+    const issuesDetected = Object.entries(employeeIssues).filter(([code, data]: [string, any]) => 
+      data.ins > data.outs + 1 || data.outs > data.ins
+    ).length
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        rawLogs: rawLogs || [],
+        employees: employees || [],
+        statistics: {
+          totalLogs,
+          uniqueEmployees,
+          inPunches,
+          outPunches,
+          issuesDetected,
+          date: date || 'all dates'
+        },
+        employeeIssues
+      }
+    })
+
+  } catch (error: any) {
+    console.error('Raw attendance API error:', error)
+    return NextResponse.json({
+      error: error?.message || 'Internal server error'
+    }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const { action, employeeCode, date, calculationMethod } = await request.json()
+
+    if (action === 'calculate') {
+      // Get raw logs for specific employee and date
+      const { data: logs, error } = await supabase
+        .from('employee_raw_logs')
+        .select('*')
+        .eq('employee_code', employeeCode)
+        .gte('log_date', `${date} 00:00:00`)
+        .lt('log_date', `${date} 23:59:59`)
+        .order('log_date', { ascending: true })
+
+      if (error) throw error
+
+      if (!logs || logs.length === 0) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            employeeCode,
+            date,
+            totalHours: 0,
+            status: 'absent',
+            punches: [],
+            issues: ['No punches recorded']
+          }
+        })
+      }
+
+      // Separate IN and OUT punches
+      const inPunches = logs.filter(log => log.punch_direction === 'in')
+      const outPunches = logs.filter(log => log.punch_direction === 'out')
+
+      let calculatedHours = 0
+      let status = 'present'
+      let issues = []
+
+      // Apply calculation method (your logic)
+      switch (calculationMethod) {
+        case 'first_in_last_out':
+          if (inPunches.length > 0 && outPunches.length > 0) {
+            const firstIn = new Date(inPunches[0].log_date)
+            const lastOut = new Date(outPunches[outPunches.length - 1].log_date)
+            calculatedHours = (lastOut.getTime() - firstIn.getTime()) / (1000 * 60 * 60)
+          } else if (inPunches.length > 0 && outPunches.length === 0) {
+            status = 'incomplete'
+            issues.push('No OUT punch recorded')
+          }
+          break
+
+        case 'last_in_last_out':
+          if (inPunches.length > 0 && outPunches.length > 0) {
+            const lastIn = new Date(inPunches[inPunches.length - 1].log_date)
+            const lastOut = new Date(outPunches[outPunches.length - 1].log_date)
+            if (lastOut > lastIn) {
+              calculatedHours = (lastOut.getTime() - lastIn.getTime()) / (1000 * 60 * 60)
+            } else {
+              issues.push('Last OUT is before last IN')
+            }
+          }
+          break
+
+        case 'strict_pairs':
+          // Pair each IN with next OUT
+          let totalMinutes = 0
+          for (let i = 0; i < inPunches.length; i++) {
+            const inTime = new Date(inPunches[i].log_date)
+            const nextOut = outPunches.find(out => new Date(out.log_date) > inTime)
+            if (nextOut) {
+              const outTime = new Date(nextOut.log_date)
+              totalMinutes += (outTime.getTime() - inTime.getTime()) / (1000 * 60)
+            } else {
+              issues.push(`IN punch at ${inPunches[i].log_date} has no matching OUT`)
+            }
+          }
+          calculatedHours = totalMinutes / 60
+          break
+
+        default:
+          // Default: first IN, last OUT
+          if (inPunches.length > 0 && outPunches.length > 0) {
+            const firstIn = new Date(inPunches[0].log_date)
+            const lastOut = new Date(outPunches[outPunches.length - 1].log_date)
+            calculatedHours = (lastOut.getTime() - firstIn.getTime()) / (1000 * 60 * 60)
+          }
+      }
+
+      // Detect issues
+      if (inPunches.length > 1) {
+        issues.push(`Multiple IN punches: ${inPunches.length}`)
+      }
+      if (outPunches.length > 1) {
+        issues.push(`Multiple OUT punches: ${outPunches.length}`)
+      }
+      if (inPunches.length === 0) {
+        issues.push('No IN punch recorded')
+        status = 'absent'
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          employeeCode,
+          date,
+          totalHours: Math.round(calculatedHours * 100) / 100,
+          status,
+          punches: logs,
+          inPunches: inPunches.length,
+          outPunches: outPunches.length,
+          issues,
+          calculationMethod
+        }
+      })
+    }
+
+    return NextResponse.json({
+      error: 'Invalid action'
+    }, { status: 400 })
+
+  } catch (error: any) {
+    console.error('Raw attendance calculation error:', error)
+    return NextResponse.json({
+      error: error?.message || 'Internal server error'
+    }, { status: 500 })
+  }
+}

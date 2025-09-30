@@ -1,0 +1,239 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYyNTI4NCwiZXhwIjoyMDcyMjAxMjg0fQ.example'
+
+// Get role profiles with their default permissions
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    
+    // Get all roles with their permissions
+    const { data: roles, error: rolesError } = await supabase
+      .from('roles')
+      .select(`
+        id,
+        name,
+        description,
+        default_permissions,
+        role_permissions (
+          permission_id,
+          permissions (
+            code,
+            description
+          )
+        )
+      `)
+      .order('name')
+
+    if (rolesError) throw rolesError
+
+    // Transform data into role profiles format
+    const roleProfiles: Record<string, string[]> = {}
+    
+    roles?.forEach(role => {
+      // Use default_permissions if available, otherwise fall back to role_permissions
+      if (role.default_permissions && Array.isArray(role.default_permissions)) {
+        roleProfiles[role.name] = role.default_permissions
+      } else {
+        // Extract permission codes from role_permissions
+        const permissionCodes = role.role_permissions
+          ?.map((rp: any) => rp.permissions?.code)
+          .filter(Boolean) || []
+        roleProfiles[role.name] = permissionCodes
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: roleProfiles
+    })
+
+  } catch (error) {
+    console.error('Error fetching role profiles:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch role profiles'
+    }, { status: 500 })
+  }
+}
+
+// Update role profiles with new default permissions
+export async function PUT(request: NextRequest) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const body = await request.json()
+    
+    const { roles } = body
+    
+    if (!Array.isArray(roles)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid request format. Expected roles array.'
+      }, { status: 400 })
+    }
+
+    // Validate each role update
+    for (const roleUpdate of roles) {
+      if (!roleUpdate.roleKey || !Array.isArray(roleUpdate.permissions)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid role update format. Each role must have roleKey and permissions array.'
+        }, { status: 400 })
+      }
+    }
+
+    // Process each role update
+    const updatePromises = roles.map(async (roleUpdate: any) => {
+      const { roleKey, permissions } = roleUpdate
+
+      // First, check if role exists
+      const { data: existingRole, error: roleCheckError } = await supabase
+        .from('roles')
+        .select('id, name')
+        .eq('name', roleKey)
+        .single()
+
+      if (roleCheckError || !existingRole) {
+        throw new Error(`Role '${roleKey}' not found`)
+      }
+
+      // Update the role's default_permissions
+      const { error: updateError } = await supabase
+        .from('roles')
+        .update({
+          default_permissions: permissions,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingRole.id)
+
+      if (updateError) throw updateError
+
+      // Log audit trail
+      await supabase
+        .from('audit_logs')
+        .insert({
+          actor_id: null, // TODO: Get from JWT token
+          action: 'role_profile_updated',
+          meta_json: {
+            role_name: roleKey,
+            role_id: existingRole.id,
+            new_permissions: permissions,
+            updated_by: 'admin_panel'
+          }
+        })
+
+      return { roleKey, success: true }
+    })
+
+    const results = await Promise.all(updatePromises)
+
+    return NextResponse.json({
+      success: true,
+      data: results,
+      message: `Successfully updated ${results.length} role profile(s)`
+    })
+
+  } catch (error) {
+    console.error('Error updating role profiles:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update role profiles'
+    }, { status: 500 })
+  }
+}
+
+// Create a new role with default permissions
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const body = await request.json()
+    
+    const { name, description, permissions = [] } = body
+
+    if (!name) {
+      return NextResponse.json({
+        success: false,
+        error: 'Role name is required'
+      }, { status: 400 })
+    }
+
+    // Check if role already exists
+    const { data: existingRole } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', name)
+      .single()
+
+    if (existingRole) {
+      return NextResponse.json({
+        success: false,
+        error: 'Role with this name already exists'
+      }, { status: 409 })
+    }
+
+    // Create the new role
+    const { data: newRole, error: createError } = await supabase
+      .from('roles')
+      .insert({
+        name,
+        description: description || `Custom role: ${name}`,
+        default_permissions: permissions
+      })
+      .select()
+      .single()
+
+    if (createError) throw createError
+
+    // If permissions are provided, also create role_permissions entries
+    if (permissions.length > 0) {
+      // Get permission IDs for the provided codes
+      const { data: permissionData, error: permissionError } = await supabase
+        .from('permissions')
+        .select('id, code')
+        .in('code', permissions)
+
+      if (permissionError) throw permissionError
+
+      // Create role_permissions entries
+      const rolePermissionInserts = permissionData.map(permission => ({
+        role_id: newRole.id,
+        permission_id: permission.id
+      }))
+
+      const { error: rpError } = await supabase
+        .from('role_permissions')
+        .insert(rolePermissionInserts)
+
+      if (rpError) throw rpError
+    }
+
+    // Log audit trail
+    await supabase
+      .from('audit_logs')
+      .insert({
+        actor_id: null, // TODO: Get from JWT token
+        action: 'role_created',
+        meta_json: {
+          role_name: name,
+          role_id: newRole.id,
+          permissions,
+          created_by: 'admin_panel'
+        }
+      })
+
+    return NextResponse.json({
+      success: true,
+      data: newRole,
+      message: 'Role created successfully'
+    })
+
+  } catch (error) {
+    console.error('Error creating role:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create role'
+    }, { status: 500 })
+  }
+}
