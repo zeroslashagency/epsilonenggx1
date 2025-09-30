@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+import { getSupabaseClient } from '@/app/services/supabase-client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +7,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[TEST-LOGIN] Attempting login:', { email, passwordLength: password?.length })
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabase = getSupabaseClient()
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
