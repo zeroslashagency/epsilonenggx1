@@ -1,15 +1,10 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/app/services/supabase-client'
 
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    const supabase = getSupabaseClient()
+    const userId = request.nextUrl.searchParams.get('userId')
     
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })

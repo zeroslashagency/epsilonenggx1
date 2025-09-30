@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Use direct Supabase configuration
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+import { getSupabaseAdminClient } from '@/app/services/supabase-client'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const requestId = searchParams.get('requestId')
+    const requestId = request.nextUrl.searchParams.get('requestId')
     
     if (!requestId) {
       return NextResponse.json({
@@ -17,7 +12,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
     
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = getSupabaseAdminClient()
     
     // Get sync request status
     const { data: syncRequest, error } = await supabase

@@ -4,7 +4,7 @@ import { getSupabaseAdminClient } from '@/app/services/supabase-client'
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
-    const { searchParams } = new URL(request.url)
+    const searchParams = request.nextUrl.searchParams
     
     // Get query parameters
     const dateRange = searchParams.get('dateRange') || 'all' // Default to all historical data

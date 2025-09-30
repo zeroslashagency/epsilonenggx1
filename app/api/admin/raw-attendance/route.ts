@@ -4,7 +4,7 @@ import { getSupabaseClient } from '@/app/services/supabase-client'
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
-    const { searchParams } = new URL(request.url)
+    const searchParams = request.nextUrl.searchParams
     
     const employeeCode = searchParams.get('employeeCode')
     const date = searchParams.get('date')

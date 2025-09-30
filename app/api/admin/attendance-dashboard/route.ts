@@ -4,8 +4,7 @@ import { getSupabaseClient } from '@/app/services/supabase-client'
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
-    const { searchParams } = new URL(request.url)
-    const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
+    const date = request.nextUrl.searchParams.get('date') || new Date().toISOString().split('T')[0]
 
     // Get daily attendance summary
     const { data: dailyAttendance, error: dailyError } = await supabase
