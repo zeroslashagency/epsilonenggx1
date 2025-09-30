@@ -5,9 +5,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sxnaopzgadd
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYyNTI4NCwiZXhwIjoyMDcyMjAxMjg0fQ.0cGxdfGQhYldGHLndKqcYAtzwHjCYnAXSB1WAqRFZ9U'
 
+// Use globalThis to ensure true singleton across module reloads in development
+// This prevents multiple instances during Next.js hot reloading
+declare global {
+  var __supabaseInstance: SupabaseClient | undefined
+  var __supabaseAdminInstance: SupabaseClient | undefined
+}
+
 // Singleton pattern to prevent multiple client instances
-let supabaseInstance: SupabaseClient | null = null
-let supabaseAdminInstance: SupabaseClient | null = null
+let supabaseInstance = globalThis.__supabaseInstance
+let supabaseAdminInstance = globalThis.__supabaseAdminInstance
 
 // Client-side Supabase instance (anon key)
 export function getSupabaseClient(): SupabaseClient {
@@ -20,6 +27,8 @@ export function getSupabaseClient(): SupabaseClient {
         storageKey: 'epsilon-auth'
       }
     })
+    // Store in globalThis for true singleton across hot reloads
+    globalThis.__supabaseInstance = supabaseInstance
   }
   return supabaseInstance
 }
@@ -33,11 +42,13 @@ export function getSupabaseAdminClient(): SupabaseClient {
         persistSession: false
       }
     })
+    // Store in globalThis for true singleton across hot reloads
+    globalThis.__supabaseAdminInstance = supabaseAdminInstance
   }
   return supabaseAdminInstance
 }
 
-// Default export for backward compatibility
+// Default export for backward compatibility - but only create if needed
 export const supabase = getSupabaseClient()
 
 // Export configuration values
