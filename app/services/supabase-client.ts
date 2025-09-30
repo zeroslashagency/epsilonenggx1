@@ -12,14 +12,11 @@ declare global {
   var __supabaseAdminInstance: SupabaseClient | undefined
 }
 
-// Singleton pattern to prevent multiple client instances
-let supabaseInstance = globalThis.__supabaseInstance
-let supabaseAdminInstance = globalThis.__supabaseAdminInstance
-
 // Client-side Supabase instance (anon key)
 export function getSupabaseClient(): SupabaseClient {
-  if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+  // Always check globalThis first to ensure true singleton
+  if (!globalThis.__supabaseInstance) {
+    globalThis.__supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
@@ -27,25 +24,22 @@ export function getSupabaseClient(): SupabaseClient {
         storageKey: 'epsilon-auth'
       }
     })
-    // Store in globalThis for true singleton across hot reloads
-    globalThis.__supabaseInstance = supabaseInstance
   }
-  return supabaseInstance
+  return globalThis.__supabaseInstance
 }
 
 // Server-side Supabase instance (service role key)
 export function getSupabaseAdminClient(): SupabaseClient {
-  if (!supabaseAdminInstance) {
-    supabaseAdminInstance = createClient(supabaseUrl, supabaseServiceKey, {
+  // Always check globalThis first to ensure true singleton
+  if (!globalThis.__supabaseAdminInstance) {
+    globalThis.__supabaseAdminInstance = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
       }
     })
-    // Store in globalThis for true singleton across hot reloads
-    globalThis.__supabaseAdminInstance = supabaseAdminInstance
   }
-  return supabaseAdminInstance
+  return globalThis.__supabaseAdminInstance
 }
 
 // Default export for backward compatibility - but only create if needed
