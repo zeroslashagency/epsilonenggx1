@@ -36,22 +36,21 @@ export async function GET(request: NextRequest) {
           name,
           description
         ),
-        scope_json
       `)
 
     if (rolesError) throw rolesError
 
     // Combine user data with roles
-    const usersWithRoles = users?.map(user => ({
+    const enhancedUsers = users?.map((user: any) => ({
       ...user,
-      roles: userRoles?.filter(ur => ur.user_id === user.id) || [],
+      roles: userRoles?.filter((ur: any) => ur.user_id === user.id) || [],
       status: 'active' // You can add status logic here
     }))
 
     return NextResponse.json({
       success: true,
       data: {
-        users: usersWithRoles,
+        users: enhancedUsers,
         totalCount: users?.length || 0
       }
     })
@@ -68,12 +67,7 @@ export async function GET(request: NextRequest) {
 // Create new user
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
+    const supabase = getSupabaseClient()
     const body = await request.json()
     
     const {
@@ -120,7 +114,7 @@ export async function POST(request: NextRequest) {
 
       if (roleQueryError) throw roleQueryError
 
-      const userRoleInserts = roleData.map(role => ({
+      const userRoleInserts = roleData.map((role: any) => ({
         user_id: authUser.user.id,
         role_id: role.id,
         scope_json: scope
@@ -176,7 +170,7 @@ export async function POST(request: NextRequest) {
 // Update user
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabase = getSupabaseClient()
     const body = await request.json()
     
     const {
@@ -220,7 +214,7 @@ export async function PATCH(request: NextRequest) {
       if (roleQueryError) throw roleQueryError
 
       // Insert new roles
-      const userRoleInserts = roleData.map(role => ({
+      const userRoleInserts = roleData.map((role: any) => ({
         user_id: userId,
         role_id: role.id,
         scope_json: scope
