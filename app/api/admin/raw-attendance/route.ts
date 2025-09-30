@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+import { getSupabaseClient } from '@/app/services/supabase-client'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     
     const employeeCode = searchParams.get('employeeCode')
@@ -76,7 +73,7 @@ export async function GET(request: NextRequest) {
     const outPunches = allLogs?.filter(log => log.punch_direction === 'out').length || 0
 
     // Detect potential issues (multiple INs without OUT)
-    const employeeIssues = {}
+    const employeeIssues: Record<string, { ins: number, outs: number, lastPunch: string | null }> = {}
     if (allLogs) {
       for (const log of allLogs) {
         if (!employeeIssues[log.employee_code]) {
@@ -118,7 +115,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabase = getSupabaseClient()
     const { action, employeeCode, date, calculationMethod } = await request.json()
 
     if (action === 'calculate') {
@@ -148,12 +145,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Separate IN and OUT punches
-      const inPunches = logs.filter(log => log.punch_direction === 'in')
-      const outPunches = logs.filter(log => log.punch_direction === 'out')
+      const inPunches = logs.filter((log: any) => log.punch_direction === 'in')
+      const outPunches = logs.filter((log: any) => log.punch_direction === 'out')
 
       let calculatedHours = 0
       let status = 'present'
-      let issues = []
+      let issues: string[] = []
 
       // Apply calculation method (your logic)
       switch (calculationMethod) {
@@ -185,7 +182,7 @@ export async function POST(request: NextRequest) {
           let totalMinutes = 0
           for (let i = 0; i < inPunches.length; i++) {
             const inTime = new Date(inPunches[i].log_date)
-            const nextOut = outPunches.find(out => new Date(out.log_date) > inTime)
+            const nextOut = outPunches.find((out: any) => new Date(out.log_date) > inTime)
             if (nextOut) {
               const outTime = new Date(nextOut.log_date)
               totalMinutes += (outTime.getTime() - inTime.getTime()) / (1000 * 60)
