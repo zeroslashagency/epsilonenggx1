@@ -116,7 +116,7 @@ export default function AttendancePage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-4 bg-card p-5 rounded-xl border border-border/50 shadow-sm">
+        <div className="flex flex-wrap items-center gap-4 bg-gradient-to-r from-white to-gray-50 p-5 rounded-xl border border-gray-200 shadow-md">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
             <Select value={dateRange} onValueChange={(value) => {
@@ -179,7 +179,7 @@ export default function AttendancePage() {
 
           <Button 
             variant="outline" 
-            className="gap-2 font-semibold border-border/50 hover:bg-muted/50 shadow-sm ml-auto"
+            className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md ml-auto"
             onClick={exportToExcel}
           >
             <Download className="h-4 w-4" />
@@ -227,12 +227,12 @@ export default function AttendancePage() {
         </div>
 
         {/* Today's Recent Activity */}
-        <Card className="shadow-lg border border-border/50 overflow-hidden">
+        <Card className="shadow-xl border border-gray-200 overflow-hidden bg-gradient-to-br from-white to-gray-50">
           <div className="p-8 space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-primary/10">
-                  <Clock className="h-5 w-5 text-primary" />
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200">
+                  <Clock className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight">Today's Recent Activity</h2>
@@ -244,7 +244,7 @@ export default function AttendancePage() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="gap-2 font-semibold border-border/50 hover:bg-muted/50 shadow-sm"
+                  className="gap-2 font-semibold bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 shadow-md"
                   onClick={() => fetchAttendanceData(dateRange)}
                   disabled={loading}
                 >
@@ -308,11 +308,11 @@ export default function AttendancePage() {
         </Card>
 
         {/* All Track Records */}
-        <Card className="shadow-lg border border-border/50 overflow-hidden">
+        <Card className="shadow-xl border border-gray-200 overflow-hidden bg-gradient-to-br from-white to-gray-50">
           <div className="p-8 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold tracking-tight">All Track Records</h2>
-              <Button variant="outline" className="bg-[hsl(var(--blue-light))] text-[hsl(var(--blue-dark))] border-[hsl(var(--blue))]/20 hover:bg-[hsl(var(--blue))]/20 hover:border-[hsl(var(--blue))]/30 transition-all shadow-sm">
+              <Button variant="outline" className="bg-gradient-to-r from-sky-50 to-sky-100 text-sky-700 border-sky-200 hover:from-sky-100 hover:to-sky-200 shadow-md">
                 <Calendar className="h-4 w-4 mr-2" />
                 Cloud Synced
               </Button>
@@ -353,7 +353,7 @@ export default function AttendancePage() {
               </div>
               <div className="flex items-end">
                 <Button 
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all"
+                  className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
                   onClick={() => fetchAttendanceData('custom')}
                 >
                   Apply Filters

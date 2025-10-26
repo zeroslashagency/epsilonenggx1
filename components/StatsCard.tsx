@@ -10,19 +10,19 @@ interface StatsCardProps {
 }
 
 const variantStyles = {
-  purple: "bg-gradient-to-br from-[hsl(var(--purple-light))] to-[hsl(var(--purple-light))]/80 text-[hsl(var(--purple-dark))] border border-[hsl(var(--purple))]/10",
-  green: "bg-gradient-to-br from-[hsl(var(--green-light))] to-[hsl(var(--green-light))]/80 text-[hsl(var(--green-dark))] border border-[hsl(var(--green))]/10",
-  orange: "bg-gradient-to-br from-[hsl(var(--orange-light))] to-[hsl(var(--orange-light))]/80 text-[hsl(var(--orange-dark))] border border-[hsl(var(--orange))]/10",
-  blue: "bg-gradient-to-br from-[hsl(var(--blue-light))] to-[hsl(var(--blue-light))]/80 text-[hsl(var(--blue-dark))] border border-[hsl(var(--blue))]/10",
-  indigo: "bg-gradient-to-br from-[hsl(var(--indigo-light))] to-[hsl(var(--indigo-light))]/80 text-[hsl(var(--indigo-dark))] border border-[hsl(var(--indigo))]/10",
+  purple: "bg-gradient-to-br from-purple-50 to-purple-100 text-purple-900 border border-purple-200 shadow-purple-100",
+  green: "bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-900 border border-emerald-200 shadow-emerald-100",
+  orange: "bg-gradient-to-br from-orange-50 to-orange-100 text-orange-900 border border-orange-200 shadow-orange-100",
+  blue: "bg-gradient-to-br from-sky-50 to-sky-100 text-sky-900 border border-sky-200 shadow-sky-100",
+  indigo: "bg-gradient-to-br from-indigo-50 to-indigo-100 text-indigo-900 border border-indigo-200 shadow-indigo-100",
 };
 
 const iconBgStyles = {
-  purple: "bg-[hsl(var(--purple))]/10",
-  green: "bg-[hsl(var(--green))]/10",
-  orange: "bg-[hsl(var(--orange))]/10",
-  blue: "bg-[hsl(var(--blue))]/10",
-  indigo: "bg-[hsl(var(--indigo))]/10",
+  purple: "bg-purple-100 text-purple-600",
+  green: "bg-emerald-100 text-emerald-600",
+  orange: "bg-orange-100 text-orange-600",
+  blue: "bg-sky-100 text-sky-600",
+  indigo: "bg-indigo-100 text-indigo-600",
 };
 
 export function StatsCard({ title, value, description, icon: Icon, variant }: StatsCardProps) {

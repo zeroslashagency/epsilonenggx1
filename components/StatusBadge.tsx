@@ -6,8 +6,8 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   const normalizedStatus = status === "check-in" ? "in" : status === "check-out" ? "out" : status;
   
   const styles = {
-    in: "bg-[hsl(var(--green-light))] text-[hsl(var(--green-dark))] border border-[hsl(var(--green))]/20",
-    out: "bg-[hsl(var(--orange-light))] text-[hsl(var(--orange-dark))] border border-[hsl(var(--orange))]/20",
+    in: "bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm",
+    out: "bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border border-orange-200 shadow-sm",
   };
 
   const labels = {
