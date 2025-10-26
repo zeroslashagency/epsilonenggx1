@@ -790,31 +790,7 @@ export default function UsersPageZoho() {
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-lg font-semibold text-[#12263F] dark:text-white mb-2">Password & Security Tools</h3>
-                        <p className="text-sm text-[#95AAC9] mb-6">Generate temporary passwords, send reset emails, or manually set a new password for the selected user.</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                          <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="New password"
-                            className="px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white"
-                          />
-                          <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm password"
-                            className="px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white"
-                          />
-                        </div>
-                        <button 
-                          onClick={handleSavePassword}
-                          className="px-4 py-2 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors"
-                        >
-                          Save password
-                        </button>
+                        <p className="text-sm text-[#95AAC9] mb-6">Send password reset emails to users.</p>
                       </div>
 
                       <div className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4">
