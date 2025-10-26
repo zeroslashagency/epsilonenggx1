@@ -37,6 +37,26 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  
+  /* Enhanced stats card colors */
+  --purple-light: 264 89% 96%;
+  --purple: 264 70% 55%;
+  --purple-dark: 264 70% 45%;
+  --green-light: 142 76% 95%;
+  --green: 142 69% 45%;
+  --green-dark: 142 69% 35%;
+  --orange-light: 28 100% 95%;
+  --orange: 28 100% 55%;
+  --orange-dark: 28 100% 45%;
+  --blue-light: 205 100% 96%;
+  --blue: 205 100% 50%;
+  --blue-dark: 205 100% 40%;
+  --indigo-light: 239 84% 95%;
+  --indigo: 239 84% 60%;
+  --indigo-dark: 239 84% 50%;
+  --success: 142 69% 45%;
+  --success-foreground: 0 0% 100%;
+  --success-light: 142 76% 95%;
 }
 
 .dark {
