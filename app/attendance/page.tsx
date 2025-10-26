@@ -361,10 +361,10 @@ export default function AttendancePage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm bg-card">
+            <div className="rounded-xl border-2 border-gray-300 overflow-hidden shadow-sm bg-white">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/30 border-b border-border/50">
+                  <TableRow className="bg-gray-100 border-b-2 border-gray-300">
                     <TableHead className="font-bold text-foreground py-4">Employee Code</TableHead>
                     <TableHead className="font-bold text-foreground">Employee Name</TableHead>
                     <TableHead className="font-bold text-foreground">Status</TableHead>
@@ -376,7 +376,7 @@ export default function AttendancePage() {
                   {attendanceData?.allLogs?.slice(0, parseInt(recordsPerPage)).map((record: any, index: number) => (
                     <TableRow 
                       key={index} 
-                      className="hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
+                      className="hover:bg-blue-50 transition-colors border-b border-gray-200"
                     >
                       <TableCell className="font-semibold py-4">{record.employee_code}</TableCell>
                       <TableCell className="font-medium">{record.employee_name}</TableCell>
