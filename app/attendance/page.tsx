@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { apiGet } from '@/app/lib/utils/api-client'
 import * as XLSX from 'xlsx'
+import { ZohoLayout } from '../components/zoho-ui'
 
 interface AttendanceLog {
   employee_code: string
@@ -83,21 +84,11 @@ export default function AttendancePage() {
   const activeUsers = attendanceData?.todayStatus?.length || 0
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Breadcrumb */}
-      <div className="border-b border-border/50 bg-card shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-            <Home className="h-4 w-4" />
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span>Dashboard</span>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span className="text-foreground font-semibold">Attendance</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-6 py-10 space-y-8">
+    <ZohoLayout breadcrumbs={[
+      { label: 'Dashboard', href: '/' },
+      { label: 'Attendance' }
+    ]}>
+      <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
           <div>
@@ -406,6 +397,6 @@ export default function AttendancePage() {
           </div>
         </Card>
       </div>
-    </div>
+    </ZohoLayout>
   )
 }
