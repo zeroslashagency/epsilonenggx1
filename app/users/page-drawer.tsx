@@ -442,13 +442,6 @@ export default function UsersPageDrawer() {
 
               {activeTab === 'security' && (
                 <div className="space-y-6">
-                  <div className="border rounded p-4">
-                    <h4 className="text-sm font-semibold mb-2">Generate Temporary Password</h4>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded">
-                      <Key className="w-4 h-4" />
-                      Generate password
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

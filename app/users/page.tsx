@@ -793,23 +793,7 @@ export default function UsersPageZoho() {
                         <p className="text-sm text-[#95AAC9] mb-6">Generate temporary passwords, send reset emails, or manually set a new password for the selected user.</p>
                       </div>
 
-                      <div className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4">
-                        <h4 className="text-sm font-semibold text-[#12263F] dark:text-white mb-2">Generate Temporary Password</h4>
-                        <p className="text-xs text-[#95AAC9] mb-4">Create a random, strong password for the user. Share it securely and ask them to change it on first login.</p>
-                        <button 
-                          onClick={handleGeneratePassword}
-                          className="flex items-center gap-2 px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                        >
-                          <Key className="w-4 h-4" />
-                          Generate password
-                        </button>
-                      </div>
-
-                      <div className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4">
-                        <h4 className="text-sm font-semibold text-[#12263F] dark:text-white mb-2">Set Password Manually</h4>
-                        <p className="text-xs text-[#95AAC9] mb-4">Define a specific password for this account. The user will be able to log in immediately using the new password.</p>
-                        <p className="text-xs text-[#95AAC9] mb-4">Password must be at least 8 characters and match exactly.</p>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="grid grid-cols-2 gap-4 mb-4">
                           <input
                             type="password"
                             value={password}
