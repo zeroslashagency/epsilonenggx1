@@ -184,12 +184,6 @@ export function ZohoSidebar({ collapsed, onToggleAction }: { collapsed: boolean;
           icon: Shield
         },
         {
-          id: 'attendance-sync',
-          label: 'Attendance Sync',
-          href: '/attendance',
-          icon: Clock
-        },
-        {
           id: 'activity-logging',
           label: 'Activity Logging',
           href: '/settings/activity-logs',
