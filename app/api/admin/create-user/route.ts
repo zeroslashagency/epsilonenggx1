@@ -1,19 +1,23 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
+import { createUserSchema } from '@/app/lib/validation/schemas'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYyNTI4NCwiZXhwIjoyMDcyMjAxMjg0fQ.0cGxdfGQhYldGHLndKqcYAtzwHjCYnAXSB1WAqRFZ9U'
+export async function POST(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require manage_users permission
+  const authResult = await requirePermission(request, 'manage_users')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-})
-
-export async function POST(request: Request) {
   try {
-    const { email, password, roleId, customPermissions } = await request.json()
+    const supabase = getSupabaseAdminClient()
+    
+    // Validate request body
+    const validation = await validateRequestBody(request, createUserSchema)
+    if (!validation.success) return validation.response
+    
+    const { email, password, roleId, customPermissions } = validation.data
 
     if (!email || !password || !roleId) {
       return NextResponse.json({ error: 'Email, password, and role are required' }, { status: 400 })
@@ -33,6 +37,24 @@ export async function POST(request: Request) {
 
     if (!authUser.user) {
       return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+    }
+
+    // Create profile explicitly
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: authUser.user.id,
+        email: authUser.user.email,
+        full_name: validation.data.full_name || email.split('@')[0],
+        role: 'Operator',
+        role_badge: 'Operator'
+      })
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError)
+      // Clean up auth user if profile creation fails
+      await supabase.auth.admin.deleteUser(authUser.user.id)
+      return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
     }
 
     // Assign role to user

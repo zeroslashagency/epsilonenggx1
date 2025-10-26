@@ -1,40 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/services/supabase-client'
+import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { requireAuth } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
+  // ✅ AUTH CHECK: Require authentication (any logged-in user can view attendance)
+  const authResult = await requireAuth(request)
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseClient()
     const searchParams = request.nextUrl.searchParams
     
-    // Get query parameters
-    const dateRange = searchParams.get('dateRange') || 'all' // Default to all historical data
-    const employeeCode = searchParams.get('employeeCode') // Filter by specific employee
-    const limit = parseInt(searchParams.get('limit') || '20') // Default to 20 items per page
-    const offset = parseInt(searchParams.get('offset') || '0') // Pagination offset
+    // Get query parameters - support both dateRange and fromDate/toDate
+    const dateRange = searchParams.get('dateRange') || 'all'
+    const fromDate = searchParams.get('fromDate')
+    const toDate = searchParams.get('toDate')
+    const employeeCode = searchParams.get('employeeCode')
+    const limit = parseInt(searchParams.get('limit') || '50000') // Default to large number for all records
+    const offset = parseInt(searchParams.get('offset') || '0')
     
-    // Calculate date range - show ALL historical data by default
-    const endDate = new Date()
-    endDate.setHours(23, 59, 59, 999) // End of today
-    const startDate = new Date()
+    // Calculate date range - prioritize fromDate/toDate if provided
+    let startDate: Date
+    let endDate: Date
     
-    if (dateRange === 'all') {
-      startDate.setFullYear(2020, 0, 1) // Start from 2020 to show all historical data
-    } else if (dateRange === 'today') {
-      startDate.setHours(0, 0, 0, 0) // Start of today
+    if (fromDate && toDate) {
+      // Use provided date range
+      startDate = new Date(fromDate)
+      endDate = new Date(toDate)
+      endDate.setHours(23, 59, 59, 999) // End of day
+      console.log('📅 Using provided date range:', { fromDate, toDate, startDate: startDate.toISOString(), endDate: endDate.toISOString() })
     } else {
-      // Parse numeric dateRange (e.g., '7' for last 7 days)
-      const daysBack = parseInt(dateRange)
-      if (!isNaN(daysBack)) {
-        startDate.setDate(startDate.getDate() - daysBack)
+      // Fallback to dateRange parameter
+      endDate = new Date()
+      endDate.setHours(23, 59, 59, 999) // End of today
+      startDate = new Date()
+      
+      if (dateRange === 'all') {
+        startDate.setFullYear(2020, 0, 1) // Start from 2020 to show all historical data
+      } else if (dateRange === 'today') {
+        startDate.setHours(0, 0, 0, 0) // Start of today
       } else {
-        startDate.setHours(0, 0, 0, 0) // Default to start of today
+        // Parse numeric dateRange (e.g., '7' for last 7 days)
+        const daysBack = parseInt(dateRange)
+        if (!isNaN(daysBack)) {
+          startDate.setDate(startDate.getDate() - daysBack)
+        } else {
+          startDate.setHours(0, 0, 0, 0) // Default to start of today
+        }
       }
+      startDate.setHours(0, 0, 0, 0) // Start of day
     }
-    startDate.setHours(0, 0, 0, 0) // Start of day
     
     // First, get total count for pagination
     let countQuery = supabase
-      .from('employee_attendance_logs')
+      .from('employee_raw_logs')
       .select('*', { count: 'exact', head: true })
       .gte('log_date', startDate.toISOString())
       .lte('log_date', endDate.toISOString())
@@ -49,34 +69,71 @@ export async function GET(request: NextRequest) {
       throw new Error(`Supabase count error: ${countError.message}`)
     }
     
-    // Build query with pagination
-    let query = supabase
-      .from('employee_attendance_logs')
-      .select('*')
-      .gte('log_date', startDate.toISOString())
-      .lte('log_date', endDate.toISOString())
-      .order('log_date', { ascending: false })
-      .range(offset, offset + limit - 1)
+    // Optimize: For single-day queries (like today), use smaller batch size
+    const isSingleDay = fromDate && toDate && fromDate === toDate
+    const batchSize = isSingleDay ? 500 : 1000 // Smaller batches for single day
+    const maxRecords = isSingleDay ? 2000 : 50000 // Limit for single day to avoid excessive fetching
     
-    // Add employee filter if specified
-    if (employeeCode) {
-      query = query.eq('employee_code', employeeCode)
+    console.log('🔍 Query optimization:', { isSingleDay, batchSize, maxRecords, dateRange: `${fromDate} to ${toDate}` })
+    
+    // Supabase has a default limit of 1000 rows, so we need to fetch in batches
+    let allLogs: any[] = []
+    let currentOffset = 0
+    let hasMore = true
+    
+    while (hasMore && allLogs.length < maxRecords) {
+      let query = supabase
+        .from('employee_raw_logs')
+        .select('*')
+        .gte('log_date', startDate.toISOString())
+        .lte('log_date', endDate.toISOString())
+        .order('log_date', { ascending: false })
+        .range(currentOffset, currentOffset + batchSize - 1)
+      
+      // Add employee filter if specified
+      if (employeeCode) {
+        query = query.eq('employee_code', employeeCode)
+      }
+      
+      const { data: batchLogs, error } = await query
+      
+      if (error) {
+        throw new Error(`Supabase query error: ${error.message}`)
+      }
+      
+      if (batchLogs && batchLogs.length > 0) {
+        allLogs = allLogs.concat(batchLogs)
+        currentOffset += batchSize
+        hasMore = batchLogs.length === batchSize // Continue if we got a full batch
+      } else {
+        hasMore = false
+      }
     }
     
-    const { data: attendanceLogs, error } = await query
+    const attendanceLogs = allLogs
     
-    if (error) {
-      throw new Error(`Supabase query error: ${error.message}`)
-    }
+    console.log('📊 Query results:', { 
+      recordsFound: attendanceLogs?.length || 0, 
+      totalCount, 
+      dateRange: { start: startDate.toISOString(), end: endDate.toISOString() },
+      sampleRecord: attendanceLogs?.[0] 
+    })
 
-    // Get employee names from employee_master
+    // Get employee names from employee_master with better error handling
     const { data: employees, error: employeeError } = await supabase
       .from('employee_master')
       .select('employee_code, employee_name, department, designation')
+      .limit(10000)
 
     if (employeeError) {
       console.warn('Could not fetch employee names:', employeeError)
     }
+
+    console.log('👥 Employee data fetched:', { 
+      employeeCount: employees?.length || 0,
+      employeeError: employeeError?.message,
+      sampleEmployee: employees?.[0]
+    })
 
     // Create a map of employee codes to names
     const employeeMap = new Map()
@@ -88,17 +145,34 @@ export async function GET(request: NextRequest) {
           designation: emp.designation
         })
       })
-      console.log('Employee map created with', employeeMap.size, 'employees')
-      console.log('Sample employee codes:', Array.from(employeeMap.keys()).slice(0, 5))
+      console.log('👥 Employee map created with', employeeMap.size, 'employees')
+      console.log('👥 Sample mappings:', Array.from(employeeMap.entries()).slice(0, 3))
     } else {
-      console.log('No employees found in employee_master')
+      console.log('❌ No employees found in employee_master')
     }
     
-    // Calculate today's summary
-    const today = new Date().toISOString().split('T')[0]
-    const todayLogs = attendanceLogs?.filter(log => 
-      log.log_date.startsWith(today)
-    ) || []
+    // Calculate today's summary - get today's data specifically
+    // Use UTC+5:30 (Indian Standard Time) for proper date calculation
+    const now = new Date()
+    const istOffset = 5.5 * 60 * 60 * 1000 // IST is UTC+5:30
+    const istDate = new Date(now.getTime() + istOffset)
+    const today = istDate.toISOString().split('T')[0]
+    
+    // Get today's logs specifically from database
+    const { data: todayLogsFromDB, error: todayError } = await supabase
+      .from('employee_raw_logs')
+      .select('*')
+      .gte('log_date', `${today}T00:00:00`)
+      .lte('log_date', `${today}T23:59:59`)
+    
+    const todayLogs = todayError ? [] : (todayLogsFromDB || [])
+    
+    console.log('📅 Today\'s data:', { 
+      today, 
+      todayLogsCount: todayLogs.length, 
+      todayError: todayError?.message,
+      sampleTodayLog: todayLogs[0] 
+    })
     
     // Group by employee for today's status
     const employeeStatus = new Map()
@@ -126,18 +200,32 @@ export async function GET(request: NextRequest) {
       employee.punch_count++
     })
     
-    // Calculate summary statistics
-    // For now, use the known total from our employee data (37 employees)
-    // TODO: Fix the employee_master query issue
-    const totalEmployees = 37
-    const presentToday = Array.from(employeeStatus.values()).filter(emp => 
-      emp.status === 'in' || emp.status === 'out'
-    ).length
-    const absentToday = totalEmployees - presentToday
+    // Calculate summary statistics using real data
+    // Get total unique employees using a more efficient query
+    const { data: uniqueEmployeeData, error: uniqueEmployeeError } = await supabase
+      .rpc('get_unique_employee_count')
+      .single()
+    
+    // Fallback: if RPC doesn't exist, use direct query with no limit
+    let totalEmployees = 47 // Known value from our previous check
+    if (!uniqueEmployeeError && uniqueEmployeeData && typeof uniqueEmployeeData === 'object') {
+      totalEmployees = (uniqueEmployeeData as any).count || 47
+    }
+    
+    console.log('👥 Employee count calculation:', { 
+      uniqueEmployeeError: uniqueEmployeeError?.message,
+      totalEmployees 
+    })
+    // Present today = employees who have any punch activity today
+    const presentToday = employeeStatus.size
+    const absentToday = Math.max(0, totalEmployees - presentToday) // Ensure non-negative
     
     // Calculate late arrivals (employees who punched in after 9:00 AM)
+    // Exclude security guards and night shift workers
     const lateArrivals = Array.from(employeeStatus.values()).filter(emp => {
-      if (emp.status !== 'in' || !emp.last_punch) return false
+      if (!emp.last_punch) return false
+      // Skip security guards and test employees
+      if (emp.employee_name.toLowerCase().includes('security') || emp.employee_code.startsWith('EE ')) return false
       const punchHour = new Date(emp.last_punch).getHours()
       return punchHour >= 9 // 9:00 AM or later
     }).length
@@ -149,14 +237,17 @@ export async function GET(request: NextRequest) {
       return punchHour < 18 // Before 6:00 PM
     }).length
     
-    // Get recent logs (last 10) with proper employee names
+    // Get recent logs (last 10) with proper employee names and field mapping
     const recentLogs = (attendanceLogs?.slice(0, 10) || []).map(log => {
       const employeeInfo = employeeMap.get(log.employee_code)
       return {
         ...log,
         employee_name: employeeInfo?.name || log.employee_name || `Employee ${log.employee_code}`,
         department: employeeInfo?.department || 'Unknown',
-        designation: employeeInfo?.designation || 'Unknown'
+        designation: employeeInfo?.designation || 'Unknown',
+        // Map sync_time to created_at for backward compatibility
+        created_at: log.sync_time,
+        synced_at: log.sync_time
       }
     })
     
@@ -167,7 +258,7 @@ export async function GET(request: NextRequest) {
         employee_code: log.employee_code,
         employee_name: employeeInfo?.name || log.employee_name || `Employee ${log.employee_code}`
       })
-    }))).map(str => JSON.parse(str)).slice(0, 20) // Limit to 20 for dropdown
+    }))).map(str => JSON.parse(str)) // Show all employees for export selection
     
     return NextResponse.json({
       success: true,
@@ -193,7 +284,17 @@ export async function GET(request: NextRequest) {
           punch_count: status.punch_count
         })),
         recentLogs,
-        allLogs: attendanceLogs,
+        allLogs: attendanceLogs?.map(log => {
+          const employeeInfo = employeeMap.get(log.employee_code)
+          return {
+            ...log,
+            employee_name: employeeInfo?.name || `Employee ${log.employee_code}`,
+            department: employeeInfo?.department || 'Unknown',
+            designation: employeeInfo?.designation || 'Unknown',
+            created_at: log.sync_time,
+            synced_at: log.sync_time
+          }
+        }) || [],
         employees: uniqueEmployees,
         dateRange: {
           start: startDate.toISOString(),

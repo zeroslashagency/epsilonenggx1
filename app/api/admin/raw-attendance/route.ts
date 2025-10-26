@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/app/services/supabase-client'
+import { getSupabaseClient } from '@/app/lib/services/supabase-client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,11 +45,14 @@ export async function GET(request: NextRequest) {
 
     // Get employee names
     const { data: employees, error: empError } = await supabase
-      .from('employee_master_simple')
+      .from('employee_master')
       .select('*')
       .order('employee_code')
 
-    if (empError) throw empError
+    if (empError) {
+      console.error('Error fetching employees:', empError)
+      // Continue without employee names if table doesn't exist
+    }
 
     // Get statistics
     let statsQuery = supabase

@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYyNTI4NCwiZXhwIjoyMDcyMjAxMjg0fQ.0cGxdfGQhYldGHLndKqcYAtzwHjCYnAXSB1WAqRFZ9U'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
 export async function POST(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require manage_users permission
+  const authResult = await requirePermission(request, 'manage_users')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
+    const supabase = getSupabaseAdminClient()
     const { employee_code, employee_name, email, password, role, department, designation, actorId } = await request.json()
 
     // Validate required fields
@@ -21,134 +19,125 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check if email already exists by checking profiles table
-    const { data: existingEmailProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
+    // Check if email already exists in auth.users
+    const { data: existingAuthUser } = await supabase.auth.admin.listUsers()
+    const emailExists = existingAuthUser.users.some(u => u.email === email)
 
-    if (existingEmailProfile) {
+    if (emailExists) {
       return NextResponse.json({ 
         error: 'A user with this email already exists' 
       }, { status: 400 })
     }
 
-    // Check if employee already has an account
+    // Check if employee already has a profile
     const { data: existingEmployeeProfile } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, email')
       .eq('employee_code', employee_code)
       .single()
 
+    // Check if profile has an auth user
     if (existingEmployeeProfile) {
-      return NextResponse.json({ 
-        error: 'This employee already has a user account' 
-      }, { status: 400 })
+      const { data: existingAuthUsers } = await supabase.auth.admin.listUsers()
+      const hasAuthUser = existingAuthUsers.users.some(u => u.id === existingEmployeeProfile.id)
+      
+      if (hasAuthUser) {
+        return NextResponse.json({ 
+          error: 'This employee already has a complete user account' 
+        }, { status: 400 })
+      }
+      
+      // Profile exists but no auth user - delete the orphaned profile first
+      console.log('⚠️ Found orphaned profile, deleting it first...')
+      const { error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', existingEmployeeProfile.id)
+      
+      if (deleteError) {
+        console.error('Failed to delete orphaned profile:', deleteError)
+        return NextResponse.json({ 
+          error: `Failed to clean up orphaned profile: ${deleteError.message}` 
+        }, { status: 500 })
+      }
+      console.log('✅ Orphaned profile deleted')
     }
 
-    // Create Supabase Auth user
+    console.log('🔑 Creating auth user in Supabase Auth')
+    console.log('📧 Email:', email)
+    console.log('👤 Name:', employee_name)
+    console.log('🔑 Password length:', password?.length)
+    
+    // Validate password
+    if (!password || password.length < 6) {
+      return NextResponse.json({ 
+        error: 'Password must be at least 6 characters long' 
+      }, { status: 400 })
+    }
+    
+    // Create user in Supabase Auth (this creates the real authenticated user)
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
         full_name: employee_name,
-        employee_code,
-        department,
-        designation
+        role,
+        employee_code
       }
     })
 
-    if (authError) {
-      console.error('Auth user creation error:', authError)
+    if (authError || !authUser.user) {
+      console.error('❌ Auth user creation error:', authError)
+      console.error('Error details:', JSON.stringify(authError, null, 2))
       return NextResponse.json({ 
-        error: `Failed to create user account: ${authError.message}` 
+        error: `Failed to create auth user: ${authError?.message || 'Unknown error'}`,
+        details: authError
       }, { status: 500 })
     }
 
-    // Create profile with employee link
-    const { error: profileError } = await supabase
+    console.log('✅ Auth user created:', authUser.user.id)
+    
+    // Create profile explicitly (no waiting for trigger)
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .insert({
         id: authUser.user.id,
-        email,
+        email: email,
         full_name: employee_name,
         employee_code,
         department: department || 'Default',
         designation: designation || 'Employee',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        role: role || 'Operator',
+        standalone_attendance: 'NO'
       })
+      .select()
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
-      // Try to clean up the auth user if profile creation failed
+      // Clean up auth user if profile creation fails
       await supabase.auth.admin.deleteUser(authUser.user.id)
       return NextResponse.json({ 
         error: `Failed to create user profile: ${profileError.message}` 
       }, { status: 500 })
     }
 
-    // Get role ID
-    const { data: roleData, error: roleError } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', role)
-      .single()
-
-    if (roleError || !roleData) {
-      console.error('Role lookup error:', roleError)
-      return NextResponse.json({ 
-        error: `Invalid role: ${role}` 
-      }, { status: 400 })
-    }
-
-    // Assign role to user
-    const { error: roleAssignError } = await supabase
-      .from('user_roles')
-      .insert({
-        user_id: authUser.user.id,
-        role_id: roleData.id,
-        created_at: new Date().toISOString()
-      })
-
-    if (roleAssignError) {
-      console.error('Role assignment error:', roleAssignError)
-      return NextResponse.json({ 
-        error: `Failed to assign role: ${roleAssignError.message}` 
-      }, { status: 500 })
-    }
-
-    // Log the user creation activity
-    await supabase
-      .from('user_activity_logs')
-      .insert({
-        user_id: authUser.user.id,
-        action: 'user_created_from_employee',
-        meta_json: {
-          employee_code,
-          employee_name,
-          role,
-          created_by: actorId || 'system'
-        },
-        ip: '127.0.0.1' // TODO: Get real IP from request
-      })
-
+    console.log('✅ User profile updated successfully:', profileData)
+    
     return NextResponse.json({
       success: true,
-      message: `User account created successfully for ${employee_name}`,
+      message: `User account created for ${employee_name}`,
       user: {
         id: authUser.user.id,
         email,
         full_name: employee_name,
         employee_code,
-        role
+        role: role || 'Operator'
       }
     })
 
   } catch (error: any) {
-    console.error('Create user from employee error:', error)
+    console.error('User creation error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

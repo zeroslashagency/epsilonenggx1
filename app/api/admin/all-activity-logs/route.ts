@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireRole } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
+  // Require Admin or Super Admin
+  const authResult = await requireRole(request, ['Admin', 'Super Admin'])
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabase = getSupabaseAdminClient()
     
     console.log('🔍 Fetching all activity logs from database...')
 
@@ -88,140 +91,11 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to get real activity logs from system data
+// REMOVED: No longer generating fake logs from system data
+// Only audit_logs table contains REAL user modifications
 async function getRealActivityLogs(supabase: any): Promise<any[]> {
-  const realLogs = []
-  
-  try {
-    // Get all users with their creation and update timestamps
-    const { data: users } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, role, created_at, updated_at')
-      .order('created_at', { ascending: false })
-
-    // Get user roles data
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('user_id, role_id, created_at')
-
-    // Get roles data
-    const { data: roles } = await supabase
-      .from('roles')
-      .select('id, name')
-
-    const roleMap = new Map(roles?.map((role: any) => [role.id, role.name]) || [])
-
-    console.log(`📊 Found ${users?.length || 0} users, ${userRoles?.length || 0} role assignments`)
-
-    // Create real activity logs based on actual data
-    let logId = 1
-
-    // 1. User creation activities (from profiles.created_at)
-    users?.forEach((user: any) => {
-      if (user.created_at) {
-        realLogs.push({
-          id: `real-${logId++}`,
-          user_id: 'system',
-          target_user_id: user.id,
-          action: 'user_created',
-          description: `New user account created: ${user.full_name}`,
-          timestamp: user.created_at,
-          ip: '192.168.1.100',
-          details: {
-            message: `User account created for ${user.full_name}`,
-            user_role: user.role,
-            user_email: user.email
-          }
-        })
-      }
-
-      // 2. Profile update activities (if updated_at != created_at)
-      if (user.updated_at && user.created_at && user.updated_at !== user.created_at) {
-        realLogs.push({
-          id: `real-${logId++}`,
-          user_id: user.id,
-          target_user_id: user.id,
-          action: 'profile_update',
-          description: `${user.full_name} updated their profile`,
-          timestamp: user.updated_at,
-          ip: '192.168.1.101',
-          details: {
-            message: `Profile information updated`,
-            user_role: user.role
-          }
-        })
-      }
-    })
-
-    // 3. Role assignment activities (from user_roles)
-    userRoles?.forEach((userRole: any) => {
-      const roleName = roleMap.get(userRole.role_id) || 'Unknown Role'
-      const user = users?.find((u: any) => u.id === userRole.user_id)
-      
-      realLogs.push({
-        id: `real-${logId++}`,
-        user_id: 'system',
-        target_user_id: userRole.user_id,
-        action: 'role_change',
-        description: `Role assigned: ${roleName} to ${user?.full_name || 'User'}`,
-        timestamp: userRole.created_at || new Date().toISOString(),
-        ip: '192.168.1.102',
-        details: {
-          message: `Role assignment completed`,
-          new_role: roleName,
-          user_name: user?.full_name
-        }
-      })
-    })
-
-    // 4. Add some realistic login activities for active users (last 7 days)
-    const activeUsers = users?.slice(0, 5) || [] // Take first 5 users as "active"
-    const now = new Date()
-    
-    activeUsers.forEach((user: any, index: number) => {
-      // Add 2-3 login activities per active user over last week
-      for (let i = 0; i < 3; i++) {
-        const loginDate = new Date(now.getTime() - (index + i) * 24 * 60 * 60 * 1000)
-        realLogs.push({
-          id: `real-${logId++}`,
-          user_id: user.id,
-          target_user_id: user.id,
-          action: 'login',
-          description: `${user.full_name} logged into the system`,
-          timestamp: loginDate.toISOString(),
-          ip: `192.168.1.${110 + index}`,
-          details: {
-            message: `User login successful`,
-            user_role: user.role
-          }
-        })
-
-        // Add corresponding logout
-        const logoutDate = new Date(loginDate.getTime() + (2 + i) * 60 * 60 * 1000) // 2-5 hours later
-        realLogs.push({
-          id: `real-${logId++}`,
-          user_id: user.id,
-          target_user_id: user.id,
-          action: 'logout',
-          description: `${user.full_name} logged out of the system`,
-          timestamp: logoutDate.toISOString(),
-          ip: `192.168.1.${110 + index}`,
-          details: {
-            message: `User logout completed`,
-            session_duration: `${2 + i} hours`
-          }
-        })
-      }
-    })
-
-    console.log(`✅ Generated ${realLogs.length} real activity logs from system data`)
-    
-    // Sort by timestamp (newest first)
-    return realLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-
-  } catch (error) {
-    console.error('❌ Error generating real activity logs:', error)
-    return []
-  }
+  console.log('ℹ️ Skipping fake log generation - using only real audit_logs')
+  return []
 }
 
 // Helper function to enhance logs with user information

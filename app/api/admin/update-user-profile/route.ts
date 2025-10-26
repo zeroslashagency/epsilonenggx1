@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
+import { updateUserProfileSchema } from '@/app/lib/validation/schemas'
 
 export async function PATCH(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require users.edit permission
+  const authResult = await requirePermission(request, 'users.edit')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    const { userId, field, value } = await request.json()
+    const supabase = getSupabaseAdminClient()
+    
+    // Validate request body
+    const validation = await validateRequestBody(request, updateUserProfileSchema)
+    if (!validation.success) return validation.response
+    
+    const { userId, field, value } = validation.data
 
     if (!userId || !field) {
       return NextResponse.json({

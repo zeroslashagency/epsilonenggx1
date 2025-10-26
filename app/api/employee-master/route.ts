@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
-// Use direct Supabase configuration
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+export async function GET(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require schedule.view permission
+  const authResult = await requirePermission(request, 'schedule.view')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
 
-export async function GET() {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = getSupabaseAdminClient()
     
     // Get all employee master data
     const { data: employeeMaster, error } = await supabase

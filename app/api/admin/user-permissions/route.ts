@@ -1,14 +1,15 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
 
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+export async function GET(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require users.permissions permission
+  const authResult = await requirePermission(request, 'users.permissions')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
 
-// Use anon key with updated RLS policies that allow authenticated access
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-export async function GET() {
   try {
+    const supabase = getSupabaseAdminClient()
     console.log('Starting user-permissions API call...')
     
     // Get all users from profiles table
@@ -62,54 +63,16 @@ export async function GET() {
       .select('id, code, description')
     console.log('Permissions query result:', { allPermissions: allPermissions?.length, error: allPermError })
 
-    // Get custom user permissions
-    const { data: customUserPermissions, error: customPermError } = await supabase
-      .from('user_permissions')
-      .select('user_id, permission_id, effect')
-
-    console.log('Custom user permissions query result:', { customUserPermissions: customUserPermissions?.length, error: customPermError })
-
-    // Combine the data
+    // Combine the data - Pure RBAC (no custom user permissions)
     const usersWithPermissions = profiles?.map(profile => {
       const userRole = userRoles?.find(ur => ur.user_id === profile.id)
       const role = allRoles?.find(r => r.id === userRole?.role_id)
       
-      // Get permissions for this user's role
+      // Get permissions for this user's role (RBAC only)
       const rolePermissionIds = rolePermissions?.filter(rp => rp.role_id === userRole?.role_id).map(rp => rp.permission_id) || []
       
-      // Get custom permissions for this user
-      const userCustomPermissions = customUserPermissions?.filter(up => up.user_id === profile.id) || []
-      const grantedCustomPermissions = userCustomPermissions.filter(up => up.effect === 'grant').map(up => up.permission_id)
-      const revokedCustomPermissions = userCustomPermissions.filter(up => up.effect === 'revoke').map(up => up.permission_id)
-      
-      // FIXED LOGIC: If user has ANY custom permissions, ignore role permissions completely
-      let finalPermissionIds: string[] = []
-      
-      const hasCustomPermissions = grantedCustomPermissions.length > 0 || revokedCustomPermissions.length > 0
-      
-      if (hasCustomPermissions) {
-        // User has custom permissions - use ONLY custom permissions (ignore role)
-        finalPermissionIds = [...grantedCustomPermissions]
-        // Note: revoked permissions are simply not included (they're excluded by not being in granted)
-      } else {
-        // User has no custom permissions - use role permissions as default
-        finalPermissionIds = [...rolePermissionIds]
-      }
-      
-      const userPermissions = allPermissions?.filter(p => finalPermissionIds.includes(p.id)) || []
-      
-      if (profile.email === 'main@gmail.com') {
-        console.log(`🔍 DEBUGGING main@gmail.com permissions:`, {
-          rolePermissionIds: rolePermissionIds.length,
-          grantedCustomPermissions: grantedCustomPermissions.length,
-          revokedCustomPermissions: revokedCustomPermissions.length,
-          totalPermissions: userPermissions.length,
-          rolePermissions: rolePermissionIds,
-          revokedPermissions: revokedCustomPermissions,
-          finalPermissions: finalPermissionIds,
-          userPermissionCodes: userPermissions.map(p => p.code)
-        })
-      }
+      // Get user permissions from their role
+      const userPermissions = allPermissions?.filter(p => rolePermissionIds.includes(p.id)) || []
       
       return {
         id: profile.id,

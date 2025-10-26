@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient, getSupabaseClient } from '@/app/services/supabase-client'
+import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
-export async function DELETE(request: NextRequest) {
+// Handle both DELETE and POST methods for backwards compatibility
+async function handleDeleteUser(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require manage_users permission
+  const authResult = await requirePermission(request, 'manage_users')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const { userId, userEmail, userName, actorId } = await request.json()
 
@@ -11,151 +18,94 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🗑️ Starting user deletion process:', { userId, userEmail, userName })
+    console.log('🗑️ Starting user deletion process for:', userId)
 
-    // Use service role for admin operations
-    const supabaseAdmin = getSupabaseAdminClient()
-
-    // Use anon key for activity logging
     const supabase = getSupabaseClient()
 
-    // Step 1: Get user details before deletion for activity log
-    const { data: userDetails, error: fetchError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (fetchError) {
-      console.error('❌ Error fetching user details:', fetchError)
-    }
-
-    // Step 2: Log the deletion activity BEFORE deleting
-    const activityLogData = {
-      actor_id: actorId || null,
-      target_id: userId || null,
-      action: 'user_deletion',
-      meta_json: {
-        deleted_user: {
-          id: userId,
-          email: userEmail,
-          full_name: userName,
-          role: userDetails?.role,
-          employee_code: userDetails?.employee_code,
-          department: userDetails?.department,
-          designation: userDetails?.designation,
-          phone: userDetails?.phone
-        },
-        deletion_timestamp: new Date().toISOString(),
-        actor_id: actorId,
-        description: `User account ${userName || userEmail} was permanently deleted`
-      },
-      ip: '192.168.1.100'
-    }
-
-    const { error: activityError } = await supabase
-      .from('audit_logs')
-      .insert(activityLogData)
-
-    if (activityError) {
-      console.error('⚠️ Failed to log deletion activity:', activityError)
-      // Don't fail the deletion for this
-    } else {
-      console.log('✅ Deletion activity logged successfully')
-    }
-
-    // Step 3: Delete related records first (foreign key constraints)
-    
-    // Delete user roles
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .delete()
-      .eq('user_id', userId)
-
-    if (roleError) {
-      console.error('⚠️ Error deleting user roles:', roleError)
-      // Continue anyway
-    }
-
-    // Delete user permissions
-    const { error: permError } = await supabase
-      .from('user_permissions')
-      .delete()
-      .eq('user_id', userId)
-
-    if (permError) {
-      console.error('⚠️ Error deleting user permissions:', permError)
-      // Continue anyway
-    }
-
-    // Step 4: Delete from profiles table
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId)
-
-    if (profileError) {
-      console.error('❌ Error deleting user profile:', profileError)
-      return NextResponse.json({ 
-        error: `Failed to delete user profile: ${profileError.message}` 
-      }, { status: 500 })
-    }
-
-    console.log('✅ User profile deleted successfully')
-
-    // Step 5: Try to delete the Auth user using admin client
-    // Note: This might fail due to service role key issues, but we'll continue
+    // Try to delete from auth.users first using service role key
     try {
-      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+      const { createClient } = require('@supabase/supabase-js')
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      )
+
+      // Delete from auth.users
+      const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
       
-      if (authError) {
-        console.error('⚠️ Warning: Could not delete auth user:', authError.message)
-        // Don't fail the whole process - profile deletion is more important
+      if (authDeleteError) {
+        console.error('Auth user deletion error:', authDeleteError)
+        // Continue with profile deletion even if auth deletion fails
       } else {
         console.log('✅ Auth user deleted successfully')
       }
-    } catch (authDeleteError) {
-      console.error('⚠️ Warning: Auth user deletion failed:', authDeleteError)
-      // Continue anyway - the profile is deleted which is the main goal
+
+    } catch (error) {
+      console.error('Auth deletion error:', error)
+      // Continue with profile deletion
     }
 
-    // Step 6: Log completion activity
-    const completionLogData = {
-      actor_id: actorId || null,
-      target_id: userId || null,
-      action: 'user_deletion_completed',
-      meta_json: {
-        message: `User account ${userName || userEmail} has been permanently deleted`,
-        deletion_completed_at: new Date().toISOString(),
-        actor_id: actorId,
-        description: `Deletion of ${userName || userEmail} completed successfully`
-      },
-      ip: '192.168.1.100'
+    // Delete from profiles table
+    const { error: profileDeleteError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+
+    if (profileDeleteError) {
+      console.error('Profile deletion error:', profileDeleteError)
+      return NextResponse.json({ 
+        error: `Failed to delete user profile: ${profileDeleteError.message}` 
+      }, { status: 500 })
     }
 
-    const { error: completionError } = await supabase
+    console.log('✅ User deleted successfully from database')
+    
+    // Log audit trail
+    await supabase
       .from('audit_logs')
-      .insert(completionLogData)
-
-    if (completionError) {
-      console.error('⚠️ Failed to log completion activity:', completionError)
-    }
-
+      .insert({
+        actor_id: user.id, // ✅ FIXED: Get from authenticated user
+        target_id: userId,
+        action: 'user_deleted',
+        meta_json: {
+          deleted_user: {
+            email: userEmail,
+            full_name: userName
+          },
+          deleted_by: user.email,
+          deleted_at: new Date().toISOString()
+        }
+      })
+    
     return NextResponse.json({
       success: true,
-      message: `User ${userName || userEmail} has been permanently deleted`,
-      deletedUser: {
-        id: userId,
-        email: userEmail,
-        name: userName
-      },
-      timestamp: new Date().toISOString()
+      message: `User ${userName || userEmail} has been deleted`,
+      data: {
+        userId,
+        userEmail,
+        deletedAt: new Date().toISOString()
+      }
     })
 
   } catch (error: any) {
     console.error('❌ User deletion error:', error)
     return NextResponse.json({
-      error: error?.message || 'Internal server error during user deletion'
+      error: error?.message || 'Internal server error'
     }, { status: 500 })
   }
+}
+
+// Export both DELETE and POST methods
+export async function DELETE(request: NextRequest) {
+  return handleDeleteUser(request)
+}
+
+export async function POST(request: NextRequest) {
+  return handleDeleteUser(request)
 }

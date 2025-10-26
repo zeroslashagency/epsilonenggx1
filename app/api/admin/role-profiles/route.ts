@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/services/supabase-client'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
 // Get role profiles with their default permissions
 export async function GET(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require roles.view permission
+  const authResult = await requirePermission(request, 'roles.view')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     
@@ -58,16 +64,66 @@ export async function GET(request: NextRequest) {
 
 // Update role profiles with new default permissions
 export async function PUT(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require assign_roles permission
+  const authResult = await requirePermission(request, 'assign_roles')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     const body = await request.json()
     
+    // Handle single role update (from edit page)
+    if (body.roleId) {
+      const { roleId, name, description, is_manufacturing_role, permissions, updated_at } = body
+
+      // Update the role
+      const { error: updateError } = await supabase
+        .from('roles')
+        .update({
+          name,
+          description,
+          is_manufacturing_role,
+          permissions_json: permissions,
+          updated_at: updated_at || new Date().toISOString()
+        })
+        .eq('id', roleId)
+
+      if (updateError) throw updateError
+
+      // Log audit trail
+      await supabase
+        .from('audit_logs')
+        .insert({
+          actor_id: user.id, // ✅ FIXED: Get from authenticated user
+          action: 'role_updated',
+          meta_json: {
+            role_id: roleId,
+            role_name: name,
+            updated_fields: {
+              name,
+              description,
+              is_manufacturing_role,
+              permissions
+            },
+            updated_by: user.email,
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+          }
+        })
+
+      return NextResponse.json({
+        success: true,
+        message: `Role "${name}" updated successfully`
+      })
+    }
+    
+    // Handle bulk role updates (legacy format)
     const { roles } = body
     
     if (!Array.isArray(roles)) {
       return NextResponse.json({
         success: false,
-        error: 'Invalid request format. Expected roles array.'
+        error: 'Invalid request format. Expected roles array or roleId.'
       }, { status: 400 })
     }
 
@@ -111,13 +167,14 @@ export async function PUT(request: NextRequest) {
       await supabase
         .from('audit_logs')
         .insert({
-          actor_id: null, // TODO: Get from JWT token
+          actor_id: user.id, 
           action: 'role_profile_updated',
           meta_json: {
             role_name: roleKey,
             role_id: existingRole.id,
             new_permissions: permissions,
-            updated_by: 'admin_panel'
+            updated_by: user.email,
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
           }
         })
 
@@ -143,6 +200,11 @@ export async function PUT(request: NextRequest) {
 
 // Create a new role with default permissions
 export async function POST(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require assign_roles permission
+  const authResult = await requirePermission(request, 'assign_roles')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     const body = await request.json()
@@ -210,13 +272,14 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('audit_logs')
       .insert({
-        actor_id: null, // TODO: Get from JWT token
+        actor_id: user.id, 
         action: 'role_created',
         meta_json: {
           role_name: name,
           role_id: newRole.id,
           permissions,
-          created_by: 'admin_panel'
+          created_by: user.email,
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
         }
       })
 

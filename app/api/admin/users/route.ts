@@ -1,30 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/app/services/supabase-client'
+import { getSupabaseAdminClient } from '../../../lib/services/supabase-client'
+import { userListLimiter } from '../../../lib/rate-limiter'
+import { requirePermission } from '../../../lib/middleware/auth.middleware'
 
 // Admin API for user management - FIXED VERSION
 export async function GET(request: NextRequest) {
-  try {
-    const supabase = getSupabaseClient()
-    
-    // Get all users with their roles and permissions
-    const { data: users, error: usersError } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        email,
-        full_name,
-        role,
-        role_badge,
-        employee_code,
-        department,
-        designation,
-        phone,
-        created_at,
-        updated_at
-      `)
-      .order('created_at', { ascending: false })
+  // ✅ PERMISSION CHECK: Require manage_users permission
+  const authResult = await requirePermission(request, 'manage_users')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
 
-    if (usersError) throw usersError
+  try {
+    // RATE LIMITING: Check if user is making too many requests
+    const clientIP = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitKey = `user-list:${clientIP}`
+    
+    const rateLimitResult = await userListLimiter.check(rateLimitKey)
+    
+    if (!rateLimitResult.success) {
+      console.warn('🚨 Rate limit exceeded for user list:', { 
+        ip: clientIP, 
+        limit: rateLimitResult.limit
+      })
+      
+      return NextResponse.json({
+        error: 'Too many user list requests. Please try again later.',
+        rateLimitInfo: {
+          limit: rateLimitResult.limit,
+          remaining: rateLimitResult.remaining,
+          resetTime: rateLimitResult.reset
+        }
+      }, { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+        }
+      })
+    }
+
+    console.log('🔍 Fetching users... (Rate limit remaining:', rateLimitResult.remaining, ')')
+    const supabase = getSupabaseAdminClient()
+    console.log('✅ Supabase client created')
+    
+    // Get all users from auth.users (the real authenticated users)
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
+    
+    if (authError) throw authError
+
+    // Get all profiles
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+    
+    if (profilesError) throw profilesError
+
+    // Create a map of profiles by user ID for quick lookup
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
+
+    // Combine auth users with their profiles
+    const users = authUsers.users
+      .filter(authUser => !authUser.email?.startsWith('deleted_'))
+      .map(authUser => {
+        const profile = profileMap.get(authUser.id)
+        return {
+          id: authUser.id,
+          email: authUser.email || '',
+          full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.email || '',
+          role: profile?.role || 'Operator',
+          role_badge: profile?.role_badge || 'Operator',
+          employee_code: profile?.employee_code || null,
+          department: profile?.department || null,
+          designation: profile?.designation || null,
+          phone: profile?.phone || null,
+          created_at: authUser.created_at,
+          updated_at: authUser.updated_at || profile?.updated_at,
+          standalone_attendance: profile?.standalone_attendance || 'NO'
+        }
+      })
 
     // Get roles and permissions for each user
     const { data: userRoles, error: rolesError } = await supabase
@@ -35,7 +89,7 @@ export async function GET(request: NextRequest) {
           id,
           name,
           description
-        ),
+        )
       `)
 
     if (rolesError) throw rolesError
@@ -56,18 +110,29 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching users:', error)
+    console.error('❌ Error fetching users:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      error: error
+    })
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch users'
+      error: error instanceof Error ? error.message : 'Failed to fetch users',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 })
   }
 }
 
 // Create new user
 export async function POST(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require manage_users permission
+  const authResult = await requirePermission(request, 'manage_users')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseAdminClient()
     const body = await request.json()
     
     const {
@@ -169,8 +234,13 @@ export async function POST(request: NextRequest) {
 
 // Update user
 export async function PATCH(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require manage_users permission
+  const authResult = await requirePermission(request, 'manage_users')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseAdminClient()
     const body = await request.json()
     
     const {
@@ -256,8 +326,13 @@ export async function PATCH(request: NextRequest) {
 
 // Delete/deactivate user
 export async function DELETE(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require manage_users permission
+  const authResult = await requirePermission(request, 'manage_users')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseAdminClient()
     const userId = request.nextUrl.searchParams.get('userId')
 
     if (!userId) {

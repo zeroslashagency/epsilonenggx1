@@ -1,13 +1,34 @@
+/**
+ * Roles API Route
+ * Handles role management operations
+ * 
+ * @route /api/admin/roles
+ * @security Requires Admin or Super Admin role
+ */
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { successResponse, serverErrorResponse } from '@/app/lib/utils/api-response'
+import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
+import { createRoleSchema, updateRoleSchema } from '@/app/lib/validation/schemas'
+import { z } from 'zod'
 
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
-
-// Get all roles and permissions
+/**
+ * GET /api/admin/roles
+ * Retrieve all roles with their permissions
+ * 
+ * @param request - Next.js request object
+ * @returns JSON response with roles, permissions, and permission matrix
+ * @security Requires Admin or Super Admin role
+ */
 export async function GET(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require assign_roles permission
+  const authResult = await requirePermission(request, 'assign_roles')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = getSupabaseAdminClient()
     
     // Get all roles
     const { data: roles, error: rolesError } = await supabase
@@ -64,20 +85,37 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Create new role
+/**
+ * POST /api/admin/roles
+ * Create a new role with permissions
+ * 
+ * @param request - Next.js request object with role data
+ * @returns JSON response with created role
+ * @security Requires Super Admin role
+ */
 export async function POST(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require assign_roles permission
+  const authResult = await requirePermission(request, 'assign_roles')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const body = await request.json()
+    const supabase = getSupabaseAdminClient()
     
-    const { name, description, permissions = [] } = body
+    // Validate request body
+    const validation = await validateRequestBody(request, createRoleSchema)
+    if (!validation.success) return validation.response
+    
+    const { name, description, permissions = [], is_manufacturing_role = false, permissions_json = {} } = validation.data
 
     // Create role
     const { data: role, error: roleError } = await supabase
       .from('roles')
       .insert({
         name,
-        description
+        description,
+        is_manufacturing_role,
+        permissions_json
       })
       .select()
       .single()
@@ -93,7 +131,7 @@ export async function POST(request: NextRequest) {
 
       if (permissionQueryError) throw permissionQueryError
 
-      const rolePermissionInserts = permissionData.map(permission => ({
+      const rolePermissionInserts = permissionData.map((permission: any) => ({
         role_id: role.id,
         permission_id: permission.id
       }))
@@ -109,12 +147,12 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('audit_logs')
       .insert({
-        actor_id: null, // Get from JWT
+        actor_id: user.id,
         action: 'role_created',
         meta_json: {
           role_name: name,
           permissions,
-          created_by: 'admin_panel'
+          created_by: user.email
         }
       })
 
@@ -133,13 +171,28 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Update role permissions
+/**
+ * PATCH /api/admin/roles
+ * Update an existing role and its permissions
+ * 
+ * @param request - Next.js request object with updated role data
+ * @returns JSON response with success message
+ * @security Requires Super Admin role
+ */
 export async function PATCH(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require assign_roles permission
+  const authResult = await requirePermission(request, 'assign_roles')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const body = await request.json()
+    const supabase = getSupabaseAdminClient()
     
-    const { roleId, name, description, permissions = [] } = body
+    // Validate request body
+    const validation = await validateRequestBody(request, updateRoleSchema.extend({ roleId: z.string().uuid() }))
+    if (!validation.success) return validation.response
+    
+    const { roleId, name, description, permissions = [] } = validation.data
 
     // Update role
     const { error: roleError } = await supabase
@@ -168,7 +221,7 @@ export async function PATCH(request: NextRequest) {
 
       if (permissionQueryError) throw permissionQueryError
 
-      const rolePermissionInserts = permissionData.map(permission => ({
+      const rolePermissionInserts = permissionData.map((permission: any) => ({
         role_id: roleId,
         permission_id: permission.id
       }))
@@ -184,12 +237,12 @@ export async function PATCH(request: NextRequest) {
     await supabase
       .from('audit_logs')
       .insert({
-        actor_id: null, // Get from JWT
+        actor_id: user.id,
         action: 'role_updated',
         meta_json: {
           role_id: roleId,
           permissions,
-          updated_by: 'admin_panel'
+          updated_by: user.email
         }
       })
 

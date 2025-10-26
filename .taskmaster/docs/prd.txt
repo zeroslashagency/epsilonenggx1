@@ -1,0 +1,72 @@
+# Epsilon Scheduling System - Product Requirements Document
+
+## Project Overview
+Epsilon Scheduling is a comprehensive workforce management system for manufacturing environments. It provides scheduling, attendance tracking, analytics, and role-based access control.
+
+## Current Status
+- Authentication & RBAC system: COMPLETE
+- Dashboard: IMPLEMENTED
+- Schedule Generator: IMPLEMENTED (needs approval workflow)
+- Attendance: IMPLEMENTED (needs manual entry)
+- Analytics: BASIC (needs enhancement)
+
+## Development Phases
+
+### Phase 1: Cleanup & Stabilization (2 weeks)
+Remove placeholder modules that were never implemented and clean up the codebase.
+
+**Tasks:**
+1. Remove Production module from UI (sidebar, routes, components, permissions)
+2. Remove Monitoring module from UI (sidebar, routes, components, permissions)
+3. Clean up unused permissions (operate_machine, view_reports if unused)
+4. Update role editor permission list (remove Production/Monitoring sections)
+5. Update documentation (README, FEATURE_MATRIX, PROJECT_STRUCTURE_REPORT)
+
+### Phase 2: Schedule Module Completion (3 weeks)
+Add approval workflow and publishing to the schedule generator.
+
+**Tasks:**
+6. Add schedule approval database schema (schedule_approvals table, status column)
+7. Create schedule approval API (submit, approve, reject, list pending)
+8. Add schedule approval UI (submit button, approval queue, status indicators)
+9. Implement schedule publishing (publish approved schedules, lock, version history)
+10. Add schedule templates (CRUD, apply template, template library)
+
+### Phase 3: Attendance Module Enhancement (2 weeks)
+Add manual attendance entry and leave management.
+
+**Tasks:**
+11. Add manual attendance entry schema (manual_attendance table, approval workflow)
+12. Create manual attendance API (POST, GET, PUT with validation)
+13. Add manual attendance UI (manual entry form, bulk entry, approval queue)
+14. Implement leave management (request form, approval workflow, balance tracking, calendar)
+
+### Phase 4: Dashboard & Analytics (3 weeks)
+Enhance dashboard with customizable widgets and custom report builder.
+
+**Tasks:**
+15. Add dashboard widget system (framework, drag-and-drop, widget library, save layouts)
+16. Implement dashboard customization (add/remove widgets, resize, themes, export/import)
+17. Add custom report builder (query builder, chart types, filters, save reports)
+18. Add advanced data export (Excel, PDF, CSV, scheduled exports)
+
+### Phase 5: System Improvements (4 weeks)
+Add backup/restore and user impersonation for better system management.
+
+**Tasks:**
+19. Implement backup/restore system (database backup, file backup, automated backups, restore, verification)
+20. Add user impersonation (impersonate button, session switching, audit logging, exit impersonation, security checks)
+
+## Technical Stack
+- Frontend: Next.js 14, React, TypeScript, TailwindCSS
+- Backend: Next.js API Routes
+- Database: Supabase (PostgreSQL)
+- Authentication: Supabase Auth
+- Authorization: Custom RBAC system
+
+## Success Criteria
+- All 20 tasks completed
+- All features tested and working
+- Documentation updated
+- No regressions in existing features
+- Production-ready code quality

@@ -1,10 +1,10 @@
-"use client";
+"use client"
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useAuth } from "@/app/contexts/auth-context"
+import { useAuth } from "../lib/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 import EpsilonLogoParticles from "@/app/components/epsilon-logo-particles"

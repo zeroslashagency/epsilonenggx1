@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Use direct Supabase configuration
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
 // SmartOffice API Configuration
 const SMART_OFFICE_CONFIG = {
@@ -12,8 +9,13 @@ const SMART_OFFICE_CONFIG = {
 }
 
 export async function GET(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require attendance.sync permission
+  const authResult = await requirePermission(request, 'attendance.sync')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = getSupabaseAdminClient()
     
     // For cloud sync approach, we only sync recent data (last 24 hours)
     // The office PC script handles historical data sync
@@ -138,6 +140,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require attendance.sync permission
+  const authResult = await requirePermission(request, 'attendance.sync')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     // Manual sync trigger
     const result = await GET(request)

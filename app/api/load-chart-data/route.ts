@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/services/supabase-client'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require dashboard.view permission
+  const authResult = await requirePermission(request, 'dashboard.view')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     

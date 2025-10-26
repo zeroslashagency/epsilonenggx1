@@ -1,21 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://sxnaopzgaddvziplrlbe.supabase.co'
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { validateQueryParams } from '@/app/lib/middleware/validation.middleware'
+import { auditLogQuerySchema } from '@/app/lib/validation/schemas'
 
 // Get audit logs with filtering
 export async function GET(request: NextRequest) {
+  // ✅ PERMISSION CHECK: Require system.audit permission
+  const authResult = await requirePermission(request, 'system.audit')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
+  // Validate query parameters
+  const validation = validateQueryParams(request, auditLogQuerySchema)
+  if (!validation.success) return validation.response
+  
+  const { page, limit, action, userId, startDate, endDate } = validation.data
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const { searchParams } = new URL(request.url)
-    
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const action = searchParams.get('action')
-    const userId = searchParams.get('userId')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+    const supabase = getSupabaseAdminClient()
     
     const offset = (page - 1) * limit
 
@@ -112,8 +115,12 @@ export async function GET(request: NextRequest) {
 
 // Create audit log entry
 export async function POST(request: NextRequest) {
+  const authResult = await requireRole(request, ['Admin', 'Super Admin'])
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = getSupabaseAdminClient()
     const body = await request.json()
     
     const {
