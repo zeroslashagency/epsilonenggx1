@@ -232,8 +232,8 @@ export async function GET(request: NextRequest) {
       return punchHour < 18 // Before 6:00 PM
     }).length
     
-    // Get recent logs (last 10) with proper employee names and field mapping
-    const recentLogs = (attendanceLogs?.slice(0, 10) || []).map(log => {
+    // Get recent logs (all logs) with proper employee names and field mapping
+    const recentLogs = (attendanceLogs || []).map(log => {
       const employeeInfo = employeeMap.get(log.employee_code)
       return {
         ...log,
