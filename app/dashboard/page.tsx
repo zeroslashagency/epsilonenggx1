@@ -277,29 +277,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Error Banner */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-red-900">Error Loading Dashboard</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setError(null)
-                  fetchDashboardData()
-                }}
-                className="border-red-300 text-red-700 hover:bg-red-100"
-              >
-                Retry
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* ROW A: KPI Strip - 6 Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
