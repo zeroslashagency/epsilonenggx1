@@ -42,6 +42,9 @@ export default function AttendancePage() {
   const [allEmployees, setAllEmployees] = useState<Array<{code: string, name: string}>>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false)
+  const [todayError, setTodayError] = useState<string | null>(null)
+  const [allTrackError, setAllTrackError] = useState<string | null>(null)
+  const [employeeError, setEmployeeError] = useState<string | null>(null)
 
   // Fetch TODAY's data only (independent from filters)
   const fetchTodayData = async () => {
@@ -65,6 +68,7 @@ export default function AttendancePage() {
       }
     } catch (error) {
       console.error('Error fetching today\'s data:', error)
+      setTodayError(getErrorMessage(error))
     } finally {
       setTodayLoading(false)
     }
@@ -96,6 +100,7 @@ export default function AttendancePage() {
       }
     } catch (error) {
       console.error('Error fetching All Track Records:', error)
+      setAllTrackError(getErrorMessage(error))
     } finally {
       setAllTrackLoading(false)
     }
@@ -123,6 +128,7 @@ export default function AttendancePage() {
       }
     } catch (error) {
       console.error('Failed to fetch employees:', error)
+      setEmployeeError('Failed to load employee list. Some features may be limited.')
     }
   }
 
@@ -543,6 +549,30 @@ export default function AttendancePage() {
               </div>
             </div>
 
+            {todayError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-red-900">Failed to Load Today's Data</h3>
+                    <p className="text-sm text-red-700 mt-1">{todayError}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setTodayError(null)
+                      fetchTodayData()
+                    }}
+                    className="border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {todayLoading ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-5">
                 <RefreshCw className="h-12 w-12 text-primary animate-spin" />
@@ -671,6 +701,9 @@ export default function AttendancePage() {
               
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Employee</label>
+                {employeeError && (
+                  <p className="text-xs text-red-600 mb-1">{employeeError}</p>
+                )}
                 <div className="relative">
                   <button
                     onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
@@ -761,6 +794,30 @@ export default function AttendancePage() {
               </div>
             </div>
 
+            {allTrackError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-red-900">Failed to Load Records</h3>
+                    <p className="text-sm text-red-700 mt-1">{allTrackError}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setAllTrackError(null)
+                      fetchAllTrackRecords()
+                    }}
+                    className="border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {showAllTrackRecords && allTrackLoading && (
               <div className="flex flex-col items-center justify-center py-20 space-y-5">
                 <RefreshCw className="h-12 w-12 text-primary animate-spin" />
@@ -768,7 +825,7 @@ export default function AttendancePage() {
               </div>
             )}
             
-            {showAllTrackRecords && !allTrackLoading && (
+            {showAllTrackRecords && !allTrackLoading && !allTrackError && (
               <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm bg-card">
                 <Table>
                 <TableHeader>
