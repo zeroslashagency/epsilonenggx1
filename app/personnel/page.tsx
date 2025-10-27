@@ -5,6 +5,7 @@ import { User, UserPlus, Shield, ArrowUpDown, Zap, Download, Calendar } from 'lu
 import Link from 'next/link'
 import { ZohoLayout } from '../components/zoho-ui'
 import * as XLSX from 'xlsx'
+import { calculateDateRange } from '@/lib/utils/date-utils'
 
 interface Employee {
   id: string
