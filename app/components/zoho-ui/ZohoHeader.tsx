@@ -17,11 +17,14 @@ import { useTheme } from '@/app/lib/contexts/theme-context'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 
 interface ZohoHeaderProps {
+  breadcrumbs?: any
   sidebarCollapsed?: boolean
 }
 
-export function ZohoHeader({ sidebarCollapsed = false }: ZohoHeaderProps) {
-  const { theme, toggleTheme } = useTheme()
+export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeaderProps) {
+  const themeContext = useTheme()
+  const theme = themeContext?.theme || 'light'
+  const toggleTheme = themeContext?.toggleTheme || (() => {})
   const { userEmail, logout } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
