@@ -52,10 +52,14 @@ export default function MaintenancePage() {
           setLoading(false)
         }
       }
-    } finally {
-      setLoading(false)
     }
-  }
+    
+    loadMaintenanceData()
+    
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const getStatusBadge = (status: string) => {
     const config = {
