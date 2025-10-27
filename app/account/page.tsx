@@ -4,18 +4,43 @@ import { useState, useEffect } from 'react'
 import { User, Mail, Shield, Calendar, Activity, Key } from 'lucide-react'
 import { ZohoLayout } from '../components/zoho-ui'
 import { useAuth } from '../lib/contexts/auth-context'
+import { createClient } from '@/app/lib/utils/supabase/client'
 
 export default function AccountPage() {
   const { user, userPermissions } = useAuth()
   const [userData, setUserData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [resetting, setResetting] = useState(false)
+  const supabase = createClient()
 
   useEffect(() => {
-    // Fetch current user data
+    // Fetch current user data from Supabase
     const fetchUserData = async () => {
       try {
-        // For now, use the auth context user data
-        setUserData(user)
+        const { data: { user: currentUser }, error } = await supabase.auth.getUser()
+        
+        if (error) {
+          console.error('Error fetching user:', error)
+          return
+        }
+
+        if (currentUser) {
+          // Fetch additional user profile data from users table
+          const { data: profileData, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single()
+
+          if (profileError) {
+            console.error('Error fetching profile:', profileError)
+          }
+
+          setUserData({
+            ...currentUser,
+            profile: profileData
+          })
+        }
       } catch (error) {
         console.error('Error fetching user data:', error)
       } finally {
@@ -25,6 +50,32 @@ export default function AccountPage() {
 
     fetchUserData()
   }, [user])
+
+  const handlePasswordReset = async () => {
+    if (!userData?.email) {
+      alert('No email address found')
+      return
+    }
+
+    setResetting(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userData.email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+
+      if (error) {
+        console.error('Error sending reset email:', error)
+        alert('Failed to send password reset email: ' + error.message)
+      } else {
+        alert('Password reset email sent! Check your inbox.')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Failed to send password reset email')
+    } finally {
+      setResetting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -43,11 +94,11 @@ export default function AccountPage() {
         <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
           <div className="flex items-start gap-6">
             <div className="w-24 h-24 bg-gradient-to-br from-[#2C7BE5] to-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-              {userData?.email?.charAt(0).toUpperCase() || 'U'}
+              {(userData?.profile?.full_name || userData?.email)?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1">
               <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white mb-2">
-                {userData?.user_metadata?.full_name || userData?.email || 'User Account'}
+                {userData?.profile?.full_name || userData?.user_metadata?.full_name || userData?.email || 'User Account'}
               </h1>
               <div className="flex items-center gap-4 text-sm text-[#95AAC9]">
                 <div className="flex items-center gap-2">
@@ -56,7 +107,7 @@ export default function AccountPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4" />
-                  {userData?.user_metadata?.role || 'User'}
+                  {userData?.profile?.role || userData?.user_metadata?.role || 'User'}
                 </div>
               </div>
             </div>
@@ -75,7 +126,7 @@ export default function AccountPage() {
               <div>
                 <label className="text-sm font-medium text-[#95AAC9]">Full Name</label>
                 <p className="text-[#12263F] dark:text-white">
-                  {userData?.user_metadata?.full_name || 'Not set'}
+                  {userData?.profile?.full_name || userData?.user_metadata?.full_name || 'Not set'}
                 </p>
               </div>
               <div>
@@ -85,13 +136,13 @@ export default function AccountPage() {
               <div>
                 <label className="text-sm font-medium text-[#95AAC9]">Employee Code</label>
                 <p className="text-[#12263F] dark:text-white">
-                  {userData?.user_metadata?.employee_code || 'Not set'}
+                  {userData?.profile?.employee_code || userData?.user_metadata?.employee_code || 'Not set'}
                 </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-[#95AAC9]">Role</label>
                 <p className="text-[#12263F] dark:text-white">
-                  {userData?.user_metadata?.role || 'User'}
+                  {userData?.profile?.role || userData?.user_metadata?.role || 'User'}
                 </p>
               </div>
             </div>
@@ -164,25 +215,18 @@ export default function AccountPage() {
             <Key className="w-5 h-5" />
             Security
           </h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-[#12263F] dark:text-white">Password</p>
-                <p className="text-sm text-[#95AAC9]">Last changed: Not available</p>
-              </div>
-              <button className="px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors">
-                Change Password
-              </button>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-[#12263F] dark:text-white">Password</p>
+              <p className="text-sm text-[#95AAC9]">Reset your password via email</p>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-[#12263F] dark:text-white">Two-Factor Authentication</p>
-                <p className="text-sm text-[#95AAC9]">Add an extra layer of security</p>
-              </div>
-              <button className="px-4 py-2 border border-[#E3E6F0] dark:border-gray-700 text-[#12263F] dark:text-white text-sm rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors">
-                Enable 2FA
-              </button>
-            </div>
+            <button 
+              onClick={handlePasswordReset}
+              disabled={resetting}
+              className="px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {resetting ? 'Sending...' : 'Change Password'}
+            </button>
           </div>
         </div>
       </div>
