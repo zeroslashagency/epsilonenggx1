@@ -4,27 +4,25 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  Settings, 
-  ChevronLeft,
-  ChevronRight,
-  UserCircle,
-  LogOut,
-  Shield,
-  Clock,
+  LayoutDashboard,
+  Calendar,
   BarChart3,
-  FileText,
   TrendingUp,
-  UserCheck,
   Package,
-  Cpu,
-  Bell,
+  Users,
+  UserPlus,
   Wrench,
-  User,
+  Bell,
+  FileText,
+  Shield,
   Activity,
-  CheckSquare
+  Settings,
+  User,
+  Clock,
+  Factory,
+  CheckSquare,
+  AlertTriangle,
+  ClipboardList
 } from 'lucide-react'
 import { useAuth } from '../../lib/contexts/auth-context'
 
@@ -164,18 +162,18 @@ export function ZohoSidebar({ collapsed, onToggleAction }: { collapsed: boolean;
       label: 'Settings',
       href: '/settings',
       icon: Settings,
-      children: [
+      items: [
         {
           id: 'user-management',
           label: 'User Management',
-          href: '/users',
+          href: '/settings/users',
           icon: Users
         },
         {
           id: 'add-users',
           label: 'Add Users',
-          href: '/users?action=add',
-          icon: UserCheck
+          href: '/settings/add-users',
+          icon: UserPlus
         },
         {
           id: 'role-profiles',
