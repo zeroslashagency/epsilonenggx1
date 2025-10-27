@@ -122,7 +122,7 @@ export default function ActivityLogsPage() {
               User Management
             </Link>
             <Link
-              href="/users?action=add"
+              href="/settings/users/add"
               className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
             >
               <UserPlus className="w-4 h-4" />
