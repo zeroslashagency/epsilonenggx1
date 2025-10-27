@@ -676,15 +676,15 @@ export default function AttendancePage() {
                         className="hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
                       >
                         <TableCell className="font-semibold py-4">{log.employee_code}</TableCell>
-{{ ... }}
+                        <TableCell className="font-medium">{log.employee_name}</TableCell>
                         <TableCell>
-                          <StatusBadge status={record.punch_direction as any} />
+                          <StatusBadge status={log.punch_direction as any} />
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {new Date(record.log_date).toLocaleDateString()}
+                          {new Date(log.log_date).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-muted-foreground font-mono text-sm">
-                          {new Date(record.log_date).toLocaleTimeString()}
+                          {new Date(log.log_date).toLocaleTimeString()}
                         </TableCell>
                       </TableRow>
                     ))}
