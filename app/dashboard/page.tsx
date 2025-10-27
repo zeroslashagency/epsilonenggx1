@@ -187,7 +187,7 @@ export default function DashboardPage() {
     <ZohoLayout breadcrumbs={[{ label: 'Dashboard' }]}>
       <div className="space-y-4">
         {/* Global Header Bar */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 rounded-xl p-4 shadow-lg">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-800 dark:to-indigo-800 rounded-xl p-4 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div>
@@ -295,7 +295,7 @@ export default function DashboardPage() {
               {/* KPI Card 1: Total Employees */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer group">
                 <div className="flex items-start justify-between mb-2">
-                  <Users className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                     <ArrowUp className="w-3 h-3" />
                     <span>+2%</span>
@@ -306,7 +306,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Employees</div>
                 <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full w-full bg-gradient-to-r from-purple-500 to-purple-600"></div>
+                  <div className="h-full w-full bg-gradient-to-r from-blue-500 to-blue-600"></div>
                 </div>
               </div>
 
@@ -423,7 +423,7 @@ export default function DashboardPage() {
               </div>
               
               {/* Chart Placeholder */}
-              <div className="h-80 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+              <div className="h-80 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
                 <div className="text-center">
                   <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-600 dark:text-gray-400 font-medium">Production Chart</p>
@@ -461,10 +461,10 @@ export default function DashboardPage() {
                 <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Active time</div>
               </div>
 
-              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-700">
+              <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-lg p-4 border border-pink-200 dark:border-pink-700">
                 <div className="flex items-center gap-2 mb-2">
-                  <Wrench className="w-5 h-5 text-red-600" />
-                  <span className="text-xs font-semibold text-red-700 dark:text-red-400">MAINTENANCE</span>
+                  <Wrench className="w-5 h-5 text-pink-600" />
+                  <span className="text-xs font-semibold text-pink-700 dark:text-pink-400">MAINTENANCE</span>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">2</div>
                 <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Due soon</div>
@@ -507,7 +507,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 rounded-xl p-5 shadow-lg">
+            <div className="bg-gradient-to-br from-blue-600 to-cyan-600 dark:from-blue-800 dark:to-cyan-800 rounded-xl p-5 shadow-lg">
               <h3 className="font-bold text-white mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5" />
                 Quick Actions
@@ -626,7 +626,7 @@ export default function DashboardPage() {
                 { reason: 'Machine Maintenance', minutes: 85, color: 'bg-red-500' },
                 { reason: 'Material Shortage', minutes: 42, color: 'bg-orange-500' },
                 { reason: 'Setup Time', minutes: 28, color: 'bg-yellow-500' },
-                { reason: 'Quality Issues', minutes: 15, color: 'bg-purple-500' }
+                { reason: 'Quality Issues', minutes: 15, color: 'bg-teal-500' }
               ].map((item, idx) => (
                 <div key={idx} className="space-y-1">
                   <div className="flex items-center justify-between">
