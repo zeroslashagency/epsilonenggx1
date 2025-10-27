@@ -187,10 +187,43 @@ export default function PersonnelPage() {
       }
     } catch (error) {
       console.error('Failed to fetch attendance stats:', error)
+      setAttendanceStats({ presentDays: 0, absentDays: 0, lateArrivals: 0, totalPunches: 0 })
+    } finally {
+      setLoadingStats(false)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedEmployee?.employee_code) {
+      fetchAttendanceStats(selectedEmployee.employee_code)
+    }
+  }, [selectedEmployee])
 
   return (
-    <ZohoLayout breadcrumbs={[{ label: 'Production' }, { label: 'Personnel' }]}>
+    <ZohoLayout breadcrumbs={[]}>
       <div className="space-y-6">
+        {/* Tab Navigation */}
+        <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
+          <div className="flex items-center gap-2 px-6">
+            <Link href="/settings/users" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
+              <User className="w-4 h-4" />
+              User Management
+            </Link>
+            <Link href="/settings/add-users" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
+              <UserPlus className="w-4 h-4" />
+              Add Users
+            </Link>
+            <Link href="/settings/roles" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
+              <Shield className="w-4 h-4" />
+              Role Profiles
+            </Link>
+            <Link href="/settings/activity-logs" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
+              <Zap className="w-4 h-4" />
+              Activity Logging
+            </Link>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
