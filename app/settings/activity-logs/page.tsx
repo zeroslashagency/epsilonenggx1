@@ -52,15 +52,29 @@ export default function ActivityLogsPage() {
   const [fromDate, setFromDate] = useState<string>('')
   const [toDate, setToDate] = useState<string>('')
   const [activeTab, setActiveTab] = useState('activity-logging')
+  
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     fetchActivityLogs()
-  }, [])
+  }, [page, pageSize, filterAction, filterUser])
 
   const fetchActivityLogs = async () => {
     setLoading(true)
     try {
-      const data = await apiGet('/api/admin/all-activity-logs')
+      const params = new URLSearchParams()
+      params.append('page', page.toString())
+      params.append('limit', pageSize.toString())
+      if (filterAction !== 'all') params.append('action', filterAction)
+      if (filterUser !== 'all') params.append('user', filterUser)
+      if (fromDate) params.append('from_date', fromDate)
+      if (toDate) params.append('to_date', toDate)
+      
+      const data = await apiGet(`/api/admin/all-activity-logs?${params.toString()}`)
       
       if (data.success) {
         setLogs(data.logs || [])
@@ -71,6 +85,12 @@ export default function ActivityLogsPage() {
           permissionChanges: 0,
           recentActivities: 0
         })
+        
+        // Update pagination metadata
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages || 1)
+          setTotalCount(data.pagination.totalCount || 0)
+        }
       }
     } catch (error) {
       console.error('Error fetching activity logs:', error)
@@ -99,11 +119,8 @@ export default function ActivityLogsPage() {
     )
   }
 
-  const filteredLogs = logs.filter(log => {
-    const matchesActionFilter = filterAction === 'all' || log.action === filterAction
-    const matchesUserFilter = filterUser === 'all' || log.user_id === filterUser
-    return matchesActionFilter && matchesUserFilter
-  })
+  // Filtering now handled server-side via API params
+  const filteredLogs = logs
 
   const uniqueUsers = Array.from(new Set(logs.map(log => log.actor).filter(Boolean)))
   const uniqueActions = Array.from(new Set(logs.map(log => log.action)))
@@ -294,7 +311,24 @@ export default function ActivityLogsPage() {
           <div className="p-6 border-b border-[#E3E6F0] dark:border-gray-700">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[#12263F] dark:text-white">System Activity Logs</h2>
-              <p className="text-sm text-[#95AAC9]">Showing {filteredLogs.length} of {stats.totalActivities} activities</p>
+              <div className="flex items-center gap-4">
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value))
+                    setPage(1)
+                  }}
+                  className="px-3 py-1 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white"
+                >
+                  <option value="25">25 per page</option>
+                  <option value="50">50 per page</option>
+                  <option value="100">100 per page</option>
+                  <option value="200">200 per page</option>
+                </select>
+                <p className="text-sm text-[#95AAC9]">
+                  Showing {((page - 1) * pageSize) + 1}-{Math.min(page * pageSize, totalCount)} of {totalCount}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -341,6 +375,60 @@ export default function ActivityLogsPage() {
               ))
             )}
           </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="p-6 border-t border-[#E3E6F0] dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-[#95AAC9]">
+                  Page {page} of {totalPages}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(1)}
+                    disabled={page === 1}
+                    className="px-3 py-1 text-sm border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-[#12263F] dark:text-white"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1 text-sm border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-[#12263F] dark:text-white"
+                  >
+                    Previous
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={page}
+                    onChange={(e) => {
+                      const newPage = parseInt(e.target.value)
+                      if (newPage >= 1 && newPage <= totalPages) {
+                        setPage(newPage)
+                      }
+                    }}
+                    className="w-16 px-2 py-1 text-sm text-center border border-[#E3E6F0] dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-[#12263F] dark:text-white"
+                  />
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="px-3 py-1 text-sm border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-[#12263F] dark:text-white"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setPage(totalPages)}
+                    disabled={page === totalPages}
+                    className="px-3 py-1 text-sm border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-[#12263F] dark:text-white"
+                  >
+                    Last
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </ZohoLayout>
