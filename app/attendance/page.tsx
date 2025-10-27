@@ -41,19 +41,92 @@ export default function AttendancePage() {
   const fetchAttendanceData = async (range: string = dateRange) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (range === 'custom' && fromDate && toDate) {
-        params.append('fromDate', fromDate)
-        params.append('toDate', toDate)
-      } else {
-        params.append('dateRange', range)
+      // Calculate date range for API call
+      const now = new Date()
+      let fromDateParam: string
+      let toDateParam: string
+      
+      switch(range) {
+        case 'today':
+          fromDateParam = toDateParam = now.toISOString().split('T')[0]
+          break
+        case 'yesterday':
+          const yesterday = new Date(now)
+          yesterday.setDate(yesterday.getDate() - 1)
+          fromDateParam = toDateParam = yesterday.toISOString().split('T')[0]
+          break
+        case 'week':
+          const weekStart = new Date(now)
+          weekStart.setDate(weekStart.getDate() - now.getDay())
+          fromDateParam = weekStart.toISOString().split('T')[0]
+          toDateParam = now.toISOString().split('T')[0]
+          break
+        case 'prev-week':
+          const prevWeekEnd = new Date(now)
+          prevWeekEnd.setDate(prevWeekEnd.getDate() - now.getDay() - 1)
+          const prevWeekStart = new Date(prevWeekEnd)
+          prevWeekStart.setDate(prevWeekStart.getDate() - 6)
+          fromDateParam = prevWeekStart.toISOString().split('T')[0]
+          toDateParam = prevWeekEnd.toISOString().split('T')[0]
+          break
+        case 'month':
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          fromDateParam = monthStart.toISOString().split('T')[0]
+          toDateParam = monthEnd.toISOString().split('T')[0]
+          break
+        case 'prev-month':
+          const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+          const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+          fromDateParam = prevMonthStart.toISOString().split('T')[0]
+          toDateParam = prevMonthEnd.toISOString().split('T')[0]
+          break
+        case 'quarter':
+          const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+          fromDateParam = quarterStart.toISOString().split('T')[0]
+          toDateParam = now.toISOString().split('T')[0]
+          break
+        case 'prev-quarter':
+          const prevQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
+          const prevQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
+          fromDateParam = prevQuarterStart.toISOString().split('T')[0]
+          toDateParam = prevQuarterEnd.toISOString().split('T')[0]
+          break
+        case 'year':
+          const yearStart = new Date(now.getFullYear(), 0, 1)
+          fromDateParam = yearStart.toISOString().split('T')[0]
+          toDateParam = now.toISOString().split('T')[0]
+          break
+        case 'prev-year':
+          const prevYearStart = new Date(now.getFullYear() - 1, 0, 1)
+          const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31)
+          fromDateParam = prevYearStart.toISOString().split('T')[0]
+          toDateParam = prevYearEnd.toISOString().split('T')[0]
+          break
+        case 'custom':
+          if (fromDate && toDate) {
+            fromDateParam = fromDate
+            toDateParam = toDate
+          } else {
+            fromDateParam = toDateParam = now.toISOString().split('T')[0]
+          }
+          break
+        default:
+          fromDateParam = toDateParam = now.toISOString().split('T')[0]
       }
+      
+      const params = new URLSearchParams()
+      params.append('fromDate', fromDateParam)
+      params.append('toDate', toDateParam)
+      
+      console.log(`📅 Fetching attendance from ${fromDateParam} to ${toDateParam}`)
       
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
         setAttendanceData(response.data)
         setRecentLogs(response.data.recentLogs || [])
         setLastSyncTime(new Date())
+        console.log(`✅ Loaded ${response.data.allLogs?.length || 0} attendance logs`)
       }
     } catch (error) {
       console.error('Error fetching attendance:', error)
