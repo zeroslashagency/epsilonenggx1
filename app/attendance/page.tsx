@@ -33,7 +33,8 @@ export default function AttendancePage() {
   const [recordsPerPage, setRecordsPerPage] = useState("all")
   const [customLimit, setCustomLimit] = useState("")
   const [showAllTrackRecords, setShowAllTrackRecords] = useState(false)
-  const [allTrackData, setAllTrackData] = useState<AttendanceLog[]>([])
+  const [allTrackData, setAllTrackData] = useState<any>(null)
+  const [allTrackLoading, setAllTrackLoading] = useState(false)
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [showDateDropdown, setShowDateDropdown] = useState(false)
   const [allEmployees, setAllEmployees] = useState<Array<{code: string, name: string}>>([])
@@ -135,6 +136,102 @@ export default function AttendancePage() {
       console.error('Error fetching attendance:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Fetch All Track Records data separately
+  const fetchAllTrackRecords = async () => {
+    setAllTrackLoading(true)
+    try {
+      // Calculate date range for API call
+      const now = new Date()
+      let fromDateParam: string
+      let toDateParam: string
+      
+      switch(dateRange) {
+        case 'today':
+          fromDateParam = toDateParam = now.toISOString().split('T')[0]
+          break
+        case 'yesterday':
+          const yesterday = new Date(now)
+          yesterday.setDate(yesterday.getDate() - 1)
+          fromDateParam = toDateParam = yesterday.toISOString().split('T')[0]
+          break
+        case 'week':
+          const weekStart = new Date(now)
+          weekStart.setDate(weekStart.getDate() - now.getDay())
+          fromDateParam = weekStart.toISOString().split('T')[0]
+          toDateParam = now.toISOString().split('T')[0]
+          break
+        case 'prev-week':
+          const prevWeekEnd = new Date(now)
+          prevWeekEnd.setDate(prevWeekEnd.getDate() - now.getDay() - 1)
+          const prevWeekStart = new Date(prevWeekEnd)
+          prevWeekStart.setDate(prevWeekStart.getDate() - 6)
+          fromDateParam = prevWeekStart.toISOString().split('T')[0]
+          toDateParam = prevWeekEnd.toISOString().split('T')[0]
+          break
+        case 'month':
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          fromDateParam = monthStart.toISOString().split('T')[0]
+          toDateParam = monthEnd.toISOString().split('T')[0]
+          break
+        case 'prev-month':
+          const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+          const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+          fromDateParam = prevMonthStart.toISOString().split('T')[0]
+          toDateParam = prevMonthEnd.toISOString().split('T')[0]
+          break
+        case 'quarter':
+          const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+          fromDateParam = quarterStart.toISOString().split('T')[0]
+          toDateParam = now.toISOString().split('T')[0]
+          break
+        case 'prev-quarter':
+          const prevQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
+          const prevQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
+          fromDateParam = prevQuarterStart.toISOString().split('T')[0]
+          toDateParam = prevQuarterEnd.toISOString().split('T')[0]
+          break
+        case 'year':
+          const yearStart = new Date(now.getFullYear(), 0, 1)
+          fromDateParam = yearStart.toISOString().split('T')[0]
+          toDateParam = now.toISOString().split('T')[0]
+          break
+        case 'prev-year':
+          const prevYearStart = new Date(now.getFullYear() - 1, 0, 1)
+          const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31)
+          fromDateParam = prevYearStart.toISOString().split('T')[0]
+          toDateParam = prevYearEnd.toISOString().split('T')[0]
+          break
+        case 'custom':
+          if (fromDate && toDate) {
+            fromDateParam = fromDate
+            toDateParam = toDate
+          } else {
+            fromDateParam = toDateParam = now.toISOString().split('T')[0]
+          }
+          break
+        default:
+          fromDateParam = toDateParam = now.toISOString().split('T')[0]
+      }
+      
+      const params = new URLSearchParams()
+      params.append('fromDate', fromDateParam)
+      params.append('toDate', toDateParam)
+      
+      console.log(`📅 Fetching All Track Records from ${fromDateParam} to ${toDateParam}`)
+      
+      const response = await apiGet(`/api/get-attendance?${params.toString()}`)
+      if (response.success && response.data) {
+        setAllTrackData(response.data)
+        console.log(`✅ Loaded ${response.data.allLogs?.length || 0} All Track Records`)
+      }
+    } catch (error) {
+      console.error('Error fetching All Track Records:', error)
+    } finally {
+      setAllTrackLoading(false)
     }
   }
 
@@ -855,7 +952,7 @@ export default function AttendancePage() {
                   className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
                   onClick={() => {
                     setShowAllTrackRecords(true)
-                    fetchAttendanceData(dateRange)
+                    fetchAllTrackRecords()
                   }}
                 >
                   Apply Filters
@@ -863,7 +960,14 @@ export default function AttendancePage() {
               </div>
             </div>
 
-            {showAllTrackRecords && (
+            {showAllTrackRecords && allTrackLoading && (
+              <div className="flex flex-col items-center justify-center py-20 space-y-5">
+                <RefreshCw className="h-12 w-12 text-primary animate-spin" />
+                <p className="text-muted-foreground">Loading records...</p>
+              </div>
+            )}
+            
+            {showAllTrackRecords && !allTrackLoading && (
               <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm bg-card">
                 <Table>
                 <TableHeader>
@@ -876,7 +980,12 @@ export default function AttendancePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendanceData?.allLogs?.slice(0, parseInt(recordsPerPage)).map((record: any, index: number) => (
+                  {(() => {
+                    const logs = allTrackData?.allLogs || []
+                    const limit = recordsPerPage === 'all' ? logs.length : 
+                                  recordsPerPage === 'custom' ? parseInt(customLimit) || logs.length :
+                                  parseInt(recordsPerPage)
+                    return logs.slice(0, limit).map((record: any, index: number) => (
                     <TableRow 
                       key={index} 
                       className="hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
@@ -893,7 +1002,8 @@ export default function AttendancePage() {
                         {new Date(record.log_date).toLocaleTimeString()}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    ))
+                  })()}
                 </TableBody>
               </Table>
             </div>
