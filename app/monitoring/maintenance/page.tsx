@@ -20,6 +20,10 @@ interface MaintenanceRecord {
 export default function MaintenancePage() {
   const [records, setRecords] = useState<MaintenanceRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     let isMounted = true
@@ -27,10 +31,13 @@ export default function MaintenancePage() {
     const loadMaintenanceData = async () => {
       setLoading(true)
       try {
-        const data = await apiGet('/api/monitoring/maintenance')
+        const params = new URLSearchParams()
+        params.append('page', page.toString())
+        params.append('limit', pageSize.toString())
+        
+        const data = await apiGet(`/api/monitoring/maintenance?${params.toString()}`)
         
         if (isMounted && data.success) {
-          // Transform API data to match UI interface
           const transformedRecords = (data.data || []).map((r: any) => ({
             ...r,
             machine_id: r.machine?.machine_id || 'N/A',
@@ -38,6 +45,10 @@ export default function MaintenancePage() {
             technician: r.technician_name
           }))
           setRecords(transformedRecords)
+          if (data.pagination) {
+            setTotalPages(data.pagination.totalPages || 1)
+            setTotalCount(data.pagination.totalCount || 0)
+          }
         } else if (isMounted) {
           console.error('Error fetching maintenance records:', data.error)
           setRecords([])
@@ -59,7 +70,7 @@ export default function MaintenancePage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [page, pageSize])
 
   const getStatusBadge = (status: string) => {
     const config = {

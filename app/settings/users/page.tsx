@@ -37,6 +37,10 @@ const SYSTEM_FUNCTIONS = [
 export default function UsersPageZoho() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'scope' | 'activity' | 'security'>('overview')
   const [permissions, setPermissions] = useState<string[]>([])
@@ -56,10 +60,18 @@ export default function UsersPageZoho() {
     const loadUsers = async () => {
       setLoading(true)
       try {
-        const data = await apiGet('/api/admin/users')
+        const params = new URLSearchParams()
+        params.append('page', page.toString())
+        params.append('limit', pageSize.toString())
+        
+        const data = await apiGet(`/api/admin/users?${params.toString()}`)
         
         if (isMounted && data.success) {
           setUsers(data.data || [])
+          if (data.pagination) {
+            setTotalPages(data.pagination.totalPages || 1)
+            setTotalCount(data.pagination.totalCount || 0)
+          }
         }
       } catch (error) {
         if (isMounted) {
@@ -77,7 +89,7 @@ export default function UsersPageZoho() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [page, pageSize])
 
   useEffect(() => {
     console.log('🎨 Permissions state changed:', permissions)

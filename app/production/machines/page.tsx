@@ -22,6 +22,10 @@ export default function MachinesPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     let isMounted = true
@@ -30,17 +34,23 @@ export default function MachinesPage() {
       setLoading(true)
       try {
         const params = new URLSearchParams()
+        params.append('page', page.toString())
+        params.append('limit', pageSize.toString())
         if (statusFilter !== 'all') params.append('status', statusFilter)
+        if (searchTerm) params.append('search', searchTerm)
         
         const data = await apiGet(`/api/production/machines?${params.toString()}`)
         
         if (isMounted && data.success) {
-          // Transform API data to match UI interface
           const transformedMachines = (data.data || []).map((m: any) => ({
             ...m,
             current_order: m.current_order?.order_number || null
           }))
           setMachines(transformedMachines)
+          if (data.pagination) {
+            setTotalPages(data.pagination.totalPages || 1)
+            setTotalCount(data.pagination.totalCount || 0)
+          }
         } else if (isMounted) {
           console.error('Error fetching machines:', data.error)
           setMachines([])
@@ -61,7 +71,7 @@ export default function MachinesPage() {
     return () => {
       isMounted = false
     }
-  }, [statusFilter])
+  }, [page, pageSize, statusFilter, searchTerm])
 
   const getStatusBadge = (status: string) => {
     const config = {
@@ -73,13 +83,7 @@ export default function MachinesPage() {
     return config[status as keyof typeof config] || config.offline
   }
 
-  const filteredMachines = machines.filter(machine => {
-    const matchesSearch = machine.machine_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         machine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         machine.type.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || machine.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filteredMachines = machines
 
   return (
     <ZohoLayout>
