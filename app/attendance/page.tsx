@@ -30,7 +30,10 @@ export default function AttendancePage() {
   const [recentLogs, setRecentLogs] = useState<AttendanceLog[]>([])
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
-  const [recordsPerPage, setRecordsPerPage] = useState("50")
+  const [recordsPerPage, setRecordsPerPage] = useState("all")
+  const [customLimit, setCustomLimit] = useState("")
+  const [showAllTrackRecords, setShowAllTrackRecords] = useState(false)
+  const [allTrackData, setAllTrackData] = useState<AttendanceLog[]>([])
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [showDateDropdown, setShowDateDropdown] = useState(false)
   const [allEmployees, setAllEmployees] = useState<Array<{code: string, name: string}>>([])
@@ -692,6 +695,21 @@ export default function AttendancePage() {
                 </Table>
               </div>
             )}
+            
+            {!showAllTrackRecords && (
+              <div className="flex flex-col items-center justify-center py-20 space-y-5">
+                <div className="h-24 w-24 rounded-2xl bg-muted/50 flex items-center justify-center border border-border/50">
+                  <Clock className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="text-lg font-semibold text-foreground">No Filters Applied</p>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Select date range, employees, and click Apply Filters to view records
+                  </p>
+                </div>
+              </div>
+            )}
+            )}
           </div>
         </Card>
 
@@ -706,25 +724,99 @@ export default function AttendancePage() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">From Date</label>
-                <Input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="bg-card"
-                />
+                <label className="text-sm font-medium text-foreground">Date Range</label>
+                <Select value={dateRange} onValueChange={(value) => {
+                  setDateRange(value)
+                }}>
+                  <SelectTrigger className="bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="yesterday">Yesterday</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="prev-week">Previous Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                    <SelectItem value="prev-month">Previous Month</SelectItem>
+                    <SelectItem value="quarter">This Quarter</SelectItem>
+                    <SelectItem value="prev-quarter">Previous Quarter</SelectItem>
+                    <SelectItem value="year">This Year</SelectItem>
+                    <SelectItem value="prev-year">Previous Year</SelectItem>
+                    <SelectItem value="custom">Custom Range</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              
+              {dateRange === 'custom' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">From Date</label>
+                    <Input
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="bg-card"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">To Date</label>
+                    <Input
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="bg-card"
+                    />
+                  </div>
+                </>
+              )}
+              
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">To Date</label>
-                <Input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="bg-card"
-                />
+                <label className="text-sm font-medium text-foreground">Employee</label>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 border border-input rounded-md hover:bg-accent transition-colors bg-card"
+                  >
+                    <span className="text-sm">
+                      {selectedEmployees.length === allEmployees.length
+                        ? 'All Employees'
+                        : `${selectedEmployees.length} Selected`}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  {showEmployeeDropdown && (
+                    <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
+                      <div className="sticky top-0 bg-white border-b border-gray-200 p-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={selectedEmployees.length === allEmployees.length}
+                            onCheckedChange={toggleAllEmployees}
+                          />
+                          <span className="font-medium text-sm">Select All ({allEmployees.length})</span>
+                        </div>
+                      </div>
+                      <div className="p-2">
+                        {allEmployees.map((employee) => (
+                          <div
+                            key={employee.code}
+                            className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded"
+                          >
+                            <Checkbox
+                              checked={selectedEmployees.includes(employee.code)}
+                              onCheckedChange={() => toggleEmployee(employee.code)}
+                            />
+                            <span className="text-sm font-medium">{employee.name}</span>
+                            <span className="text-xs text-gray-500">({employee.code})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+              
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Records per page</label>
                 <Select value={recordsPerPage} onValueChange={setRecordsPerPage}>
@@ -732,13 +824,25 @@ export default function AttendancePage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">No Limit</SelectItem>
                     <SelectItem value="10">10 records</SelectItem>
                     <SelectItem value="25">25 records</SelectItem>
                     <SelectItem value="50">50 records</SelectItem>
                     <SelectItem value="100">100 records</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
+                {recordsPerPage === 'custom' && (
+                  <Input
+                    type="number"
+                    placeholder="Enter limit"
+                    value={customLimit}
+                    onChange={(e) => setCustomLimit(e.target.value)}
+                    className="bg-card mt-2"
+                  />
+                )}
               </div>
+              
               <div className="flex items-end gap-2">
                 <Button 
                   variant="outline"
@@ -750,15 +854,19 @@ export default function AttendancePage() {
                 </Button>
                 <Button 
                   className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
-                  onClick={() => fetchAttendanceData('custom')}
+                  onClick={() => {
+                    setShowAllTrackRecords(true)
+                    fetchAttendanceData(dateRange)
+                  }}
                 >
                   Apply Filters
                 </Button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm bg-card">
-              <Table>
+            {showAllTrackRecords && (
+              <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm bg-card">
+                <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 border-b border-border/50">
                     <TableHead className="font-bold text-foreground py-4">Employee Code</TableHead>
