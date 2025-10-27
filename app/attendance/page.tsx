@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { apiGet } from '@/app/lib/utils/api-client'
-import * as XLSX from 'xlsx'
 import { ZohoLayout } from '../components/zoho-ui'
+import * as XLSX from 'xlsx'
 import { calculateDateRange, getDateRangeLabel as getDateLabel } from '@/lib/utils/date-utils'
+import { AttendanceLog, TodayAttendanceData, AllTrackData } from '@/app/types'
 
 interface AttendanceLog {
   employee_code: string
@@ -27,7 +28,7 @@ export default function AttendancePage() {
   const [dateRange, setDateRange] = useState("today")
   const [employeeFilter, setEmployeeFilter] = useState("all")
   const [loading, setLoading] = useState(false)
-  const [todayData, setTodayData] = useState<any>(null)
+  const [todayData, setTodayData] = useState<TodayAttendanceData | null>(null)
   const [todayLoading, setTodayLoading] = useState(false)
   const [recentLogs, setRecentLogs] = useState<AttendanceLog[]>([])
   const [fromDate, setFromDate] = useState("")
@@ -35,7 +36,7 @@ export default function AttendancePage() {
   const [recordsPerPage, setRecordsPerPage] = useState("all")
   const [customLimit, setCustomLimit] = useState("")
   const [showAllTrackRecords, setShowAllTrackRecords] = useState(false)
-  const [allTrackData, setAllTrackData] = useState<any>(null)
+  const [allTrackData, setAllTrackData] = useState<AllTrackData | null>(null)
   const [allTrackLoading, setAllTrackLoading] = useState(false)
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [showDateDropdown, setShowDateDropdown] = useState(false)

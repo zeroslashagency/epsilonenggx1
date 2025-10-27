@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, Mail, Shield, Calendar, Activity, Key } from 'lucide-react'
 import { ZohoLayout } from '../components/zoho-ui'
-import { useAuth } from '../lib/contexts/auth-context'
-import { getSupabaseClient } from '../lib/services/supabase-client'
+import { User, Key, Mail, Shield } from 'lucide-react'
+import { useAuth } from '@/app/lib/contexts/auth-context'
+import { getSupabaseClient } from '@/app/lib/supabase/client'
+import { UserData } from '@/app/types'
 
 export default function AccountPage() {
   const { userPermissions } = useAuth()
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
   const supabase = getSupabaseClient()

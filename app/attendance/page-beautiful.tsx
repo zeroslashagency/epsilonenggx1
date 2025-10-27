@@ -1,30 +1,16 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Home, ChevronRight, Activity, Users, AlertCircle, UserX, UserCheck, Clock, Download, RefreshCw, Calendar } from "lucide-react"
-import { StatsCard } from "@/components/StatsCard"
-import { StatusBadge } from "@/components/StatusBadge"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { apiGet } from '@/app/lib/utils/api-client'
+import { ZohoLayout } from '../components/zoho-ui'
+import { Download, RefreshCw, Calendar, Users, TrendingUp, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
 import * as XLSX from 'xlsx'
-
-interface AttendanceLog {
-  employee_code: string
-  employee_name: string
-  log_date: string
-  punch_direction: string
-  sync_time: string
-}
+import { AttendanceLog, TodayAttendanceData } from '@/app/types'
 
 export default function AttendancePage() {
   const [dateRange, setDateRange] = useState("today")
   const [employeeFilter, setEmployeeFilter] = useState("all")
   const [loading, setLoading] = useState(false)
-  const [attendanceData, setAttendanceData] = useState<any>(null)
+  const [attendanceData, setAttendanceData] = useState<TodayAttendanceData | null>(null)
   const [recentLogs, setRecentLogs] = useState<AttendanceLog[]>([])
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")

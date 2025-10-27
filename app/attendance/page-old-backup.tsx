@@ -91,8 +91,8 @@ export default function AttendancePage() {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
-  const [employeeList, setEmployeeList] = useState<any[]>([])
-  const [analyticsData, setAnalyticsData] = useState<any>(null)
+  const [employeeList, setEmployeeList] = useState<Array<{code: string, name: string}>>([])
+  const [analyticsData, setAnalyticsData] = useState<AttendanceAnalytics | null>(null)
   const [showCharts, setShowCharts] = useState(false)
   // const [isConnected, setIsConnected] = useState(false) // REMOVED - not needed for cloud sync
   const [todayUniqueData, setTodayUniqueData] = useState<any[]>([])

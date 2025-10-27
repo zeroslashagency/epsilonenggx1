@@ -1,14 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Download, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { RefreshCw, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { HistoricalSyncResult } from '@/app/types'
 import { ZohoButton, ZohoBadge } from './zoho-ui'
 
 export default function HistoricalDataSync() {
   const [fromDate, setFromDate] = useState('2025-10-14')
   const [toDate, setToDate] = useState('2025-10-20')
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<HistoricalSyncResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const handleSync = async () => {

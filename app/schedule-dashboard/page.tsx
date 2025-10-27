@@ -1,46 +1,49 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { useAuth } from '@/app/lib/contexts/auth-context'
-import {
-  Target,
-  Users,
-  Factory,
-  Activity,
-  AlertCircle,
-  BarChart3,
-  User,
+import { useState, useEffect } from 'react'
+import { 
+  Calendar, 
+  Clock, 
+  TrendingUp, 
+  AlertCircle, 
   CheckCircle2,
-  ArrowLeft,
-  Cog,
-  RefreshCw,
-  LogOut,
-  Package,
-  Timer,
-  Cpu,
-  Gauge,
-  TrendingUp,
-  CheckCircle,
   XCircle,
-  Clock,
-  AlertTriangle,
-  TrendingDown,
-  PieChart,
-  Thermometer,
-  LineChart,
-  BarChart2,
-  UserCheck,
-  Flame,
-  Calendar
-} from "lucide-react"
+  RefreshCw,
+  Download,
+  Settings,
+  BarChart3,
+  Users,
+  Package,
+  Zap,
+  Target,
+  Activity
+} from 'lucide-react'
+import { useAuth } from '@/app/lib/contexts/auth-context'
+import { DashboardData } from '@/app/types'
+
+// Simple interfaces for dashboard data
+interface KPI {
+  label: string
+  value: string | number
+  change?: string
+  trend?: 'up' | 'down' | 'neutral'
+  icon: any
+  color: string
+}
+
+interface Schedule {
+  id: string
+  order: string
+  machine: string
+  startTime: string
+  endTime: string
+  status: 'completed' | 'in-progress' | 'pending' | 'delayed'
+  priority: 'high' | 'medium' | 'low'
+}
 
 export default function ScheduleDashboardSimple() {
   const [activeSection, setActiveSection] = useState("kpis")
-  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
   const { userEmail, logout } = useAuth()
