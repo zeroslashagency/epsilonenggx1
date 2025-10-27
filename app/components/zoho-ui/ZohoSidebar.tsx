@@ -98,7 +98,12 @@ export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
       icon: UserCheck
     },
 
-    // PRODUCTION Section (Collapsible)
+    // PRODUCTION & MONITORING Section
+    {
+      id: 'production-section',
+      label: 'PRODUCTION & MONITORING',
+      isSection: true
+    },
     {
       id: 'production',
       label: 'Production',
