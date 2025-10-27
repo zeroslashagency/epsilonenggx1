@@ -45,10 +45,10 @@ interface MenuItem {
 
 interface ZohoSidebarProps {
   collapsed: boolean;
-  onToggle: () => void;
+  onToggleAction: () => void;
 }
 
-export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
+export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
   const pathname = usePathname()
   const { userPermissions, logout, hasPermission, refreshPermissions } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -251,7 +251,7 @@ export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
           </div>
         )}
         <button
-          onClick={onToggle}
+        onClick={onToggleAction}
           className="p-1.5 rounded-[4px] hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
         >
           {collapsed ? (

@@ -21,7 +21,7 @@ export function ZohoLayout({ children, breadcrumbs }: ZohoLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Sidebar */}
-      <ZohoSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+      <ZohoSidebar collapsed={sidebarCollapsed} onToggleAction={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
       {/* Main Content Area */}
       <div

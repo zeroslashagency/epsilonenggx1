@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { User, UserPlus, Shield, ArrowUpDown, Zap, RefreshCw, Edit } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ZohoLayout } from '../../components/zoho-ui'
+import { ZohoLayout } from '@/app/components/zoho-ui'
 import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 
 interface Employee {
