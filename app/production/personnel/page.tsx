@@ -21,7 +21,32 @@ export default function PersonnelPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchPersonnel()
+    let isMounted = true
+    
+    const loadPersonnel = async () => {
+      setLoading(true)
+      try {
+        const data = await apiGet('/api/production/personnel')
+        
+        if (isMounted && data.success) {
+          setPersonnel(data.data || [])
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching personnel:', error)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+    
+    loadPersonnel()
+    
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const fetchPersonnel = async () => {

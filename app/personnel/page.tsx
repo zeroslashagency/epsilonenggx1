@@ -40,6 +40,39 @@ export default function PersonnelPage() {
   const [showDateDropdown, setShowDateDropdown] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
+    
+    const loadPersonnel = async () => {
+      setLoading(true)
+      try {
+        const data = await apiGet('/api/admin/raw-attendance')
+        
+        if (isMounted && data.success) {
+          const employees = data.data || []
+          const uniqueEmployees = Array.from(new Map(
+            employees.map((e: any) => [e.employee_id, e])
+          ).values())
+          setEmployees(uniqueEmployees)
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching personnel:', error)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+    
+    loadPersonnel()
+    
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
     fetchEmployees()
   }, [])
 

@@ -51,7 +51,32 @@ export default function UsersPageZoho() {
   const [editedDesignation, setEditedDesignation] = useState('')
 
   useEffect(() => {
-    fetchUsers()
+    let isMounted = true
+    
+    const loadUsers = async () => {
+      setLoading(true)
+      try {
+        const data = await apiGet('/api/admin/users')
+        
+        if (isMounted && data.success) {
+          setUsers(data.data || [])
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching users:', error)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+    
+    loadUsers()
+    
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   useEffect(() => {

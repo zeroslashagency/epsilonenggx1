@@ -56,8 +56,37 @@ export default function UserDetailPage() {
   const [editedDesignation, setEditedDesignation] = useState('')
 
   useEffect(() => {
+    let isMounted = true
+    
+    const loadUser = async () => {
+      if (!userId || !isMounted) return
+      
+      setLoading(true)
+      try {
+        const data = await apiGet(`/api/admin/users/${userId}`)
+        
+        if (isMounted && data.success) {
+          setUser(data.data)
+          setSelectedRole(data.data.role)
+          setPermissions(data.data.permissions || [])
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching user:', error)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+    
     if (userId) {
-      fetchUser()
+      loadUser()
+    }
+    
+    return () => {
+      isMounted = false
     }
   }, [userId])
 

@@ -22,13 +22,35 @@ export default function MaintenancePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchMaintenanceRecords()
-  }, [])
-
-  const fetchMaintenanceRecords = async () => {
-    setLoading(true)
-    try {
-      const data = await apiGet('/api/monitoring/maintenance')
+    let isMounted = true
+    
+    const loadMaintenanceData = async () => {
+      setLoading(true)
+      try {
+        const data = await apiGet('/api/monitoring/maintenance')
+        
+        if (isMounted && data.success) {
+          // Transform API data to match UI interface
+          const transformedRecords = (data.data || []).map((r: any) => ({
+            ...r,
+            machine_id: r.machine?.machine_id || 'N/A',
+            machine_name: r.machine?.name || 'Unknown Machine',
+            technician: r.technician_name
+          }))
+          setRecords(transformedRecords)
+        } else {
+          console.error('Error fetching maintenance records:', data.error)
+          setRecords([])
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching maintenance records:', error)
+          setRecords([])
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
       
       if (data.success) {
         // Transform API data to match UI interface

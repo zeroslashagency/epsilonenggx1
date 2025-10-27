@@ -23,7 +23,32 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchTasks()
+    let isMounted = true
+    
+    const loadTasks = async () => {
+      setLoading(true)
+      try {
+        const data = await apiGet('/api/production/tasks')
+        
+        if (isMounted && data.success) {
+          setTasks(data.data || [])
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching tasks:', error)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+    
+    loadTasks()
+    
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const fetchTasks = async () => {

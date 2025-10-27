@@ -24,14 +24,31 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
   useEffect(() => {
-    fetchOrders()
-  }, [statusFilter])
-
-  const fetchOrders = async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (statusFilter !== 'all') params.append('status', statusFilter)
+    let isMounted = true
+    
+    const loadOrders = async () => {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams()
+        if (statusFilter !== 'all') params.append('status', statusFilter)
+        
+        const data = await apiGet(`/api/production/orders?${params.toString()}`)
+        
+        if (isMounted && data.success) {
+          setOrders(data.data || [])
+        } else {
+          console.error('Error fetching orders:', data.error)
+          setOrders([])
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching orders:', error)
+          setOrders([])
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
       
       const data = await apiGet(`/api/production/orders?${params.toString()}`)
       

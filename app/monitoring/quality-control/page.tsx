@@ -20,13 +20,28 @@ export default function QualityControlPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchQualityChecks()
-  }, [])
-
-  const fetchQualityChecks = async () => {
-    setLoading(true)
-    try {
-      const data = await apiGet('/api/monitoring/quality')
+    let isMounted = true
+    
+    const fetchQualityChecks = async () => {
+      setLoading(true)
+      try {
+        const data = await apiGet('/api/monitoring/quality')
+        
+        if (isMounted && data.success) {
+          // Transform API data to match UI interface
+          const transformedChecks = (data.data || []).map((c: any) => ({
+            ...c,
+            order_id: c.order?.order_number || 'N/A',
+            inspector: c.inspector_name,
+            timestamp: c.created_at
+          }))
+          setChecks(transformedChecks)
+        } else {
+          console.error('Error fetching quality checks:', data.error)
+          setChecks([])
+        }
+      } catch (error) {
+        console.error('Error fetching quality checks:', error)
       
       if (data.success) {
         // Transform API data to match UI interface
