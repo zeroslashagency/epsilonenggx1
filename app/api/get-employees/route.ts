@@ -9,15 +9,13 @@ export async function GET(request: NextRequest) {
   const user = authResult
 
   try {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClient().from('employee_master')
+      .select('employee_code, employee_name, department, designation, status')
+      .order('employee_name', { ascending: true })
     
     console.log('📊 Fetching employees from employee_master table...')
     
-    // Fetch all employees from employee_master table
     const { data: employees, error } = await supabase
-      .from('employee_master')
-      .select('employee_code, employee_name, department, designation, status')
-      .order('employee_name', { ascending: true })
     
     if (error) {
       console.error('Supabase error:', error)
