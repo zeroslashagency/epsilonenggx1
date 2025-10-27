@@ -35,6 +35,8 @@ export default function PersonnelPage() {
     totalPunches: 0
   })
   const [loadingStats, setLoadingStats] = useState(false)
+  const [dateRange, setDateRange] = useState<string>('month')
+  const [showDateDropdown, setShowDateDropdown] = useState(false)
 
   useEffect(() => {
     fetchEmployees()
@@ -147,13 +149,8 @@ export default function PersonnelPage() {
       setLoadingStats(true)
       console.log(`📊 Fetching attendance for employee code: ${employeeCode}`)
 
-      // Calculate this month's date range
-      const now = new Date()
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-      
-      const fromDate = firstDayOfMonth.toISOString().split('T')[0]
-      const toDate = lastDayOfMonth.toISOString().split('T')[0]
+      // Use selected date range
+      const { fromDate, toDate } = calculateDateRange(dateRange)
 
       // Fetch attendance data for this employee for this month
       const response = await fetch(`/api/get-attendance?employeeCode=${employeeCode}&fromDate=${fromDate}&toDate=${toDate}`)
@@ -200,26 +197,99 @@ export default function PersonnelPage() {
     }
   }, [selectedEmployee])
 
-  const downloadAttendanceExcel = async (period: 'week' | 'month') => {
+  const getDateRangeLabel = () => {
+    const labels: Record<string, string> = {
+      'today': 'Today',
+      'yesterday': 'Yesterday',
+      'week': 'This Week',
+      'prev-week': 'Previous Week',
+      'month': 'This Month',
+      'prev-month': 'Previous Month',
+      'quarter': 'This Quarter',
+      'prev-quarter': 'Previous Quarter',
+      'year': 'This Year',
+      'prev-year': 'Previous Year'
+    }
+    return labels[dateRange] || 'This Month'
+  }
+
+  const calculateDateRange = (range: string) => {
+    const now = new Date()
+    let fromDate: string
+    let toDate: string
+
+    switch (range) {
+      case 'today':
+        fromDate = toDate = now.toISOString().split('T')[0]
+        break
+      case 'yesterday':
+        const yesterday = new Date(now)
+        yesterday.setDate(yesterday.getDate() - 1)
+        fromDate = toDate = yesterday.toISOString().split('T')[0]
+        break
+      case 'week':
+        const weekStart = new Date(now)
+        weekStart.setDate(weekStart.getDate() - now.getDay())
+        fromDate = weekStart.toISOString().split('T')[0]
+        toDate = now.toISOString().split('T')[0]
+        break
+      case 'prev-week':
+        const prevWeekEnd = new Date(now)
+        prevWeekEnd.setDate(prevWeekEnd.getDate() - now.getDay() - 1)
+        const prevWeekStart = new Date(prevWeekEnd)
+        prevWeekStart.setDate(prevWeekStart.getDate() - 6)
+        fromDate = prevWeekStart.toISOString().split('T')[0]
+        toDate = prevWeekEnd.toISOString().split('T')[0]
+        break
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        fromDate = monthStart.toISOString().split('T')[0]
+        toDate = monthEnd.toISOString().split('T')[0]
+        break
+      case 'prev-month':
+        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+        fromDate = prevMonthStart.toISOString().split('T')[0]
+        toDate = prevMonthEnd.toISOString().split('T')[0]
+        break
+      case 'quarter':
+        const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+        fromDate = quarterStart.toISOString().split('T')[0]
+        toDate = now.toISOString().split('T')[0]
+        break
+      case 'prev-quarter':
+        const prevQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
+        const prevQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
+        fromDate = prevQuarterStart.toISOString().split('T')[0]
+        toDate = prevQuarterEnd.toISOString().split('T')[0]
+        break
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1)
+        fromDate = yearStart.toISOString().split('T')[0]
+        toDate = now.toISOString().split('T')[0]
+        break
+      case 'prev-year':
+        const prevYearStart = new Date(now.getFullYear() - 1, 0, 1)
+        const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31)
+        fromDate = prevYearStart.toISOString().split('T')[0]
+        toDate = prevYearEnd.toISOString().split('T')[0]
+        break
+      default:
+        const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        fromDate = defaultStart.toISOString().split('T')[0]
+        toDate = defaultEnd.toISOString().split('T')[0]
+    }
+
+    return { fromDate, toDate }
+  }
+
+  const downloadAttendanceExcel = async () => {
     if (!selectedEmployee?.employee_code) return
 
     try {
-      // Calculate date range
-      const now = new Date()
-      let fromDate: string
-      let toDate: string
-
-      if (period === 'week') {
-        const weekAgo = new Date(now)
-        weekAgo.setDate(weekAgo.getDate() - 7)
-        fromDate = weekAgo.toISOString().split('T')[0]
-        toDate = now.toISOString().split('T')[0]
-      } else {
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        fromDate = firstDayOfMonth.toISOString().split('T')[0]
-        toDate = lastDayOfMonth.toISOString().split('T')[0]
-      }
+      const { fromDate, toDate } = calculateDateRange(dateRange)
 
       // Fetch attendance data
       const response = await fetch(`/api/get-attendance?employeeCode=${selectedEmployee.employee_code}&fromDate=${fromDate}&toDate=${toDate}`)
@@ -245,7 +315,7 @@ export default function PersonnelPage() {
         XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
 
         // Download
-        const fileName = `${selectedEmployee.full_name}_Attendance_${period}_${new Date().toISOString().split('T')[0]}.xlsx`
+        const fileName = `${selectedEmployee.full_name}_Attendance_${dateRange}_${new Date().toISOString().split('T')[0]}.xlsx`
         XLSX.writeFile(wb, fileName)
 
         console.log(`✅ Downloaded ${logs.length} attendance records`)
@@ -441,19 +511,51 @@ export default function PersonnelPage() {
                     <p className="text-sm text-[#95AAC9]">Monthly attendance tracking and performance</p>
                   </div>
                   <div className="flex gap-2">
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowDateDropdown(!showDateDropdown)}
+                        className="flex items-center gap-2 px-4 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors text-sm text-[#12263F] dark:text-white"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        {getDateRangeLabel()}
+                      </button>
+                      {showDateDropdown && (
+                        <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg shadow-lg z-10 w-48">
+                          {['today', 'yesterday', 'week', 'prev-week', 'month', 'prev-month', 'quarter', 'prev-quarter', 'year', 'prev-year'].map((range) => (
+                            <button
+                              key={range}
+                              onClick={() => {
+                                setDateRange(range)
+                                setShowDateDropdown(false)
+                                if (selectedEmployee?.employee_code) {
+                                  fetchAttendanceStats(selectedEmployee.employee_code)
+                                }
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 text-sm text-[#12263F] dark:text-white"
+                            >
+                              {getDateRangeLabel().replace(getDateRangeLabel(), 
+                                range === 'today' ? 'Today' :
+                                range === 'yesterday' ? 'Yesterday' :
+                                range === 'week' ? 'This Week' :
+                                range === 'prev-week' ? 'Previous Week' :
+                                range === 'month' ? 'This Month' :
+                                range === 'prev-month' ? 'Previous Month' :
+                                range === 'quarter' ? 'This Quarter' :
+                                range === 'prev-quarter' ? 'Previous Quarter' :
+                                range === 'year' ? 'This Year' :
+                                'Previous Year'
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
-                      onClick={() => downloadAttendanceExcel('week')}
+                      onClick={downloadAttendanceExcel}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
                     >
                       <Download className="w-4 h-4" />
-                      Week
-                    </button>
-                    <button
-                      onClick={() => downloadAttendanceExcel('month')}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                    >
-                      <Download className="w-4 h-4" />
-                      Month
+                      Export Excel
                     </button>
                   </div>
                 </div>
