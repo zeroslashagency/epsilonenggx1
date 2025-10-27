@@ -528,7 +528,7 @@ export default function AttendancePage() {
                   variant="outline" 
                   size="sm" 
                   className="gap-2 font-semibold bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 shadow-md"
-                  onClick={() => fetchAttendanceData(dateRange)}
+                  onClick={() => fetchAttendanceData(todayDateRange)}
                   disabled={loading}
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -640,7 +640,7 @@ export default function AttendancePage() {
                 </Select>
               </div>
               
-              {dateRange === 'custom' && (
+              {allTrackDateRange === 'custom' && (
                 <>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">From Date</label>
