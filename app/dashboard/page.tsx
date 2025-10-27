@@ -279,7 +279,7 @@ export default function DashboardPage() {
 
 
         {/* ROW A: KPI Strip - 6 Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-fade-in">
           {loading ? (
             <>
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -293,7 +293,7 @@ export default function DashboardPage() {
           ) : (
             <>
               {/* KPI Card 1: Total Employees */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer group">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
                 <div className="flex items-start justify-between mb-2">
                   <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
@@ -311,7 +311,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 2: Present Today */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
@@ -329,7 +329,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 3: Active Orders */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <Calendar className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -346,7 +346,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 4: Machines Running */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <Factory className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                   <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -363,7 +363,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 5: Overall Efficiency */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <Zap className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600">
@@ -381,7 +381,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 6: Units Produced */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <Target className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600">
@@ -402,11 +402,11 @@ export default function DashboardPage() {
         </div>
 
         {/* ROW B: Main Chart + Right Rail */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
           {/* Main Chart Area (2/3 width) */}
           <div className="lg:col-span-2 space-y-4">
             {/* Production Timeline Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -501,7 +501,7 @@ export default function DashboardPage() {
           {/* Right Rail (1/3 width) */}
           <div className="space-y-4">
             {/* Alerts & Urgent Items */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
               <div className="flex items-center gap-2 mb-4">
                 <Bell className="w-5 h-5 text-red-600" />
                 <h3 className="font-bold text-gray-900 dark:text-white">Alerts</h3>
@@ -533,7 +533,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-blue-500 to-cyan-500 dark:from-blue-700 dark:to-cyan-700 rounded-xl p-5 shadow-lg">
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-500 dark:from-blue-700 dark:to-cyan-700 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
               <h3 className="font-bold text-white mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5" />
                 Quick Actions
@@ -560,7 +560,7 @@ export default function DashboardPage() {
         {/* ROW C: Tactical Widgets - 3 Columns */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Recent Activity / Live Feed */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Activity className="w-5 h-5 text-blue-600" />
@@ -588,7 +588,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Top Operators */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
             <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600" />
               Top Operators
@@ -620,7 +620,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Downtime Breakdown */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
             <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
               <PieChart className="w-5 h-5 text-red-600" />
               Downtime Breakdown
@@ -656,7 +656,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ROW D: Production Tables */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <FileText className="w-6 h-6 text-blue-600" />
