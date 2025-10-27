@@ -353,7 +353,7 @@ export default function AttendancePage() {
             <Calendar className="h-4 w-4 text-primary" />
             <Select value={dateRange} onValueChange={(value) => {
               setDateRange(value)
-              if (value !== 'custom') fetchAttendanceData(value)
+              // Date range only affects All Track Records section, not Today's section
             }}>
               <SelectTrigger className="w-[200px] bg-background border-border/50 font-medium shadow-sm">
                 <SelectValue />
@@ -526,10 +526,10 @@ export default function AttendancePage() {
                   variant="outline" 
                   size="sm" 
                   className="gap-2 font-semibold bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 shadow-md"
-                  onClick={() => fetchAttendanceData(dateRange)}
-                  disabled={loading}
+                  onClick={() => fetchTodayData()}
+                  disabled={todayLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 ${todayLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </div>
