@@ -145,7 +145,7 @@ export default function UserDetailPage() {
       const standalone_attendance = permissions.includes('standalone_attendance') ? 'YES' : 'NO'
       
       const data = await apiPost('/api/admin/update-user-permissions', {
-        userId: user.id,
+        userId: user?.id,
         permissions,
         standalone_attendance
       })

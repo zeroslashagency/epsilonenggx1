@@ -144,7 +144,7 @@ export default function AccountPage() {
               <div>
                 <label className="text-sm font-medium text-[#95AAC9]">Employee Code</label>
                 <p className="text-[#12263F] dark:text-white">
-                  {userData?.profile?.employee_code || userData?.user_metadata?.employee_code || 'Not set'}
+                  <p className="text-sm text-gray-600">Employee Code: {userData?.profile?.employee_code || userData?.user_metadata?.employee_code || 'Not assigned'}</p>
                 </p>
               </div>
               <div>

@@ -90,7 +90,7 @@ export default function UsersPageDrawer() {
   const handleSaveChanges = async () => {
     if (!selectedUser) return
     try {
-      setCreating(true)
+      setLoading(true)
       const response = await fetch('/api/admin/update-user-contact', {
         method: 'POST',
         headers: {
