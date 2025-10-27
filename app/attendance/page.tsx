@@ -46,6 +46,23 @@ export default function AttendancePage() {
   const [allTrackError, setAllTrackError] = useState<string | null>(null)
   const [employeeError, setEmployeeError] = useState<string | null>(null)
 
+  // Error message helper
+  const getErrorMessage = (error: any): string => {
+    if (error.message?.includes('fetch') || error.message?.includes('network')) {
+      return 'Network connection failed. Please check your internet and try again.'
+    }
+    if (error.status === 500) {
+      return 'Server error. Please try again in a few moments.'
+    }
+    if (error.status === 401 || error.status === 403) {
+      return 'Session expired. Please refresh the page and log in again.'
+    }
+    if (error.message?.includes('timeout')) {
+      return 'Request timed out. Try selecting a smaller date range.'
+    }
+    return error.message || 'Something went wrong. Please try again.'
+  }
+
   // Fetch TODAY's data only (independent from filters)
   const fetchTodayData = async () => {
     setTodayLoading(true)
