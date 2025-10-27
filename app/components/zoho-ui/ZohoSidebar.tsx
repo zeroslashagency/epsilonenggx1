@@ -11,6 +11,7 @@ import {
   Package,
   Users,
   UserPlus,
+  UserCheck,
   Wrench,
   Bell,
   FileText,
@@ -22,7 +23,12 @@ import {
   Factory,
   CheckSquare,
   AlertTriangle,
-  ClipboardList
+  ClipboardList,
+  Cpu,
+  ChevronRight,
+  ChevronLeft,
+  UserCircle,
+  LogOut
 } from 'lucide-react'
 import { useAuth } from '../../lib/contexts/auth-context'
 
