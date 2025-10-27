@@ -670,13 +670,13 @@ export default function AttendancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentLogs.map((record, index) => (
+                    {recentLogs.map((log, index) => (
                       <TableRow 
                         key={index} 
                         className="hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
                       >
-                        <TableCell className="font-semibold py-4">{record.employee_code}</TableCell>
-                        <TableCell className="font-medium">{record.employee_name}</TableCell>
+                        <TableCell className="font-semibold py-4">{log.employee_code}</TableCell>
+{{ ... }}
                         <TableCell>
                           <StatusBadge status={record.punch_direction as any} />
                         </TableCell>
