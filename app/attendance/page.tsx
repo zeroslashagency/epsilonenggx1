@@ -123,10 +123,63 @@ export default function AttendancePage() {
   const exportToExcel = () => {
     if (!attendanceData?.allLogs) return
     
-    const worksheet = XLSX.utils.json_to_sheet(attendanceData.allLogs)
     const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance")
-    XLSX.writeFile(workbook, `attendance_${new Date().toISOString().split('T')[0]}.xlsx`)
+    
+    // Filter logs by selected employees
+    const filteredLogs = attendanceData.allLogs.filter((log: any) =>
+      selectedEmployees.length === 0 || selectedEmployees.includes(log.employee_code)
+    )
+    
+    // Group logs by employee
+    const employeeGroups: Record<string, any[]> = {}
+    filteredLogs.forEach((log: any) => {
+      const empCode = log.employee_code
+      if (!employeeGroups[empCode]) {
+        employeeGroups[empCode] = []
+      }
+      employeeGroups[empCode].push(log)
+    })
+    
+    // Create a sheet for each employee
+    Object.entries(employeeGroups).forEach(([empCode, logs]) => {
+      const employee = allEmployees.find(e => e.code === empCode)
+      const employeeName = employee?.name || `Employee ${empCode}`
+      
+      // Format data for this employee
+      const excelData = logs.map((log: any) => {
+        const logDate = new Date(log.log_date)
+        return {
+          'Date': logDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+          'Time': logDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          'Day': logDate.toLocaleDateString('en-US', { weekday: 'long' }),
+          'Direction': log.punch_direction || 'N/A',
+          'Employee Code': empCode,
+          'Employee Name': employeeName
+        }
+      })
+      
+      const worksheet = XLSX.utils.json_to_sheet(excelData)
+      
+      // Set column widths
+      worksheet['!cols'] = [
+        { wch: 12 }, // Date
+        { wch: 12 }, // Time
+        { wch: 12 }, // Day
+        { wch: 10 }, // Direction
+        { wch: 15 }, // Employee Code
+        { wch: 25 }  // Employee Name
+      ]
+      
+      // Sheet name (limit to 31 characters)
+      const sheetName = `${employeeName.substring(0, 25)}_${empCode}`.substring(0, 31)
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+    })
+    
+    // Download file
+    const fileName = `attendance_${getDateRangeLabel().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(workbook, fileName)
+    
+    console.log(`✅ Exported ${Object.keys(employeeGroups).length} employee sheets`)
   }
 
   const stats = attendanceData?.summary || {
