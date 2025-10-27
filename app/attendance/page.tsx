@@ -138,22 +138,29 @@ export default function AttendancePage() {
     switch(dateRange) {
       case 'today':
         startDate = new Date(now)
+        endDate = new Date(now)
         break
       case 'yesterday':
-        startDate = endDate = new Date(now.setDate(now.getDate() - 1))
+        const yesterday = new Date(now)
+        yesterday.setDate(yesterday.getDate() - 1)
+        startDate = endDate = yesterday
         break
       case 'week':
         startDate = new Date(now)
         startDate.setDate(startDate.getDate() - now.getDay())
+        endDate = new Date(now)
         break
       case 'prev-week':
-        endDate = new Date(now)
-        endDate.setDate(endDate.getDate() - now.getDay() - 1)
-        startDate = new Date(endDate)
-        startDate.setDate(startDate.getDate() - 6)
+        const prevWeekEnd = new Date(now)
+        prevWeekEnd.setDate(prevWeekEnd.getDate() - now.getDay() - 1)
+        const prevWeekStart = new Date(prevWeekEnd)
+        prevWeekStart.setDate(prevWeekStart.getDate() - 6)
+        startDate = prevWeekStart
+        endDate = prevWeekEnd
         break
       case 'month':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
         break
       case 'prev-month':
         startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -161,6 +168,7 @@ export default function AttendancePage() {
         break
       case 'quarter':
         startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+        endDate = new Date(now)
         break
       case 'prev-quarter':
         startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
@@ -168,13 +176,24 @@ export default function AttendancePage() {
         break
       case 'year':
         startDate = new Date(now.getFullYear(), 0, 1)
+        endDate = new Date(now)
         break
       case 'prev-year':
         startDate = new Date(now.getFullYear() - 1, 0, 1)
         endDate = new Date(now.getFullYear() - 1, 11, 31)
         break
+      case 'custom':
+        if (fromDate && toDate) {
+          startDate = new Date(fromDate)
+          endDate = new Date(toDate)
+        } else {
+          startDate = new Date(now)
+          endDate = new Date(now)
+        }
+        break
       default:
         startDate = new Date(now)
+        endDate = new Date(now)
     }
     
     // Filter logs by selected employees
