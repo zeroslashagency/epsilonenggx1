@@ -218,76 +218,11 @@ export default function PersonnelPage() {
     return labels[exportDateRange] || 'This Month'
   }
 
-  const calculateDateRange = (range: string) => {
-    const now = new Date()
-    let fromDate: string
-    let toDate: string
-
-    switch (range) {
-      case 'today':
-        fromDate = toDate = now.toISOString().split('T')[0]
-        break
-      case 'yesterday':
-        const yesterday = new Date(now)
-        yesterday.setDate(yesterday.getDate() - 1)
-        fromDate = toDate = yesterday.toISOString().split('T')[0]
-        break
-      case 'week':
-        const weekStart = new Date(now)
-        weekStart.setDate(weekStart.getDate() - now.getDay())
-        fromDate = weekStart.toISOString().split('T')[0]
-        toDate = now.toISOString().split('T')[0]
-        break
-      case 'prev-week':
-        const prevWeekEnd = new Date(now)
-        prevWeekEnd.setDate(prevWeekEnd.getDate() - now.getDay() - 1)
-        const prevWeekStart = new Date(prevWeekEnd)
-        prevWeekStart.setDate(prevWeekStart.getDate() - 6)
-        fromDate = prevWeekStart.toISOString().split('T')[0]
-        toDate = prevWeekEnd.toISOString().split('T')[0]
-        break
-      case 'month':
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        fromDate = monthStart.toISOString().split('T')[0]
-        toDate = monthEnd.toISOString().split('T')[0]
-        break
-      case 'prev-month':
-        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-        const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
-        fromDate = prevMonthStart.toISOString().split('T')[0]
-        toDate = prevMonthEnd.toISOString().split('T')[0]
-        break
-      case 'quarter':
-        const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
-        fromDate = quarterStart.toISOString().split('T')[0]
-        toDate = now.toISOString().split('T')[0]
-        break
-      case 'prev-quarter':
-        const prevQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
-        const prevQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
-        fromDate = prevQuarterStart.toISOString().split('T')[0]
-        toDate = prevQuarterEnd.toISOString().split('T')[0]
-        break
-      case 'year':
-        const yearStart = new Date(now.getFullYear(), 0, 1)
-        fromDate = yearStart.toISOString().split('T')[0]
-        toDate = now.toISOString().split('T')[0]
-        break
-      case 'prev-year':
-        const prevYearStart = new Date(now.getFullYear() - 1, 0, 1)
-        const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31)
-        fromDate = prevYearStart.toISOString().split('T')[0]
-        toDate = prevYearEnd.toISOString().split('T')[0]
-        break
-      default:
-        const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        fromDate = defaultStart.toISOString().split('T')[0]
-        toDate = defaultEnd.toISOString().split('T')[0]
-    }
-
-    return { fromDate, toDate }
+  // Helper function to get week number
+  const getWeekNumber = (date: Date): number => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1)
+    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)
   }
 
   const downloadAttendanceExcel = async () => {
@@ -295,6 +230,8 @@ export default function PersonnelPage() {
 
     try {
       const { fromDate, toDate } = calculateDateRange(exportDateRange)
+      const startDate = new Date(fromDate)
+      const endDate = new Date(toDate)
 
       // Fetch attendance data
       const response = await fetch(`/api/get-attendance?employeeCode=${selectedEmployee.employee_code}&fromDate=${fromDate}&toDate=${toDate}`)
@@ -303,38 +240,110 @@ export default function PersonnelPage() {
       if (data.success && data.data?.allLogs && data.data.allLogs.length > 0) {
         const logs = data.data.allLogs
 
-        // Prepare Excel data with proper formatting
-        const excelData = logs.map((log: any) => {
-          const logDate = new Date(log.log_date)
-          return {
-            'Date': logDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-            'Time': logDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            'Day': logDate.toLocaleDateString('en-US', { weekday: 'long' }),
-            'Direction': log.punch_direction || 'N/A',
-            'Employee Code': log.employee_code || selectedEmployee.employee_code,
-            'Employee Name': selectedEmployee.full_name,
-            'Department': selectedEmployee.department || 'N/A',
-            'Designation': selectedEmployee.designation || 'N/A'
+        // Sort logs by date
+        const sortedLogs = logs.sort((a: any, b: any) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime())
+        
+        // Create sheet data with Attendance format
+        const sheetData: any[] = []
+        
+        // Add employee name header
+        sheetData.push([selectedEmployee.full_name.toUpperCase()])
+        sheetData.push([]) // Empty row
+        
+        // Create header
+        sheetData.push(['Week', 'Date', 'Punches', 'Status'])
+        
+        // Generate ALL dates in the range
+        const allDates: Date[] = []
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          allDates.push(new Date(d))
+        }
+        
+        // Group all dates by week
+        const weekDateGroups: Record<string, Date[]> = {}
+        allDates.forEach(date => {
+          const weekNumber = getWeekNumber(date)
+          const weekKey = `WEEK ${weekNumber}`
+          
+          if (!weekDateGroups[weekKey]) {
+            weekDateGroups[weekKey] = []
           }
+          weekDateGroups[weekKey].push(date)
         })
-
-        // Create workbook with proper column widths
-        const ws = XLSX.utils.json_to_sheet(excelData)
+        
+        // Add data for each week
+        Object.entries(weekDateGroups).forEach(([weekKey, weekDates]) => {
+          let isFirstDateInWeek = true
+          
+          weekDates.forEach(date => {
+            const dateKey = date.toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'short',
+              year: '2-digit'
+            })
+            
+            // Find all logs for this date
+            const dateLogs = logs.filter((log: any) => {
+              const logDate = new Date(log.log_date).toDateString()
+              return logDate === date.toDateString()
+            })
+            
+            if (dateLogs.length === 0) {
+              // No logs for this date - show as absent
+              sheetData.push([
+                isFirstDateInWeek ? weekKey : '',
+                dateKey,
+                '',
+                'Absent'
+              ])
+              isFirstDateInWeek = false
+            } else {
+              // Sort logs by time for this date
+              const sortedDateLogs = dateLogs.sort((a: any, b: any) => 
+                new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
+              )
+              
+              // Combine all punch times in one cell
+              const allPunches = sortedDateLogs.map((log: any) => {
+                const time = new Date(log.log_date).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                })
+                const direction = log.punch_direction?.toLowerCase() === 'in' ? 'in' : 'out'
+                return `${time}(${direction})`
+              }).join(',')
+              
+              sheetData.push([
+                isFirstDateInWeek ? weekKey : '',
+                dateKey,
+                allPunches,
+                sortedDateLogs.length > 0 ? 'Present' : 'Absent'
+              ])
+              isFirstDateInWeek = false
+            }
+            
+            // Add Sunday separator
+            if (date.getDay() === 0) { // Sunday
+              sheetData.push(['SUNDAY', '', '', ''])
+            }
+          })
+        })
+        
+        // Create worksheet
+        const ws = XLSX.utils.aoa_to_sheet(sheetData)
         
         // Set column widths
         ws['!cols'] = [
-          { wch: 12 }, // Date
-          { wch: 12 }, // Time
-          { wch: 12 }, // Day
-          { wch: 10 }, // Direction
-          { wch: 15 }, // Employee Code
-          { wch: 25 }, // Employee Name
-          { wch: 20 }, // Department
-          { wch: 20 }  // Designation
+          { width: 15 }, // Week
+          { width: 15 }, // Date
+          { width: 80 }, // Punches (wide to fit all times)
+          { width: 12 }  // Status
         ]
 
         const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
+        XLSX.utils.book_append_sheet(wb, ws, selectedEmployee.full_name.substring(0, 31))
 
         // Download with proper filename
         const fileName = `${selectedEmployee.full_name.replace(/\s+/g, '_')}_Attendance_${getDateRangeLabel().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
