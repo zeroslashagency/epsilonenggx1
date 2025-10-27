@@ -24,7 +24,9 @@ interface AttendanceLog {
 }
 
 export default function AttendancePage() {
-  const [dateRange, setDateRange] = useState("today")
+  // Separate state for each section to prevent conflicts
+  const [todayDateRange, setTodayDateRange] = useState("today")  // For Today's Recent Activity
+  const [allTrackDateRange, setAllTrackDateRange] = useState("today")  // For All Track Records
   const [employeeFilter, setEmployeeFilter] = useState("all")
   const [loading, setLoading] = useState(false)
   const [attendanceData, setAttendanceData] = useState<any>(null)
@@ -42,8 +44,8 @@ export default function AttendancePage() {
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false)
 
-  // Fetch attendance data
-  const fetchAttendanceData = async (range: string = dateRange) => {
+  // Fetch attendance data for Today's Recent Activity
+  const fetchAttendanceData = async (range: string = todayDateRange) => {
     setLoading(true)
     try {
       // Use centralized date calculation utility
@@ -74,7 +76,7 @@ export default function AttendancePage() {
     setAllTrackLoading(true)
     try {
       // Use centralized date calculation utility
-      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(dateRange, fromDate, toDate)
+      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(allTrackDateRange, fromDate, toDate)
       
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
@@ -136,7 +138,7 @@ export default function AttendancePage() {
   }
 
   const getDateRangeLabel = () => {
-    return getDateLabel(dateRange)
+    return getDateLabel(todayDateRange)
   }
 
   // Helper function to get week number
@@ -156,8 +158,9 @@ export default function AttendancePage() {
       return
     }
     
-    // Use centralized date calculation utility
-    const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRange, fromDate, toDate)
+    // Use centralized date calculation utility - use correct dateRange based on source
+    const dateRangeToUse = source === 'allTrack' ? allTrackDateRange : todayDateRange
+    const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRangeToUse, fromDate, toDate)
     const startDate = new Date(fromDateStr)
     const endDate = new Date(toDateStr)
     
@@ -350,8 +353,8 @@ export default function AttendancePage() {
         <div className="flex flex-wrap items-center gap-4 bg-gradient-to-r from-white to-gray-50 p-5 rounded-xl border border-gray-200 shadow-md">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
-            <Select value={dateRange} onValueChange={(value) => {
-              setDateRange(value)
+            <Select value={todayDateRange} onValueChange={(value) => {
+              setTodayDateRange(value)
               if (value !== 'custom') fetchAttendanceData(value)
             }}>
               <SelectTrigger className="w-[200px] bg-background border-border/50 font-medium shadow-sm">
@@ -615,8 +618,8 @@ export default function AttendancePage() {
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Date Range</label>
-                <Select value={dateRange} onValueChange={(value) => {
-                  setDateRange(value)
+                <Select value={allTrackDateRange} onValueChange={(value) => {
+                  setAllTrackDateRange(value)
                 }}>
                   <SelectTrigger className="bg-card">
                     <SelectValue />
