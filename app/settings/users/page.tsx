@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { User, UserPlus, Shield, ArrowUpDown, Zap, Edit, Trash2, Download, Plus, Save, X, RefreshCw, Key, Mail, Settings } from 'lucide-react'
 import Link from 'next/link'
-import { ZohoLayout } from '../components/zoho-ui'
+import { ZohoLayout } from '../../components/zoho-ui'
 import { apiGet, apiPost, apiDelete } from '@/app/lib/utils/api-client'
 
 interface User {

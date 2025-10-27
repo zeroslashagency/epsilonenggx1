@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { User, UserPlus, Shield, ArrowUpDown, Zap, Edit, Trash2, Settings, X, Save, RefreshCw, Key, Mail } from 'lucide-react'
 import Link from 'next/link'
-import { ZohoLayout } from '../components/zoho-ui'
+import { ZohoLayout } from '../../components/zoho-ui'
 
 interface UserType {
   id: string
