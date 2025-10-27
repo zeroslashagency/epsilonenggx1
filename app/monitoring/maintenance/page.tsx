@@ -38,7 +38,7 @@ export default function MaintenancePage() {
             technician: r.technician_name
           }))
           setRecords(transformedRecords)
-        } else {
+        } else if (isMounted) {
           console.error('Error fetching maintenance records:', data.error)
           setRecords([])
         }
@@ -51,23 +51,7 @@ export default function MaintenancePage() {
         if (isMounted) {
           setLoading(false)
         }
-      
-      if (data.success) {
-        // Transform API data to match UI interface
-        const transformedRecords = (data.data || []).map((r: any) => ({
-          ...r,
-          machine_id: r.machine?.machine_id || 'N/A',
-          machine_name: r.machine?.name || 'Unknown Machine',
-          technician: r.technician_name
-        }))
-        setRecords(transformedRecords)
-      } else {
-        console.error('Error fetching maintenance records:', data.error)
-        setRecords([])
       }
-    } catch (error) {
-      console.error('Error fetching maintenance records:', error)
-      setRecords([])
     } finally {
       setLoading(false)
     }

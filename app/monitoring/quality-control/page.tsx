@@ -36,33 +36,27 @@ export default function QualityControlPage() {
             timestamp: c.created_at
           }))
           setChecks(transformedChecks)
-        } else {
+        } else if (isMounted) {
           console.error('Error fetching quality checks:', data.error)
           setChecks([])
         }
       } catch (error) {
-        console.error('Error fetching quality checks:', error)
-      
-      if (data.success) {
-        // Transform API data to match UI interface
-        const transformedChecks = (data.data || []).map((c: any) => ({
-          ...c,
-          order_id: c.order?.order_number || 'N/A',
-          inspector: c.inspector_name,
-          timestamp: c.created_at
-        }))
-        setChecks(transformedChecks)
-      } else {
-        console.error('Error fetching quality checks:', data.error)
-        setChecks([])
+        if (isMounted) {
+          console.error('Error fetching quality checks:', error)
+          setChecks([])
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
       }
-    } catch (error) {
-      console.error('Error fetching quality checks:', error)
-      setChecks([])
-    } finally {
-      setLoading(false)
     }
-  }
+    fetchQualityChecks()
+    
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const passRate = checks.length > 0 
     ? Math.round((checks.filter(c => c.result === 'passed').length / checks.filter(c => c.result !== 'pending').length) * 100) 

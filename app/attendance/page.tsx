@@ -119,55 +119,32 @@ export default function AttendancePage() {
   // Load today's data on mount
   useEffect(() => {
     fetchTodayData()
+    
     let isMounted = true
     
     const loadEmployees = async () => {
       try {
         const data = await apiGet('/api/get-employees')
         
-        if (isMounted && data.success) {
-          setAllEmployees(data.employees
+        if (isMounted && data.success && data.employees) {
+          const employees = data.employees
             .filter((emp: any) => emp.employee_code)
             .map((emp: any) => ({
               code: emp.employee_code,
               name: emp.employee_name || `Employee ${emp.employee_code}`
             }))
-          )
-          setSelectedEmployees(data.employees
-            .filter((emp: any) => emp.employee_code)
-            .map((emp: any) => emp.employee_code)
-          )
+          setAllEmployees(employees)
+          setSelectedEmployees(employees.map((e: any) => e.code))
         }
       } catch (error) {
         if (isMounted) {
           console.error('Failed to fetch employees:', error)
-          setEmployeeError('Failed to load employee list. Some features may be limited.')
         }
       }
     }
     
     loadEmployees()
-    
-    return () => {
-      isMounted = false
-    }
   }, [])
-
-      if (data.success && data.employees) {
-        const employees = data.employees
-          .filter((emp: any) => emp.employee_code)
-          .map((emp: any) => ({
-            code: emp.employee_code,
-            name: emp.employee_name || `Employee ${emp.employee_code}`
-          }))
-        setAllEmployees(employees)
-        setSelectedEmployees(employees.map((e: any) => e.code))
-      }
-    } catch (error) {
-      console.error('Failed to fetch employees:', error)
-      setEmployeeError('Failed to load employee list. Some features may be limited.')
-    }
-  }
 
   const toggleEmployee = (employeeCode: string) => {
     setSelectedEmployees(prev =>

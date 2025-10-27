@@ -41,34 +41,27 @@ export default function MachinesPage() {
             current_order: m.current_order?.order_number || null
           }))
           setMachines(transformedMachines)
-        } else {
+        } else if (isMounted) {
           console.error('Error fetching machines:', data.error)
           setMachines([])
         }
       } catch (error) {
-        console.error('Error fetching machines:', error)
-      if (statusFilter !== 'all') params.append('status', statusFilter)
-      
-      const data = await apiGet(`/api/production/machines?${params.toString()}`)
-      
-      if (data.success) {
-        // Transform API data to match UI interface
-        const transformedMachines = (data.data || []).map((m: any) => ({
-          ...m,
-          current_order: m.current_order?.order_number || null
-        }))
-        setMachines(transformedMachines)
-      } else {
-        console.error('Error fetching machines:', data.error)
-        setMachines([])
+        if (isMounted) {
+          console.error('Error fetching machines:', error)
+          setMachines([])
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
       }
-    } catch (error) {
-      console.error('Error fetching machines:', error)
-      setMachines([])
-    } finally {
-      setLoading(false)
     }
-  }
+    loadMachines()
+    
+    return () => {
+      isMounted = false
+    }
+  }, [statusFilter])
 
   const getStatusBadge = (status: string) => {
     const config = {

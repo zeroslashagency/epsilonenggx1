@@ -177,7 +177,7 @@ export default function DashboardPage() {
         if (!isMounted) return
         
         if (data.success) {
-          const rawData = data.data || []
+          const rawData = Array.isArray(data.data) ? data.data : []
           const today = new Date().toISOString().split('T')[0]
           const todayData = rawData.filter((r: any) => r.date?.startsWith(today))
           const totalEmployees = new Set(rawData.map((r: any) => r.employee_id)).size

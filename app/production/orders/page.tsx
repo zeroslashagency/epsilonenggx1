@@ -36,7 +36,7 @@ export default function OrdersPage() {
         
         if (isMounted && data.success) {
           setOrders(data.data || [])
-        } else {
+        } else if (isMounted) {
           console.error('Error fetching orders:', data.error)
           setOrders([])
         }
@@ -49,22 +49,15 @@ export default function OrdersPage() {
         if (isMounted) {
           setLoading(false)
         }
-      
-      const data = await apiGet(`/api/production/orders?${params.toString()}`)
-      
-      if (data.success) {
-        setOrders(data.data || [])
-      } else {
-        console.error('Error fetching orders:', data.error)
-        setOrders([])
       }
-    } catch (error) {
-      console.error('Error fetching orders:', error)
-      setOrders([])
-    } finally {
-      setLoading(false)
     }
-  }
+    
+    loadOrders()
+    
+    return () => {
+      isMounted = false
+    }
+  }, [statusFilter])
 
   const getStatusBadge = (status: string) => {
     const colors = {
