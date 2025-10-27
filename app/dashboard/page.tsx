@@ -440,7 +440,7 @@ export default function DashboardPage() {
 
             {/* Quick KPI Cards Below Chart */}
             <div className="grid grid-cols-4 gap-4">
-              <div className="group bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-5 border border-green-200 dark:border-green-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="group bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-5 border border-green-200 dark:border-green-700 shadow-sm hover:shadow-green-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                     <Target className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -454,7 +454,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="group bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-5 border border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="group bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-5 border border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-blue-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                     <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -468,7 +468,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="group bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-5 border border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="group bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-5 border border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-orange-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                     <Activity className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -482,7 +482,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="group bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-xl p-5 border border-pink-200 dark:border-pink-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="group bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-xl p-5 border border-pink-200 dark:border-pink-700 shadow-sm hover:shadow-pink-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 bg-pink-100 dark:bg-pink-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                     <Wrench className="w-5 h-5 text-pink-600 dark:text-pink-400" />
