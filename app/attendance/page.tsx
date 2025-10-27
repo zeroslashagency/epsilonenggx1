@@ -33,7 +33,7 @@ export default function AttendancePage() {
   const [recordsPerPage, setRecordsPerPage] = useState("50")
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [showDateDropdown, setShowDateDropdown] = useState(false)
-  const [allEmployees, setAllEmployees] = useState<string[]>([])
+  const [allEmployees, setAllEmployees] = useState<Array<{code: string, name: string}>>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false)
 
@@ -73,9 +73,14 @@ export default function AttendancePage() {
       const response = await fetch('/api/get-employees')
       const data = await response.json()
       if (data.success && data.employees) {
-        const employeeCodes = data.employees.map((emp: any) => emp.employee_code).filter(Boolean)
-        setAllEmployees(employeeCodes)
-        setSelectedEmployees(employeeCodes)
+        const employees = data.employees
+          .filter((emp: any) => emp.employee_code)
+          .map((emp: any) => ({
+            code: emp.employee_code,
+            name: emp.employee_name || `Employee ${emp.employee_code}`
+          }))
+        setAllEmployees(employees)
+        setSelectedEmployees(employees.map((e: any) => e.code))
       }
     } catch (error) {
       console.error('Failed to fetch employees:', error)
@@ -94,7 +99,7 @@ export default function AttendancePage() {
     if (selectedEmployees.length === allEmployees.length) {
       setSelectedEmployees([])
     } else {
-      setSelectedEmployees(allEmployees)
+      setSelectedEmployees(allEmployees.map(e => e.code))
     }
   }
 
@@ -220,16 +225,17 @@ export default function AttendancePage() {
                   </div>
                 </div>
                 <div className="p-2">
-                  {allEmployees.map((employeeCode) => (
+                  {allEmployees.map((employee) => (
                     <div
-                      key={employeeCode}
+                      key={employee.code}
                       className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded"
                     >
                       <Checkbox
-                        checked={selectedEmployees.includes(employeeCode)}
-                        onCheckedChange={() => toggleEmployee(employeeCode)}
+                        checked={selectedEmployees.includes(employee.code)}
+                        onCheckedChange={() => toggleEmployee(employee.code)}
                       />
-                      <span className="text-sm">Employee {employeeCode}</span>
+                      <span className="text-sm font-medium">{employee.name}</span>
+                      <span className="text-xs text-gray-500">({employee.code})</span>
                     </div>
                   ))}
                 </div>
