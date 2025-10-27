@@ -199,34 +199,38 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {/* Dark Mode Toggle */}
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-10 h-10 rounded-full">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              </Button>
+              {/* Quick Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Quick search..."
+                  className="pl-9 w-64 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                />
+              </div>
+              
+              {/* Sync Status */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg border border-white/20">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-white font-medium">Live</span>
+                <span className="text-xs text-blue-100">{lastUpdate.toLocaleTimeString()}</span>
+              </div>
 
               {/* Notifications */}
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-10 h-10 rounded-full relative">
+              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 relative">
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">3</span>
               </Button>
 
-              {/* Settings */}
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-10 h-10 rounded-full">
-                <Settings className="w-5 h-5" />
+              {/* Refresh */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchDashboardData}
+                disabled={loading}
+                className="text-white hover:bg-white/10"
+              >
+                <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
               </Button>
-
-              {/* User Profile */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full hover:bg-gray-50 transition-colors cursor-pointer">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  AD
-                </div>
-                <span className="text-gray-900 font-medium text-sm">admin</span>
-                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
             </div>
           </div>
         </div>
@@ -436,40 +440,60 @@ export default function DashboardPage() {
 
             {/* Quick KPI Cards Below Chart */}
             <div className="grid grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-4 border border-green-200 dark:border-green-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-5 h-5 text-green-600" />
+              <div className="group bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-5 border border-green-200 dark:border-green-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                    <Target className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
                   <span className="text-xs font-semibold text-green-700 dark:text-green-400">TARGET</span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">1,500</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">83% achieved</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">1,500</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">83% achieved</div>
+                <div className="mt-3 h-1.5 bg-green-200 dark:bg-green-900/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-green-600 dark:bg-green-500 rounded-full animate-pulse" style={{ width: '83%' }}></div>
+                </div>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
+              <div className="group bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-5 border border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                    <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
                   <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">QUALITY</span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">98.5%</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Pass rate</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">98.5%</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Pass rate</div>
+                <div className="mt-3 h-1.5 bg-blue-200 dark:bg-blue-900/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full animate-pulse" style={{ width: '98.5%' }}></div>
+                </div>
               </div>
 
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Activity className="w-5 h-5 text-orange-600" />
+              <div className="group bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-5 border border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                    <Activity className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  </div>
                   <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">UTILIZATION</span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">76%</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Active time</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">76%</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Active time</div>
+                <div className="mt-3 h-1.5 bg-orange-200 dark:bg-orange-900/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-orange-600 dark:bg-orange-500 rounded-full animate-pulse" style={{ width: '76%' }}></div>
+                </div>
               </div>
 
-              <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-lg p-4 border border-pink-200 dark:border-pink-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Wrench className="w-5 h-5 text-pink-600" />
+              <div className="group bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-xl p-5 border border-pink-200 dark:border-pink-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-2 bg-pink-100 dark:bg-pink-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                    <Wrench className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                  </div>
                   <span className="text-xs font-semibold text-pink-700 dark:text-pink-400">MAINTENANCE</span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">2</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Due soon</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">2</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Due soon</div>
+                <div className="mt-3 h-1.5 bg-pink-200 dark:bg-pink-900/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-pink-600 dark:bg-pink-500 rounded-full w-1/2"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -530,28 +554,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Today's Summary */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
-              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Today's Summary</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Units Produced</span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">1,247</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Downtime</span>
-                  <span className="text-sm font-bold text-red-600">2.5 hrs</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Efficiency</span>
-                  <span className="text-sm font-bold text-green-600">87%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Quality Rate</span>
-                  <span className="text-sm font-bold text-blue-600">98.5%</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
