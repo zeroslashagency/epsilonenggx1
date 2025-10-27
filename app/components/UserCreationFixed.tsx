@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { ZohoButton } from './zoho-ui'
+import { apiPost } from '@/app/lib/utils/api-client'
 
 interface UserData {
   full_name: string
@@ -21,21 +23,14 @@ export function UserCreationFixed({ userData }: { userData: UserData }) {
     try {
       console.log('🚀 USING FIXED USER CREATION SYSTEM')
       
-      const response = await fetch('/api/admin/user-creation-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          full_name: userData.full_name,
-          email: userData.email,
-          password: userData.password,
-          role: userData.role,
-          employee_code: userData.employee_code || null,
-          department: userData.department || null,
-          designation: userData.designation || null,
-          actorId: 'admin'
-        })
+      const data = await apiPost('/api/admin/user-creation-requests', {
+        email: userData.email,
+        full_name: userData.full_name,
+        role: userData.role,
+        employee_code: userData.employee_code || null,
+        department: userData.department || null,
+        designation: userData.designation || null,
+        actorId: 'admin'
       })
 
       const result = await response.json()

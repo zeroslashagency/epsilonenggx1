@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, UserPlus, Shield, ArrowUpDown, Zap, Download, Calendar } from 'lucide-react'
-import Link from 'next/link'
-import { ZohoLayout } from '../components/zoho-ui'
+import { Download, RefreshCw, Calendar, Users, TrendingUp, Clock, AlertCircle, CheckCircle2, XCircle, Filter, ChevronDown, FileText } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { apiGet } from '@/app/lib/utils/api-client'
+import { ZohoLayout } from '../components/zoho-ui'
 import { calculateDateRange } from '@/lib/utils/date-utils'
 
 interface Employee {
@@ -158,8 +158,7 @@ export default function PersonnelPage() {
       const toDate = lastDayOfMonth.toISOString().split('T')[0]
 
       // Fetch attendance data for this employee for this month
-      const response = await fetch(`/api/get-attendance?employeeCode=${employeeCode}&fromDate=${fromDate}&toDate=${toDate}`)
-      const data = await response.json()
+      const data = await apiGet(`/api/get-attendance?employeeCode=${employeeCode}&fromDate=${fromDate}&toDate=${toDate}`)
 
       if (data.success && data.data?.allLogs) {
         const logs = data.data.allLogs
@@ -234,8 +233,7 @@ export default function PersonnelPage() {
       const endDate = new Date(toDate)
 
       // Fetch attendance data
-      const response = await fetch(`/api/get-attendance?employeeCode=${selectedEmployee.employee_code}&fromDate=${fromDate}&toDate=${toDate}`)
-      const data = await response.json()
+      const data = await apiGet(`/api/get-attendance?employeeCode=${selectedEmployee.employee_code}&fromDate=${fromDate}&toDate=${toDate}`)
 
       if (data.success && data.data?.allLogs && data.data.allLogs.length > 0) {
         const logs = data.data.allLogs

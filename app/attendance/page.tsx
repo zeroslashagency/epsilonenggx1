@@ -124,8 +124,7 @@ export default function AttendancePage() {
 
   const fetchAllEmployees = async () => {
     try {
-      const response = await fetch('/api/get-employees')
-      const data = await response.json()
+      const data = await apiGet('/api/get-employees')
       if (data.success && data.employees) {
         const employees = data.employees
           .filter((emp: any) => emp.employee_code)
