@@ -293,7 +293,7 @@ export default function DashboardPage() {
           ) : (
             <>
               {/* KPI Card 1: Total Employees */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-blue-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
                 <div className="flex items-start justify-between mb-2">
                   <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
@@ -311,7 +311,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 2: Present Today */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-green-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
@@ -329,7 +329,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 3: Active Orders */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-blue-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <Calendar className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -346,7 +346,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 4: Machines Running */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-orange-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <Factory className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                   <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -363,7 +363,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 5: Overall Efficiency */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-yellow-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <Zap className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600">
@@ -381,7 +381,7 @@ export default function DashboardPage() {
               </div>
 
               {/* KPI Card 6: Units Produced */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-indigo-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <Target className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                   <div className="flex items-center gap-1 text-xs text-green-600">
