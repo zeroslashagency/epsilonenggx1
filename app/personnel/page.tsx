@@ -35,7 +35,7 @@ export default function PersonnelPage() {
     totalPunches: 0
   })
   const [loadingStats, setLoadingStats] = useState(false)
-  const [dateRange, setDateRange] = useState<string>('month')
+  const [exportDateRange, setExportDateRange] = useState<string>('month')
   const [showDateDropdown, setShowDateDropdown] = useState(false)
 
   useEffect(() => {
@@ -149,8 +149,12 @@ export default function PersonnelPage() {
       setLoadingStats(true)
       console.log(`📊 Fetching attendance for employee code: ${employeeCode}`)
 
-      // Use selected date range
-      const { fromDate, toDate } = calculateDateRange(dateRange)
+      // Always use current month for display stats
+      const now = new Date()
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const fromDate = firstDayOfMonth.toISOString().split('T')[0]
+      const toDate = lastDayOfMonth.toISOString().split('T')[0]
 
       // Fetch attendance data for this employee for this month
       const response = await fetch(`/api/get-attendance?employeeCode=${employeeCode}&fromDate=${fromDate}&toDate=${toDate}`)
@@ -210,7 +214,7 @@ export default function PersonnelPage() {
       'year': 'This Year',
       'prev-year': 'Previous Year'
     }
-    return labels[dateRange] || 'This Month'
+    return labels[exportDateRange] || 'This Month'
   }
 
   const calculateDateRange = (range: string) => {
@@ -289,7 +293,7 @@ export default function PersonnelPage() {
     if (!selectedEmployee?.employee_code) return
 
     try {
-      const { fromDate, toDate } = calculateDateRange(dateRange)
+      const { fromDate, toDate } = calculateDateRange(exportDateRange)
 
       // Fetch attendance data
       const response = await fetch(`/api/get-attendance?employeeCode=${selectedEmployee.employee_code}&fromDate=${fromDate}&toDate=${toDate}`)
@@ -315,7 +319,7 @@ export default function PersonnelPage() {
         XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
 
         // Download
-        const fileName = `${selectedEmployee.full_name}_Attendance_${dateRange}_${new Date().toISOString().split('T')[0]}.xlsx`
+        const fileName = `${selectedEmployee.full_name}_Attendance_${exportDateRange}_${new Date().toISOString().split('T')[0]}.xlsx`
         XLSX.writeFile(wb, fileName)
 
         console.log(`✅ Downloaded ${logs.length} attendance records`)
@@ -525,11 +529,8 @@ export default function PersonnelPage() {
                             <button
                               key={range}
                               onClick={() => {
-                                setDateRange(range)
+                                setExportDateRange(range)
                                 setShowDateDropdown(false)
-                                if (selectedEmployee?.employee_code) {
-                                  fetchAttendanceStats(selectedEmployee.employee_code)
-                                }
                               }}
                               className="w-full text-left px-4 py-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 text-sm text-[#12263F] dark:text-white"
                             >
