@@ -285,7 +285,7 @@ export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
           </div>
         )}
         <button
-          onClick={onToggleAction}
+          onClick={onToggle}
           className="p-1.5 rounded-[4px] hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
         >
           {collapsed ? (
