@@ -208,18 +208,6 @@ export default function OrganizationPage() {
                   </div>
                 </div>
               </Link>
-
-              <Link href="/attendance" className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-[4px] p-6 hover:border-[#2C7BE5] transition-colors group">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-[#E3F2FD] dark:bg-blue-900/20 rounded-[4px] group-hover:bg-[#2C7BE5] group-hover:text-white transition-colors">
-                    <Users className="w-6 h-6 text-[#2C7BE5] group-hover:text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#12263F] dark:text-white">Attendance Sync</h3>
-                    <p className="text-sm text-[#95AAC9]">Sync attendance data</p>
-                  </div>
-                </div>
-              </Link>
             </div>
           </div>
         </div>

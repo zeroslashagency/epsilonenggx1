@@ -260,11 +260,11 @@ export default function UserDetailPage() {
         {/* Tab Navigation */}
         <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
           <div className="flex items-center gap-2 px-6">
-            <Link href="/users" className="flex items-center gap-2 px-4 py-3 text-sm text-white bg-[#00A651] rounded-t transition-colors border-b-2 border-[#00A651]">
+            <Link href="/settings/users" className="flex items-center gap-2 px-4 py-3 text-sm text-white bg-[#00A651] rounded-t transition-colors border-b-2 border-[#00A651]">
               <User className="w-4 h-4" />
               User Management
             </Link>
-            <Link href="/users/add" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
+            <Link href="/settings/users/add" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
               <UserPlus className="w-4 h-4" />
               Add Users
             </Link>
@@ -283,7 +283,7 @@ export default function UserDetailPage() {
         <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/users">
+              <Link href="/settings/users">
                 <button className="p-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 rounded transition-colors">
                   <ArrowLeft className="w-5 h-5 text-[#95AAC9]" />
                 </button>

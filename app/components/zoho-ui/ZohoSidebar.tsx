@@ -75,6 +75,12 @@ export function ZohoSidebar({ collapsed, onToggleAction }: { collapsed: boolean;
       icon: TrendingUp
     },
     {
+      id: 'attendance',
+      label: 'Attendance',
+      href: '/attendance',
+      icon: Clock
+    },
+    {
       id: 'standalone-attendance',
       label: 'Standalone Attendance',
       href: '/standalone-attendance',
@@ -188,7 +194,7 @@ export function ZohoSidebar({ collapsed, onToggleAction }: { collapsed: boolean;
     {
       id: 'account',
       label: 'Account',
-      href: '/users',
+      href: '/account',
       icon: User
     }
   ]
@@ -205,6 +211,7 @@ export function ZohoSidebar({ collapsed, onToggleAction }: { collapsed: boolean;
         'schedule-generator': 'view_schedule',
         'chart': 'view_dashboard', // Chart uses dashboard permission
         'analytics': 'view_reports', // Analytics uses reports permission
+        'attendance': 'attendance_read',
         'standalone-attendance': 'attendance_read',
         'production': 'operate_machine', // Production section
         'orders': 'operate_machine',

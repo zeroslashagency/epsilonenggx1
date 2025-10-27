@@ -132,13 +132,6 @@ export default function RolesPage() {
               Role Profiles
             </Link>
             <Link
-              href="/settings/attendance-sync"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <ArrowUpDown className="w-4 h-4" />
-              Attendance Sync
-            </Link>
-            <Link
               href="/settings/activity-logs"
               className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
             >

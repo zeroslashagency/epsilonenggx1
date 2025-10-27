@@ -107,7 +107,7 @@ export default function AddUsersPage() {
 
       if (result.success) {
         alert('User created successfully!')
-        router.push('/users')
+        router.push('/settings/users')
       } else {
         alert('Failed to create user: ' + (result.error || 'Unknown error'))
       }
@@ -163,7 +163,7 @@ export default function AddUsersPage() {
         }
         
         alert(successMessage)
-        router.push('/users')
+        router.push('/settings/users')
       } else {
         alert('❌ Failed to create user: ' + (result.error || 'Unknown error'))
       }
@@ -180,14 +180,14 @@ export default function AddUsersPage() {
         <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
           <div className="flex items-center gap-2 px-6">
             <Link
-              href="/users"
+              href="/settings/users"
               className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
             >
               <User className="w-4 h-4" />
               User Management
             </Link>
             <Link
-              href="/users/add"
+              href="/settings/users/add"
               className="flex items-center gap-2 px-4 py-3 text-sm text-white bg-[#00A651] rounded-t transition-colors border-b-2 border-[#00A651]"
             >
               <UserPlus className="w-4 h-4" />
