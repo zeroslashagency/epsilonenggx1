@@ -1,7 +1,8 @@
 "use client"
 
+import { useState, useEffect } from 'react'
 import { ZohoLayout, ZohoBadge, ZohoButton } from '@/app/components/zoho-ui'
-import { Users, UserPlus, Search, MoreVertical, Edit, Trash2, Shield } from 'lucide-react'
+import { Users, UserPlus, Search, MoreVertical, Edit, Trash2, Shield, User, Zap, Settings, Save, X } from 'lucide-react'
 import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 import Link from 'next/link'
 

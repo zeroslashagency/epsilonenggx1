@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Cpu, Activity, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Cpu, Activity, AlertCircle, CheckCircle2, Clock, CheckCircle, Plus, Search } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
 
 interface Machine {

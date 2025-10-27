@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '../components/zoho-ui'
-import { Download, RefreshCw, Calendar, Users, TrendingUp, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
-import * as XLSX from 'xlsx'
+import { Calendar, Users, TrendingUp, Download, RefreshCw, Home, ChevronRight, Activity } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { apiGet } from '@/app/lib/utils/api-client'
 import { AttendanceLog, TodayAttendanceData } from '@/app/types'
 
 export default function AttendancePage() {

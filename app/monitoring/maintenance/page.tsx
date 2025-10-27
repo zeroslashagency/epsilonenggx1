@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Wrench, CheckCircle2, Clock, AlertTriangle } from 'lucide-react'
+import { Wrench, CheckCircle2, Clock, AlertTriangle, CheckCircle, Calendar, AlertCircle } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
 
 interface MaintenanceRecord {

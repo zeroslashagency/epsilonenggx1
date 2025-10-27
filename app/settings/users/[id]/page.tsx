@@ -1,11 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, UserPlus, Shield, ArrowUpDown, Zap, ArrowLeft, Save, X, RefreshCw, Key, Mail } from 'lucide-react'
+import { User, UserPlus, Shield, ArrowUpDown, Zap, ArrowLeft, Save, X, RefreshCw, Key, Mail, Activity } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { ZohoLayout, ZohoBadge, ZohoButton } from '@/app/components/zoho-ui'
-import { User, Mail, Shield, Activity, Save, X } from 'lucide-react'
 import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 
 interface UserDetail {

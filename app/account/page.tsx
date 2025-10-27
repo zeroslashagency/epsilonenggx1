@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '../components/zoho-ui'
-import { User, Key, Mail, Shield } from 'lucide-react'
+import { User, Key, Mail, Shield, Activity } from 'lucide-react'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
 import { UserData } from '@/app/types'
@@ -38,7 +38,14 @@ export default function AccountPage() {
           }
 
           setUserData({
-            ...currentUser,
+            id: currentUser.id,
+            email: currentUser.email || '',
+            full_name: currentUser.user_metadata?.full_name || currentUser.email || '',
+            role: currentUser.user_metadata?.role || 'viewer',
+            created_at: currentUser.created_at || new Date().toISOString(),
+            last_sign_in_at: currentUser.last_sign_in_at,
+            email_confirmed_at: currentUser.email_confirmed_at,
+            user_metadata: currentUser.user_metadata,
             profile: profileData
           })
         }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Users, UserCheck, UserX, Briefcase } from 'lucide-react'
+import { Users, UserCheck, UserX, Briefcase, Plus, Award } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
 
 interface Personnel {

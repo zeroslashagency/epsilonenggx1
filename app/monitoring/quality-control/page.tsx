@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { CheckCircle2, XCircle, AlertTriangle, Package } from 'lucide-react'
+import { CheckCircle2, XCircle, AlertTriangle, Package, CheckCircle, Shield, TrendingUp } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
 
 interface QualityCheck {
