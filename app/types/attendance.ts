@@ -6,6 +6,7 @@ export interface AttendanceLog {
   punch_direction: 'IN' | 'OUT' | string
   device_id?: string
   created_at?: string
+  sync_time?: string
 }
 
 export interface AttendanceSummary {
@@ -20,8 +21,16 @@ export interface TodayAttendanceData {
   totalAbsent: number
   attendancePercentage: number
   logs: AttendanceLog[]
-  summary?: AttendanceSummary[]
+  summary?: AttendanceSummary[] | {
+    totalEmployees: number
+    present: number
+    absent: number
+    lateArrivals: number
+    earlyDepartures: number
+  }
   lastSync?: string
+  allLogs?: AttendanceLog[]
+  todayStatus?: any
 }
 
 export interface AllTrackData {
@@ -30,6 +39,7 @@ export interface AllTrackData {
   fromDate: string
   toDate: string
   employees?: string[]
+  allLogs?: AttendanceLog[]
 }
 
 export interface AttendanceAnalytics {

@@ -9,8 +9,15 @@ export interface UserData {
   phone?: string
   created_at: string
   last_login?: string
+  last_sign_in_at?: string
+  email_confirmed_at?: string
   standalone_attendance?: 'YES' | 'NO'
   status?: 'active' | 'pending' | 'inactive'
+  user_metadata?: {
+    full_name?: string
+    role?: string
+  }
+  profile?: any
 }
 
 export interface UserPermissions {

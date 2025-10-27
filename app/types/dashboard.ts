@@ -40,4 +40,5 @@ export interface DashboardData {
   machines: Machine[]
   alerts: Alert[]
   lastUpdated?: string
+  chartData?: any
 }

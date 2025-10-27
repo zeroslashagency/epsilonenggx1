@@ -16,14 +16,6 @@ import * as XLSX from 'xlsx'
 import { calculateDateRange, getDateRangeLabel as getDateLabel } from '@/lib/utils/date-utils'
 import { AttendanceLog, TodayAttendanceData, AllTrackData } from '@/app/types'
 
-interface AttendanceLog {
-  employee_code: string
-  employee_name: string
-  log_date: string
-  punch_direction: string
-  sync_time: string
-}
-
 export default function AttendancePage() {
   const [dateRange, setDateRange] = useState("today")
   const [employeeFilter, setEmployeeFilter] = useState("all")

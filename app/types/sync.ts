@@ -15,6 +15,12 @@ export interface HistoricalSyncResult extends SyncResult {
   dateRange?: {
     from: string
     to: string
+    fromDate?: string
+    toDate?: string
   }
   recordsProcessed?: number
+  fetched?: number
+  cleaned?: number
+  stored?: number
+  errors?: string[]
 }
