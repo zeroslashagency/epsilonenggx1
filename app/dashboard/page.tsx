@@ -187,7 +187,7 @@ export default function DashboardPage() {
     <ZohoLayout breadcrumbs={[{ label: 'Dashboard' }]}>
       <div className="space-y-4">
         {/* Global Header Bar */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-800 dark:to-indigo-800 rounded-xl p-4 shadow-lg">
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 dark:from-blue-700 dark:to-indigo-700 rounded-xl p-4 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div>
@@ -507,7 +507,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-blue-600 to-cyan-600 dark:from-blue-800 dark:to-cyan-800 rounded-xl p-5 shadow-lg">
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-500 dark:from-blue-700 dark:to-cyan-700 rounded-xl p-5 shadow-lg">
               <h3 className="font-bold text-white mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5" />
                 Quick Actions
