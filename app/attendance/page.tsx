@@ -102,9 +102,14 @@ export default function AttendancePage() {
     const labels: Record<string, string> = {
       'today': 'Today',
       'yesterday': 'Yesterday',
-      '7': 'Last 7 Days',
-      '14': 'Last 14 Days',
-      '30': 'Last 30 Days'
+      'week': 'This Week',
+      'prev-week': 'Previous Week',
+      'month': 'This Month',
+      'prev-month': 'Previous Month',
+      'quarter': 'This Quarter',
+      'prev-quarter': 'Previous Quarter',
+      'year': 'This Year',
+      'prev-year': 'Previous Year'
     }
     return labels[dateRange] || 'Today'
   }
@@ -137,94 +142,28 @@ export default function AttendancePage() {
     ]}>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Attendance Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Real-time attendance data synced from office computer</p>
+            <h1 className="text-4xl font-bold text-foreground mb-3 tracking-tight">Attendance Dashboard</h1>
+            <p className="text-muted-foreground text-lg">Real-time attendance data synced from office computer</p>
           </div>
-          <div className="flex gap-3">
-            {/* Date Range Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowDateDropdown(!showDateDropdown)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Calendar className="h-4 w-4" />
-                <span className="font-medium">{getDateRangeLabel()}</span>
-                <ChevronDown className="h-4 w-4" />
-              </button>
-              {showDateDropdown && (
-                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-48">
-                  {['today', 'yesterday', '7', '14', '30'].map((range) => (
-                    <button
-                      key={range}
-                      onClick={() => {
-                        setDateRange(range)
-                        setShowDateDropdown(false)
-                        fetchAttendanceData(range)
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-                    >
-                      {range === 'today' ? 'Today' :
-                       range === 'yesterday' ? 'Yesterday' :
-                       `Last ${range} Days`}
-                    </button>
-                  ))}
-                </div>
-              )}
+          <div className="flex flex-col items-end gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <Activity className="h-4 w-4 text-primary" />
+              <span className="font-semibold text-foreground">Auto-Sync Status</span>
             </div>
-
-            {/* Employee Multi-Select */}
-            <div className="relative">
-              <button
-                onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Users className="h-4 w-4" />
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
                 <span className="font-medium">
-                  {selectedEmployees.length === allEmployees.length
-                    ? 'All Employees'
-                    : `${selectedEmployees.length} Selected`}
+                  Last sync: {lastSyncTime ? new Date(lastSyncTime).toLocaleTimeString() : 'Loading...'}
                 </span>
-                <ChevronDown className="h-4 w-4" />
-              </button>
-              {showEmployeeDropdown && (
-                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
-                  <div className="sticky top-0 bg-white border-b border-gray-200 p-3">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={selectedEmployees.length === allEmployees.length}
-                        onCheckedChange={toggleAllEmployees}
-                      />
-                      <span className="font-medium text-sm">Select All ({allEmployees.length})</span>
-                    </div>
-                  </div>
-                  <div className="p-2">
-                    {allEmployees.map((employeeCode) => (
-                      <div
-                        key={employeeCode}
-                        className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded"
-                      >
-                        <Checkbox
-                          checked={selectedEmployees.includes(employeeCode)}
-                          onCheckedChange={() => toggleEmployee(employeeCode)}
-                        />
-                        <span className="text-sm">Employee {employeeCode}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </div>
+              <div className="flex items-center gap-2 text-[hsl(var(--success))] font-medium">
+                <div className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--success))] animate-pulse shadow-sm" />
+                <span>Cloud Synced</span>
+              </div>
             </div>
-
-            <Button 
-              variant="outline" 
-              className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md"
-              onClick={exportToExcel}
-            >
-              <Download className="h-4 w-4" />
-              Export Excel
-            </Button>
           </div>
         </div>
 
@@ -242,12 +181,60 @@ export default function AttendancePage() {
               <SelectContent>
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="yesterday">Yesterday</SelectItem>
-                <SelectItem value="7">Last 7 Days</SelectItem>
-                <SelectItem value="14">Last 14 Days</SelectItem>
-                <SelectItem value="30">Last 30 Days</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="prev-week">Previous Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="prev-month">Previous Month</SelectItem>
+                <SelectItem value="quarter">This Quarter</SelectItem>
+                <SelectItem value="prev-quarter">Previous Quarter</SelectItem>
+                <SelectItem value="year">This Year</SelectItem>
+                <SelectItem value="prev-year">Previous Year</SelectItem>
                 <SelectItem value="custom">Custom Range</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Employee Multi-Select */}
+          <div className="relative">
+            <button
+              onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white shadow-sm"
+            >
+              <Users className="h-4 w-4" />
+              <span className="font-medium text-sm">
+                {selectedEmployees.length === allEmployees.length
+                  ? 'All Employees'
+                  : `${selectedEmployees.length} Selected`}
+              </span>
+              <ChevronDown className="h-4 w-4" />
+            </button>
+            {showEmployeeDropdown && (
+              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedEmployees.length === allEmployees.length}
+                      onCheckedChange={toggleAllEmployees}
+                    />
+                    <span className="font-medium text-sm">Select All ({allEmployees.length})</span>
+                  </div>
+                </div>
+                <div className="p-2">
+                  {allEmployees.map((employeeCode) => (
+                    <div
+                      key={employeeCode}
+                      className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded"
+                    >
+                      <Checkbox
+                        checked={selectedEmployees.includes(employeeCode)}
+                        onCheckedChange={() => toggleEmployee(employeeCode)}
+                      />
+                      <span className="text-sm">Employee {employeeCode}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {dateRange === 'custom' && (
@@ -464,9 +451,17 @@ export default function AttendancePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end gap-2">
                 <Button 
-                  className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
+                  variant="outline"
+                  className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md"
+                  onClick={exportToExcel}
+                >
+                  <Download className="h-4 w-4" />
+                  Export Excel
+                </Button>
+                <Button 
+                  className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
                   onClick={() => fetchAttendanceData('custom')}
                 >
                   Apply Filters
