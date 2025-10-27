@@ -435,7 +435,9 @@ export default function AttendancePage() {
                 placeholder="To Date"
               />
               <Button 
-                onClick={() => fetchAttendanceData('custom')}
+                onClick={() => {
+                  // Custom date range only affects All Track Records section
+                }}
                 className="gap-2 font-semibold"
               >
                 Apply
