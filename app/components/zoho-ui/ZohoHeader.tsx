@@ -73,12 +73,12 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center space-x-2 ml-6">
+        <div className="flex items-center space-x-3 ml-6">
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
             className="
-              p-2 rounded-lg
+              p-2.5 rounded-full
               text-gray-600 dark:text-gray-400
               hover:bg-gray-100 dark:hover:bg-gray-800
               transition-colors
@@ -100,7 +100,7 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
                 setShowUserMenu(false)
               }}
               className="
-                relative p-2 rounded-lg
+                relative p-2.5 rounded-full
                 text-gray-600 dark:text-gray-400
                 hover:bg-gray-100 dark:hover:bg-gray-800
                 transition-colors
@@ -108,7 +108,7 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
               )}
             </button>
 
@@ -172,7 +172,7 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
           {/* Settings */}
           <button
             className="
-              p-2 rounded-lg
+              p-2.5 rounded-full
               text-gray-600 dark:text-gray-400
               hover:bg-gray-100 dark:hover:bg-gray-800
               transition-colors
@@ -190,17 +190,17 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
                 setShowNotifications(false)
               }}
               className="
-                flex items-center space-x-2 px-3 py-2 rounded-lg
+                flex items-center space-x-2.5 px-3 py-1.5 rounded-full
                 text-gray-700 dark:text-gray-300
                 hover:bg-gray-100 dark:hover:bg-gray-800
-                transition-colors
+                transition-colors border border-gray-200 dark:border-gray-700
               "
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-medium hidden md:block">
-                {userEmail?.split('@')[0] || 'User'}
+              <span className="text-sm font-medium">
+                {userEmail?.split('@')[0] || 'admin'}
               </span>
               <ChevronDown className="w-4 h-4" />
             </button>
