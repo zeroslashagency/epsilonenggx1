@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Bell, AlertTriangle, AlertCircle, Info, CheckCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, Bell } from 'lucide-react'
+import { apiGet, apiPatch } from '@/app/lib/utils/api-client'
 
 interface Alert {
   id: string
@@ -25,8 +26,7 @@ export default function AlertsPage() {
   const fetchAlerts = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/monitoring/alerts')
-      const data = await response.json()
+      const data = await apiGet('/api/monitoring/alerts')
       
       if (data.success) {
         // Transform API data - rename created_at to timestamp for UI
@@ -50,21 +50,15 @@ export default function AlertsPage() {
   const getSeverityConfig = (severity: string) => {
     const config = {
       critical: { color: 'bg-red-100 text-red-800 border-red-200', icon: AlertCircle, iconColor: 'text-red-600' },
-      warning: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: AlertTriangle, iconColor: 'text-yellow-600' },
-      info: { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Info, iconColor: 'text-blue-600' }
+      warning: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: AlertCircle, iconColor: 'text-yellow-600' },
+      info: { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: AlertCircle, iconColor: 'text-blue-600' }
     }
     return config[severity as keyof typeof config] || config.info
   }
 
   const handleAcknowledge = async (id: string) => {
     try {
-      const response = await fetch('/api/monitoring/alerts', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      })
-      
-      const data = await response.json()
+      const data = await apiPatch('/api/monitoring/alerts', { id })
       
       if (data.success) {
         // Update local state

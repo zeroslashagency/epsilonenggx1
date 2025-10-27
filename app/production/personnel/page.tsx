@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Users, Plus, Search, UserCheck, UserX, Award } from 'lucide-react'
+import { Users, UserCheck, UserX, Briefcase } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
 
 interface Personnel {
   id: string
@@ -26,8 +27,7 @@ export default function PersonnelPage() {
   const fetchPersonnel = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/production/personnel')
-      const data = await response.json()
+      const data = await apiGet('/api/production/personnel')
       
       if (data.success) {
         // Transform API data to match UI interface

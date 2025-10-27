@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Cpu, Plus, Search, Activity, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { Cpu, Activity, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
 
 interface Machine {
   id: string
@@ -32,8 +33,7 @@ export default function MachinesPage() {
       const params = new URLSearchParams()
       if (statusFilter !== 'all') params.append('status', statusFilter)
       
-      const response = await fetch(`/api/production/machines?${params.toString()}`)
-      const data = await response.json()
+      const data = await apiGet(`/api/production/machines?${params.toString()}`)
       
       if (data.success) {
         // Transform API data to match UI interface

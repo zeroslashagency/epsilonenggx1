@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { User, UserPlus, Shield, ArrowUpDown, Zap, ArrowLeft, Save, X, RefreshCw, Key, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
-import { ZohoLayout } from '../../components/zoho-ui'
+import { ZohoLayout, ZohoBadge, ZohoButton } from '@/app/components/zoho-ui'
+import { User, Mail, Shield, Activity, Save, X } from 'lucide-react'
+import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 
 interface UserDetail {
   id: string
@@ -69,8 +71,7 @@ export default function UserDetailPage() {
   const fetchActivityLogs = async () => {
     setLoadingActivity(true)
     try {
-      const response = await fetch(`/api/admin/user-activity-logs/${userId}`)
-      const data = await response.json()
+      const data = await apiGet(`/api/admin/user-activity-logs/${userId}`)
       
       if (data.success) {
         setActivityLogs(data.logs || [])
@@ -85,8 +86,7 @@ export default function UserDetailPage() {
 
   const fetchUser = async () => {
     try {
-      const response = await fetch('/api/admin/users')
-      const data = await response.json()
+      const data = await apiGet('/api/admin/users')
       
       if (data.success) {
         const foundUser = data.data.users.find((u: any) => u.id === userId)
@@ -145,20 +145,11 @@ export default function UserDetailPage() {
       // Determine standalone_attendance based on permissions
       const standalone_attendance = permissions.includes('standalone_attendance') ? 'YES' : 'NO'
       
-      const response = await fetch('/api/admin/update-user-permissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userId,
-          role: selectedRole,
-          permissions: permissions,
-          standalone_attendance: standalone_attendance
-        })
+      const data = await apiPost('/api/admin/update-user-permissions', {
+        userId: user.id,
+        permissions,
+        standalone_attendance
       })
-
-      const data = await response.json()
 
       if (data.success) {
         console.log('✅ Changes saved successfully')
@@ -200,21 +191,12 @@ export default function UserDetailPage() {
 
   const handleSaveContactInfo = async () => {
     try {
-      const response = await fetch('/api/admin/update-user-contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userId,
-          phone: editedPhone,
-          employee_code: editedEmployeeCode,
-          department: editedDepartment,
-          designation: editedDesignation
-        })
+      const data = await apiPost('/api/admin/update-user-contact', {
+        userId: user?.id,
+        phone: editedPhone,
+        department: editedDepartment,
+        designation: editedDesignation
       })
-
-      const data = await response.json()
 
       if (data.success) {
         alert('Contact information updated successfully!')

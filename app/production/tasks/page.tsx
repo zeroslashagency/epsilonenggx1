@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { CheckSquare, Plus, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { ListTodo, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
 
 interface Task {
   id: string
@@ -28,8 +29,7 @@ export default function TasksPage() {
   const fetchTasks = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/production/tasks')
-      const data = await response.json()
+      const data = await apiGet('/api/production/tasks')
       
       if (data.success) {
         // Transform API data to match UI interface

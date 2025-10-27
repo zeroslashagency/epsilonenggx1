@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Wrench, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { Wrench, CheckCircle2, Clock, AlertTriangle } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
 
 interface MaintenanceRecord {
   id: string
@@ -27,8 +28,7 @@ export default function MaintenancePage() {
   const fetchMaintenanceRecords = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/monitoring/maintenance')
-      const data = await response.json()
+      const data = await apiGet('/api/monitoring/maintenance')
       
       if (data.success) {
         // Transform API data to match UI interface

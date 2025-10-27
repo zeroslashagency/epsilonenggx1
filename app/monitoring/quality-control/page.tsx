@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Shield, CheckCircle, XCircle, AlertTriangle, TrendingUp } from 'lucide-react'
+import { CheckCircle2, XCircle, AlertTriangle, Package } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
 
 interface QualityCheck {
   id: string
@@ -25,8 +26,7 @@ export default function QualityControlPage() {
   const fetchQualityChecks = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/monitoring/quality')
-      const data = await response.json()
+      const data = await apiGet('/api/monitoring/quality')
       
       if (data.success) {
         // Transform API data to match UI interface

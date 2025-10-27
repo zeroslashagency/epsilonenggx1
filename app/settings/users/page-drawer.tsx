@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { User, UserPlus, Shield, ArrowUpDown, Zap, Edit, Trash2, Settings, X, Save, RefreshCw, Key, Mail } from 'lucide-react'
+import { ZohoLayout, ZohoBadge, ZohoButton } from '@/app/components/zoho-ui'
+import { Users, UserPlus, Search, MoreVertical, Edit, Trash2, Shield } from 'lucide-react'
+import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 import Link from 'next/link'
-import { ZohoLayout } from '../../components/zoho-ui'
 
 interface UserType {
   id: string
@@ -53,8 +53,7 @@ export default function UsersPageDrawer() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/users')
-      const data = await response.json()
+      const data = await apiGet('/api/admin/users')
       
       if (data.success) {
         setUsers(data.data.users || [])
@@ -89,8 +88,8 @@ export default function UsersPageDrawer() {
 
   const handleSaveChanges = async () => {
     if (!selectedUser) return
-    
     try {
+      setCreating(true)
       const response = await fetch('/api/admin/update-user-contact', {
         method: 'POST',
         headers: {

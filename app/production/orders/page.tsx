@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Package, Plus, Search, Filter, Download, Edit, Trash2, Eye } from 'lucide-react'
+import { Package, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
+import { Trash2, Eye } from 'lucide-react'
 
 interface Order {
   id: string
@@ -32,8 +34,7 @@ export default function OrdersPage() {
       const params = new URLSearchParams()
       if (statusFilter !== 'all') params.append('status', statusFilter)
       
-      const response = await fetch(`/api/production/orders?${params.toString()}`)
-      const data = await response.json()
+      const data = await apiGet(`/api/production/orders?${params.toString()}`)
       
       if (data.success) {
         setOrders(data.data || [])
