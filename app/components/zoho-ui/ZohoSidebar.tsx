@@ -42,10 +42,16 @@ interface MenuItem {
   isSection?: boolean
 }
 
-export function ZohoSidebar({ collapsed, onToggleAction }: { collapsed: boolean; onToggleAction: () => void }) {
+interface ZohoSidebarProps {
+  collapsed: boolean
+  onToggle: () => void
+}
+
+export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
   const pathname = usePathname()
-  const { logout, userPermissions, hasPermission, refreshPermissions } = useAuth()
-  const [expandedItems, setExpandedItems] = useState<string[]>(['settings'])
+  const { userPermissions, logout } = useAuth()
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['settings'])
 
   const menuItems: MenuItem[] = [
     // MAIN Section
@@ -202,6 +208,14 @@ export function ZohoSidebar({ collapsed, onToggleAction }: { collapsed: boolean;
       icon: User
     }
   ]
+
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(menuId) 
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    )
+  }
 
   // Filter menu items based on user permissions
   const filterMenuByPermissions = (items: MenuItem[]): MenuItem[] => {
