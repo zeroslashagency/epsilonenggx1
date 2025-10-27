@@ -299,36 +299,55 @@ export default function PersonnelPage() {
       const response = await fetch(`/api/get-attendance?employeeCode=${selectedEmployee.employee_code}&fromDate=${fromDate}&toDate=${toDate}`)
       const data = await response.json()
 
-      if (data.success && data.data?.allLogs) {
+      if (data.success && data.data?.allLogs && data.data.allLogs.length > 0) {
         const logs = data.data.allLogs
 
-        // Prepare Excel data
-        const excelData = logs.map((log: any) => ({
-          'Date': new Date(log.log_date).toLocaleDateString(),
-          'Time': new Date(log.log_date).toLocaleTimeString(),
-          'Direction': log.punch_direction || 'N/A',
-          'Employee Code': log.employee_code,
-          'Employee Name': selectedEmployee.full_name,
-          'Department': selectedEmployee.department || 'N/A',
-          'Designation': selectedEmployee.designation || 'N/A'
-        }))
+        // Prepare Excel data with proper formatting
+        const excelData = logs.map((log: any) => {
+          const logDate = new Date(log.log_date)
+          return {
+            'Date': logDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+            'Time': logDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            'Day': logDate.toLocaleDateString('en-US', { weekday: 'long' }),
+            'Direction': log.punch_direction || 'N/A',
+            'Employee Code': log.employee_code || selectedEmployee.employee_code,
+            'Employee Name': selectedEmployee.full_name,
+            'Department': selectedEmployee.department || 'N/A',
+            'Designation': selectedEmployee.designation || 'N/A'
+          }
+        })
 
-        // Create workbook
+        // Create workbook with proper column widths
         const ws = XLSX.utils.json_to_sheet(excelData)
+        
+        // Set column widths
+        ws['!cols'] = [
+          { wch: 12 }, // Date
+          { wch: 12 }, // Time
+          { wch: 12 }, // Day
+          { wch: 10 }, // Direction
+          { wch: 15 }, // Employee Code
+          { wch: 25 }, // Employee Name
+          { wch: 20 }, // Department
+          { wch: 20 }  // Designation
+        ]
+
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
 
-        // Download
-        const fileName = `${selectedEmployee.full_name}_Attendance_${exportDateRange}_${new Date().toISOString().split('T')[0]}.xlsx`
+        // Download with proper filename
+        const fileName = `${selectedEmployee.full_name.replace(/\s+/g, '_')}_Attendance_${getDateRangeLabel().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
         XLSX.writeFile(wb, fileName)
 
-        console.log(`✅ Downloaded ${logs.length} attendance records`)
+        console.log(`✅ Downloaded ${logs.length} attendance records for ${selectedEmployee.full_name}`)
+        alert(`Successfully exported ${logs.length} attendance records!`)
       } else {
-        alert('No attendance data found for this period')
+        console.warn('⚠️ No attendance data found')
+        alert(`No attendance data found for ${selectedEmployee.full_name} in the selected period (${getDateRangeLabel()})`)
       }
     } catch (error) {
       console.error('Failed to download attendance:', error)
-      alert('Failed to download attendance data')
+      alert('Failed to download attendance data. Please try again.')
     }
   }
 
