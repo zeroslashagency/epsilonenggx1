@@ -521,7 +521,7 @@ export default function AttendancePage() {
           <Button 
             variant="outline" 
             className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md ml-auto"
-            onClick={exportToExcel}
+            onClick={() => exportToExcel('today')}
           >
             <Download className="h-4 w-4" />
             Export Excel
