@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { apiGet } from '@/app/lib/utils/api-client'
 import * as XLSX from 'xlsx'
 import { ZohoLayout } from '../components/zoho-ui'
+import { calculateDateRange, getDateRangeLabel as getDateLabel } from '@/lib/utils/date-utils'
 
 interface AttendanceLog {
   employee_code: string
@@ -45,79 +46,8 @@ export default function AttendancePage() {
   const fetchAttendanceData = async (range: string = dateRange) => {
     setLoading(true)
     try {
-      // Calculate date range for API call
-      const now = new Date()
-      let fromDateParam: string
-      let toDateParam: string
-      
-      switch(range) {
-        case 'today':
-          fromDateParam = toDateParam = now.toISOString().split('T')[0]
-          break
-        case 'yesterday':
-          const yesterday = new Date(now)
-          yesterday.setDate(yesterday.getDate() - 1)
-          fromDateParam = toDateParam = yesterday.toISOString().split('T')[0]
-          break
-        case 'week':
-          const weekStart = new Date(now)
-          weekStart.setDate(weekStart.getDate() - now.getDay())
-          fromDateParam = weekStart.toISOString().split('T')[0]
-          toDateParam = now.toISOString().split('T')[0]
-          break
-        case 'prev-week':
-          const prevWeekEnd = new Date(now)
-          prevWeekEnd.setDate(prevWeekEnd.getDate() - now.getDay() - 1)
-          const prevWeekStart = new Date(prevWeekEnd)
-          prevWeekStart.setDate(prevWeekStart.getDate() - 6)
-          fromDateParam = prevWeekStart.toISOString().split('T')[0]
-          toDateParam = prevWeekEnd.toISOString().split('T')[0]
-          break
-        case 'month':
-          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-          const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-          fromDateParam = monthStart.toISOString().split('T')[0]
-          toDateParam = monthEnd.toISOString().split('T')[0]
-          break
-        case 'prev-month':
-          const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-          const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
-          fromDateParam = prevMonthStart.toISOString().split('T')[0]
-          toDateParam = prevMonthEnd.toISOString().split('T')[0]
-          break
-        case 'quarter':
-          const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
-          fromDateParam = quarterStart.toISOString().split('T')[0]
-          toDateParam = now.toISOString().split('T')[0]
-          break
-        case 'prev-quarter':
-          const prevQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
-          const prevQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
-          fromDateParam = prevQuarterStart.toISOString().split('T')[0]
-          toDateParam = prevQuarterEnd.toISOString().split('T')[0]
-          break
-        case 'year':
-          const yearStart = new Date(now.getFullYear(), 0, 1)
-          fromDateParam = yearStart.toISOString().split('T')[0]
-          toDateParam = now.toISOString().split('T')[0]
-          break
-        case 'prev-year':
-          const prevYearStart = new Date(now.getFullYear() - 1, 0, 1)
-          const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31)
-          fromDateParam = prevYearStart.toISOString().split('T')[0]
-          toDateParam = prevYearEnd.toISOString().split('T')[0]
-          break
-        case 'custom':
-          if (fromDate && toDate) {
-            fromDateParam = fromDate
-            toDateParam = toDate
-          } else {
-            fromDateParam = toDateParam = now.toISOString().split('T')[0]
-          }
-          break
-        default:
-          fromDateParam = toDateParam = now.toISOString().split('T')[0]
-      }
+      // Use centralized date calculation utility
+      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(range, fromDate, toDate)
       
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
@@ -143,79 +73,8 @@ export default function AttendancePage() {
   const fetchAllTrackRecords = async () => {
     setAllTrackLoading(true)
     try {
-      // Calculate date range for API call
-      const now = new Date()
-      let fromDateParam: string
-      let toDateParam: string
-      
-      switch(dateRange) {
-        case 'today':
-          fromDateParam = toDateParam = now.toISOString().split('T')[0]
-          break
-        case 'yesterday':
-          const yesterday = new Date(now)
-          yesterday.setDate(yesterday.getDate() - 1)
-          fromDateParam = toDateParam = yesterday.toISOString().split('T')[0]
-          break
-        case 'week':
-          const weekStart = new Date(now)
-          weekStart.setDate(weekStart.getDate() - now.getDay())
-          fromDateParam = weekStart.toISOString().split('T')[0]
-          toDateParam = now.toISOString().split('T')[0]
-          break
-        case 'prev-week':
-          const prevWeekEnd = new Date(now)
-          prevWeekEnd.setDate(prevWeekEnd.getDate() - now.getDay() - 1)
-          const prevWeekStart = new Date(prevWeekEnd)
-          prevWeekStart.setDate(prevWeekStart.getDate() - 6)
-          fromDateParam = prevWeekStart.toISOString().split('T')[0]
-          toDateParam = prevWeekEnd.toISOString().split('T')[0]
-          break
-        case 'month':
-          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-          const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-          fromDateParam = monthStart.toISOString().split('T')[0]
-          toDateParam = monthEnd.toISOString().split('T')[0]
-          break
-        case 'prev-month':
-          const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-          const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
-          fromDateParam = prevMonthStart.toISOString().split('T')[0]
-          toDateParam = prevMonthEnd.toISOString().split('T')[0]
-          break
-        case 'quarter':
-          const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
-          fromDateParam = quarterStart.toISOString().split('T')[0]
-          toDateParam = now.toISOString().split('T')[0]
-          break
-        case 'prev-quarter':
-          const prevQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
-          const prevQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
-          fromDateParam = prevQuarterStart.toISOString().split('T')[0]
-          toDateParam = prevQuarterEnd.toISOString().split('T')[0]
-          break
-        case 'year':
-          const yearStart = new Date(now.getFullYear(), 0, 1)
-          fromDateParam = yearStart.toISOString().split('T')[0]
-          toDateParam = now.toISOString().split('T')[0]
-          break
-        case 'prev-year':
-          const prevYearStart = new Date(now.getFullYear() - 1, 0, 1)
-          const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31)
-          fromDateParam = prevYearStart.toISOString().split('T')[0]
-          toDateParam = prevYearEnd.toISOString().split('T')[0]
-          break
-        case 'custom':
-          if (fromDate && toDate) {
-            fromDateParam = fromDate
-            toDateParam = toDate
-          } else {
-            fromDateParam = toDateParam = now.toISOString().split('T')[0]
-          }
-          break
-        default:
-          fromDateParam = toDateParam = now.toISOString().split('T')[0]
-      }
+      // Use centralized date calculation utility
+      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(dateRange, fromDate, toDate)
       
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
@@ -277,19 +136,7 @@ export default function AttendancePage() {
   }
 
   const getDateRangeLabel = () => {
-    const labels: Record<string, string> = {
-      'today': 'Today',
-      'yesterday': 'Yesterday',
-      'week': 'This Week',
-      'prev-week': 'Previous Week',
-      'month': 'This Month',
-      'prev-month': 'Previous Month',
-      'quarter': 'This Quarter',
-      'prev-quarter': 'Previous Quarter',
-      'year': 'This Year',
-      'prev-year': 'Previous Year'
-    }
-    return labels[dateRange] || 'Today'
+    return getDateLabel(dateRange)
   }
 
   // Helper function to get week number
@@ -300,8 +147,14 @@ export default function AttendancePage() {
   }
 
   // Export to Excel
-  const exportToExcel = () => {
-    if (!attendanceData?.allLogs) return
+  const exportToExcel = (source: 'today' | 'allTrack' = 'today') => {
+    // Choose correct data source based on which section triggered export
+    const dataSource = source === 'allTrack' ? allTrackData : attendanceData
+    
+    if (!dataSource?.allLogs) {
+      alert('No data to export. Please load data first.')
+      return
+    }
     
     // Calculate date range
     const now = new Date()
@@ -370,7 +223,7 @@ export default function AttendancePage() {
     }
     
     // Filter logs by selected employees
-    const filteredLogs = attendanceData.allLogs.filter((log: any) =>
+    const filteredLogs = dataSource.allLogs.filter((log: any) =>
       selectedEmployees.length === 0 || selectedEmployees.includes(log.employee_code)
     )
     
@@ -943,7 +796,7 @@ export default function AttendancePage() {
                 <Button 
                   variant="outline"
                   className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md"
-                  onClick={exportToExcel}
+                  onClick={() => exportToExcel('allTrack')}
                 >
                   <Download className="h-4 w-4" />
                   Export Excel
