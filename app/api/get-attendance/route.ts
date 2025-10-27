@@ -3,11 +3,6 @@ import { getSupabaseClient } from '@/app/lib/services/supabase-client'
 import { requireAuth } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
-  // ✅ AUTH CHECK: Require authentication (any logged-in user can view attendance)
-  const authResult = await requireAuth(request)
-  if (authResult instanceof NextResponse) return authResult
-  const user = authResult
-
   try {
     const supabase = getSupabaseClient()
     const searchParams = request.nextUrl.searchParams
