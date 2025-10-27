@@ -139,7 +139,7 @@ export default function UsersPageDrawer() {
               <User className="w-4 h-4" />
               User Management
             </Link>
-            <Link href="/settings/users/add" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
+            <Link href="/settings/add-users" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
               <UserPlus className="w-4 h-4" />
               Add Users
             </Link>
@@ -158,7 +158,7 @@ export default function UsersPageDrawer() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white">All Users</h1>
           <div className="flex items-center gap-2">
-            <Link href="/settings/users/add">
+            <Link href="/settings/add-users">
               <button className="px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors">
                 Invite User
               </button>

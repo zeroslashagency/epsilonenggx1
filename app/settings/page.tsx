@@ -12,14 +12,14 @@ export default function SettingsPage() {
         <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
           <div className="flex items-center gap-2 px-6">
             <Link
-              href="/users"
+              href="/settings/users"
               className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
             >
               <User className="w-4 h-4" />
               User Management
             </Link>
             <Link
-              href="/users/add"
+              href="/settings/add-users"
               className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
             >
               <UserPlus className="w-4 h-4" />
@@ -49,7 +49,7 @@ export default function SettingsPage() {
             <p className="text-[#95AAC9] mb-6">Select a tab above to manage your settings</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
               <Link
-                href="/users"
+                href="/settings/users"
                 className="p-6 border border-[#E3E6F0] dark:border-gray-700 rounded hover:border-[#2C7BE5] transition-colors group"
               >
                 <User className="w-8 h-8 text-[#2C7BE5] mx-auto mb-3" />
@@ -57,7 +57,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-[#95AAC9]">Manage users and permissions</p>
               </Link>
               <Link
-                href="/users/add"
+                href="/settings/add-users"
                 className="p-6 border border-[#E3E6F0] dark:border-gray-700 rounded hover:border-[#2C7BE5] transition-colors group"
               >
                 <UserPlus className="w-8 h-8 text-[#00A651] mx-auto mb-3" />

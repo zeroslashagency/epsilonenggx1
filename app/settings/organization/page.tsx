@@ -185,7 +185,7 @@ export default function OrganizationPage() {
 
             {/* Quick Links */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Link href="/users" className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-[4px] p-6 hover:border-[#2C7BE5] transition-colors group">
+              <Link href="/settings/users" className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-[4px] p-6 hover:border-[#2C7BE5] transition-colors group">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-[#E8F5E8] dark:bg-green-900/20 rounded-[4px] group-hover:bg-[#2C7BE5] group-hover:text-white transition-colors">
                     <Users className="w-6 h-6 text-[#28A745] group-hover:text-white" />

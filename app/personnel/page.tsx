@@ -205,11 +205,11 @@ export default function PersonnelPage() {
         {/* Tab Navigation */}
         <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
           <div className="flex items-center gap-2 px-6">
-            <Link href="/users" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
+            <Link href="/settings/users" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
               <User className="w-4 h-4" />
               User Management
             </Link>
-            <Link href="/users/add" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
+            <Link href="/settings/add-users" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
               <UserPlus className="w-4 h-4" />
               Add Users
             </Link>
