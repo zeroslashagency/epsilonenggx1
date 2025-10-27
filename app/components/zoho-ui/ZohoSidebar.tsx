@@ -50,7 +50,7 @@ interface ZohoSidebarProps {
 
 export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
   const pathname = usePathname()
-  const { userPermissions, logout } = useAuth()
+  const { userPermissions, logout, hasPermission, refreshPermissions } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>(['settings'])
 
