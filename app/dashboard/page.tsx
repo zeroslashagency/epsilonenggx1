@@ -499,7 +499,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Right Rail (1/3 width) */}
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4 h-full">
             {/* Alerts & Urgent Items */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
               <div className="flex items-center gap-2 mb-4">
@@ -532,23 +532,23 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-blue-500 to-cyan-500 dark:from-blue-700 dark:to-cyan-700 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-              <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5" />
+            {/* Quick Actions - Flex grow to fill remaining space */}
+            <div className="flex-1 bg-gradient-to-br from-blue-500 to-cyan-500 dark:from-blue-700 dark:to-cyan-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] flex flex-col">
+              <h3 className="font-bold text-white mb-5 flex items-center gap-2 text-lg">
+                <Zap className="w-6 h-6" />
                 Quick Actions
               </h3>
-              <div className="space-y-2">
-                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2">
-                  <Plus className="w-4 h-4" />
+              <div className="space-y-3 flex-1 flex flex-col justify-center">
+                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2 h-12 text-base">
+                  <Plus className="w-5 h-5" />
                   Add New Order
                 </Button>
-                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2">
-                  <PlayCircle className="w-4 h-4" />
+                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2 h-12 text-base">
+                  <PlayCircle className="w-5 h-5" />
                   Run Schedule
                 </Button>
-                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2">
-                  <FileText className="w-4 h-4" />
+                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2 h-12 text-base">
+                  <FileText className="w-5 h-5" />
                   Generate Report
                 </Button>
               </div>
