@@ -420,7 +420,7 @@ export default function AttendancePage() {
             )}
           </div>
 
-          {dateRange === 'custom' && (
+          {todayDateRange === 'custom' && (
             <>
               <Input
                 type="date"
