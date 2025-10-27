@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, UserPlus, Shield, ArrowUpDown, Zap } from 'lucide-react'
+import { User, UserPlus, Shield, ArrowUpDown, Zap, Download, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { ZohoLayout } from '../components/zoho-ui'
+import * as XLSX from 'xlsx'
 
 interface Employee {
   id: string
@@ -199,6 +200,64 @@ export default function PersonnelPage() {
     }
   }, [selectedEmployee])
 
+  const downloadAttendanceExcel = async (period: 'week' | 'month') => {
+    if (!selectedEmployee?.employee_code) return
+
+    try {
+      // Calculate date range
+      const now = new Date()
+      let fromDate: string
+      let toDate: string
+
+      if (period === 'week') {
+        const weekAgo = new Date(now)
+        weekAgo.setDate(weekAgo.getDate() - 7)
+        fromDate = weekAgo.toISOString().split('T')[0]
+        toDate = now.toISOString().split('T')[0]
+      } else {
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        fromDate = firstDayOfMonth.toISOString().split('T')[0]
+        toDate = lastDayOfMonth.toISOString().split('T')[0]
+      }
+
+      // Fetch attendance data
+      const response = await fetch(`/api/get-attendance?employeeCode=${selectedEmployee.employee_code}&fromDate=${fromDate}&toDate=${toDate}`)
+      const data = await response.json()
+
+      if (data.success && data.data?.allLogs) {
+        const logs = data.data.allLogs
+
+        // Prepare Excel data
+        const excelData = logs.map((log: any) => ({
+          'Date': new Date(log.log_date).toLocaleDateString(),
+          'Time': new Date(log.log_date).toLocaleTimeString(),
+          'Direction': log.punch_direction || 'N/A',
+          'Employee Code': log.employee_code,
+          'Employee Name': selectedEmployee.full_name,
+          'Department': selectedEmployee.department || 'N/A',
+          'Designation': selectedEmployee.designation || 'N/A'
+        }))
+
+        // Create workbook
+        const ws = XLSX.utils.json_to_sheet(excelData)
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
+
+        // Download
+        const fileName = `${selectedEmployee.full_name}_Attendance_${period}_${new Date().toISOString().split('T')[0]}.xlsx`
+        XLSX.writeFile(wb, fileName)
+
+        console.log(`✅ Downloaded ${logs.length} attendance records`)
+      } else {
+        alert('No attendance data found for this period')
+      }
+    } catch (error) {
+      console.error('Failed to download attendance:', error)
+      alert('Failed to download attendance data')
+    }
+  }
+
   return (
     <ZohoLayout breadcrumbs={[{ label: 'Production' }, { label: 'Personnel' }]}>
       <div className="space-y-6">
@@ -380,6 +439,22 @@ export default function PersonnelPage() {
                   <div>
                     <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Attendance Summary</h3>
                     <p className="text-sm text-[#95AAC9]">Monthly attendance tracking and performance</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => downloadAttendanceExcel('week')}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Week
+                    </button>
+                    <button
+                      onClick={() => downloadAttendanceExcel('month')}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Month
+                    </button>
                   </div>
                 </div>
                 
