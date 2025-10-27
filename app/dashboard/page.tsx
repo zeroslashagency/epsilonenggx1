@@ -187,7 +187,7 @@ export default function DashboardPage() {
     <ZohoLayout breadcrumbs={[{ label: 'Dashboard' }]}>
       <div className="space-y-4">
         {/* Global Header Bar */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 dark:from-blue-700 dark:to-indigo-700 rounded-xl p-4 shadow-lg">
+        <div className="bg-gradient-to-r from-blue-400 to-indigo-400 dark:from-blue-500 dark:to-indigo-700 rounded-xl p-4 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div>
@@ -199,38 +199,34 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {/* Quick Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Quick search..."
-                  className="pl-9 w-64 bg-white/10 border-white/20 text-white placeholder:text-white/60"
-                />
-              </div>
-              
-              {/* Sync Status */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg border border-white/20">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-xs text-white font-medium">Live</span>
-                <span className="text-xs text-blue-100">{lastUpdate.toLocaleTimeString()}</span>
-              </div>
+              {/* Dark Mode Toggle */}
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-10 h-10 rounded-full">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              </Button>
 
               {/* Notifications */}
-              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 relative">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-10 h-10 rounded-full relative">
                 <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">3</span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </Button>
 
-              {/* Refresh */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchDashboardData}
-                disabled={loading}
-                className="text-white hover:bg-white/10"
-              >
-                <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+              {/* Settings */}
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-10 h-10 rounded-full">
+                <Settings className="w-5 h-5" />
               </Button>
+
+              {/* User Profile */}
+              <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full hover:bg-gray-50 transition-colors cursor-pointer">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  AD
+                </div>
+                <span className="text-gray-900 font-medium text-sm">admin</span>
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -415,10 +411,16 @@ export default function DashboardPage() {
                   </h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Real-time production metrics</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">Daily</Button>
-                  <Button variant="outline" size="sm">Weekly</Button>
-                  <Button variant="outline" size="sm">Monthly</Button>
+                <div className="inline-flex items-center bg-gray-100 dark:bg-gray-700 rounded-full p-1">
+                  <button className="px-6 py-2 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium text-sm shadow-sm transition-all">
+                    Daily
+                  </button>
+                  <button className="px-6 py-2 rounded-full text-gray-600 dark:text-gray-400 font-medium text-sm hover:text-gray-900 dark:hover:text-white transition-all">
+                    Weekly
+                  </button>
+                  <button className="px-6 py-2 rounded-full text-gray-600 dark:text-gray-400 font-medium text-sm hover:text-gray-900 dark:hover:text-white transition-all">
+                    Monthly
+                  </button>
                 </div>
               </div>
               
