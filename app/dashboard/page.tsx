@@ -165,7 +165,69 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    fetchDashboardData()
+    let isMounted = true
+    
+    const loadData = async () => {
+      try {
+        if (!isMounted) return
+        setError(null)
+        
+        const data = await apiGet('/api/admin/raw-attendance')
+        
+        if (!isMounted) return
+        
+        if (data.success) {
+          const rawData = data.data || []
+          const today = new Date().toISOString().split('T')[0]
+          const todayData = rawData.filter((r: any) => r.date?.startsWith(today))
+          const totalEmployees = new Set(rawData.map((r: any) => r.employee_id)).size
+          const presentToday = new Set(todayData.filter((r: any) => r.status === 'present').map((r: any) => r.employee_id)).size
+          
+          setStats({
+            ...stats,
+            totalEmployees,
+            presentToday,
+            attendancePercentage: totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 0
+          })
+          
+          const last7Days = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date()
+            date.setDate(date.getDate() - i)
+            return date.toISOString().split('T')[0]
+          }).reverse()
+          
+          const trendData = last7Days.map(date => {
+            const dayData = rawData.filter((r: any) => r.date?.startsWith(date))
+            const present = new Set(dayData.filter((r: any) => r.status === 'present').map((r: any) => r.employee_id)).size
+            const total = totalEmployees
+            return {
+              date,
+              present,
+              absent: total - present,
+              percentage: total > 0 ? Math.round((present / total) * 100) : 0
+            }
+          })
+          
+          setAttendanceTrend(trendData)
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Error fetching dashboard data:', err)
+          setError('Failed to load dashboard data')
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+          setLastUpdate(new Date())
+        }
+      }
+    }
+    
+    loadData()
+    
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   useEffect(() => {

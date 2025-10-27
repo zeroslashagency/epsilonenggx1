@@ -20,7 +20,40 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchAlerts()
+    let isMounted = true
+    
+    const loadAlerts = async () => {
+      setLoading(true)
+      try {
+        const data = await apiGet('/api/monitoring/alerts')
+        
+        if (isMounted && data.success) {
+          const transformedAlerts = (data.data || []).map((a: any) => ({
+            ...a,
+            timestamp: a.created_at
+          }))
+          setAlerts(transformedAlerts)
+        } else if (isMounted) {
+          console.error('Error fetching alerts:', data.error)
+          setAlerts([])
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching alerts:', error)
+          setAlerts([])
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+    
+    loadAlerts()
+    
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const fetchAlerts = async () => {

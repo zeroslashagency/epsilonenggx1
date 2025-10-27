@@ -159,6 +159,8 @@ export default function SchedulerPage() {
 
   // Load saved advanced settings on mount
   useEffect(() => {
+    let isMounted = true
+    
     const loadSavedSettings = async () => {
       try {
         const response = await fetch('/api/save-advanced-settings', {
@@ -170,7 +172,7 @@ export default function SchedulerPage() {
 
         if (response.ok) {
           const result = await response.json()
-          if (result.success && result.data) {
+          if (isMounted && result.success && result.data) {
             const savedData = result.data.machine_data
             // Load lock state from saved data
             setSettingsLocked(savedData.is_locked || false)
@@ -203,6 +205,10 @@ export default function SchedulerPage() {
 
     if (userEmail) {
       loadSavedSettings()
+    }
+
+    return () => {
+      isMounted = false
     }
   }, [userEmail])
 
