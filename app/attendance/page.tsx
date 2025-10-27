@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Home, ChevronRight, Activity, Users, AlertCircle, UserX, UserCheck, Clock, Download, RefreshCw, Calendar } from "lucide-react"
+import { Home, ChevronRight, Activity, Users, AlertCircle, UserX, UserCheck, Clock, Download, RefreshCw, Calendar, ChevronDown } from "lucide-react"
 import { StatsCard } from "@/components/StatsCard"
 import { StatusBadge } from "@/components/StatusBadge"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { apiGet } from '@/app/lib/utils/api-client'
 import * as XLSX from 'xlsx'
 import { ZohoLayout } from '../components/zoho-ui'
@@ -40,27 +41,73 @@ export default function AttendancePage() {
       if (range === 'custom' && fromDate && toDate) {
         params.append('fromDate', fromDate)
         params.append('toDate', toDate)
-      } else {
-        params.append('dateRange', range)
-      }
-      
-      const response = await apiGet(`/api/get-attendance?${params.toString()}`)
-      if (response.success && response.data) {
-        setAttendanceData(response.data)
         setRecentLogs(response.data.recentLogs || [])
         setLastSyncTime(new Date())
       }
     } catch (error) {
-      console.error('Error fetching attendance:', error)
+      console.error('Failed to fetch attendance:', error)
     } finally {
       setLoading(false)
     }
   }
 
+  useEffect(() => {
+    if (selectedEmployees.length >= 0) {
+      fetchAttendanceData(dateRange)
+    }
+  }, [selectedEmployees])
+
   // Load today's data on mount
   useEffect(() => {
-    fetchAttendanceData('today')
+    fetchAttendanceData(dateRange)
+    fetchAllEmployees()
   }, [])
+
+  const fetchAllEmployees = async () => {
+    try {
+      const response = await fetch('/api/get-employees')
+      const data = await response.json()
+      if (data.success && data.employees) {
+        const employeeCodes = data.employees.map((emp: any) => emp.employee_code).filter(Boolean)
+        setAllEmployees(employeeCodes)
+        setSelectedEmployees(employeeCodes) // Select all by default
+      }
+    } catch (error) {
+      console.error('Failed to fetch employees:', error)
+    }
+  }
+
+  const toggleEmployee = (employeeCode: string) => {
+    setSelectedEmployees(prev =>
+      prev.includes(employeeCode)
+        ? prev.filter(code => code !== employeeCode)
+        : [...prev, employeeCode]
+    )
+  }
+
+  const toggleAllEmployees = () => {
+    if (selectedEmployees.length === allEmployees.length) {
+      setSelectedEmployees([])
+    } else {
+      setSelectedEmployees(allEmployees)
+    }
+  }
+
+  const getDateRangeLabel = () => {
+    const labels: Record<string, string> = {
+      'today': 'Today',
+      'yesterday': 'Yesterday',
+      'week': 'This Week',
+      'prev-week': 'Previous Week',
+      'month': 'This Month',
+      'prev-month': 'Previous Month',
+      'quarter': 'This Quarter',
+      'prev-quarter': 'Previous Quarter',
+      'year': 'This Year',
+      'prev-year': 'Previous Year'
+    }
+    return labels[dateRange] || 'Today'
+  }
 
   // Export to Excel
   const exportToExcel = () => {
@@ -167,24 +214,6 @@ export default function AttendancePage() {
             <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
               <SelectTrigger className="w-[180px] bg-background border-border/50 font-medium shadow-sm">
                 <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Employees</SelectItem>
-                <SelectItem value="present">Present Today</SelectItem>
-                <SelectItem value="absent">Absent Today</SelectItem>
-                <SelectItem value="late">Late Arrivals</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button 
-            variant="outline" 
-            className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md ml-auto"
-            onClick={exportToExcel}
-          >
-            <Download className="h-4 w-4" />
-            Export Excel
-          </Button>
         </div>
 
         {/* Stats Cards */}
