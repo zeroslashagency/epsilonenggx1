@@ -102,65 +102,25 @@ export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
     {
       id: 'production',
       label: 'Production',
+      href: '/production',
       icon: Package,
-      children: [
-        {
-          id: 'orders',
-          label: 'Orders',
-          href: '/production/orders',
-          icon: Package
-        },
-        {
-          id: 'machines',
-          label: 'Machines',
-          href: '/production/machines',
-          icon: Cpu
-        },
-        {
-          id: 'personnel',
-          label: 'Personnel',
-          href: '/production/personnel',
-          icon: Users
-        },
-        {
-          id: 'tasks',
-          label: 'Tasks',
-          href: '/production/tasks',
-          icon: CheckSquare
-        }
+      items: [
+        { id: 'orders', label: 'Orders', href: '/production/orders', icon: FileText },
+        { id: 'machines', label: 'Machines', href: '/production/machines', icon: Wrench },
+        { id: 'personnel', label: 'Personnel', href: '/personnel', icon: Users },
+        { id: 'tasks', label: 'Tasks', href: '/production/tasks', icon: CheckSquare }
       ]
     },
-
-    // MONITORING Section (Collapsible)
     {
       id: 'monitoring',
       label: 'Monitoring',
+      href: '/monitoring',
       icon: Bell,
-      children: [
-        {
-          id: 'alerts',
-          label: 'Alerts',
-          href: '/monitoring/alerts',
-          icon: Bell
-        },
-        {
-          id: 'reports',
-          label: 'Reports',
-          href: '/monitoring/reports',
-          icon: FileText
-        },
-        {
-          id: 'quality-control',
-          label: 'Quality Control',
-          href: '/monitoring/quality-control',
-          icon: Shield
-        },
-        {
-          id: 'maintenance',
-          label: 'Maintenance',
-          href: '/monitoring/maintenance',
-          icon: Wrench
-        }
+      items: [
+        { id: 'alerts', label: 'Alerts', href: '/alerts', icon: Bell },
+        { id: 'reports', label: 'Reports', href: '/monitoring/reports', icon: FileText },
+        { id: 'quality', label: 'Quality Control', href: '/monitoring/quality', icon: Shield },
+        { id: 'maintenance', label: 'Maintenance', href: '/monitoring/maintenance', icon: Wrench }
       ]
     },
 
@@ -259,6 +219,7 @@ export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
   }
 
   const isActive = (href: string) => {
+    if (!href || href === '#') return false
     return pathname === href || pathname.startsWith(href + '/')
   }
 
