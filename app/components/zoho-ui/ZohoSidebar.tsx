@@ -40,18 +40,19 @@ interface MenuItem {
   badge?: string
   children?: MenuItem[]
   isSection?: boolean
+  items?: MenuItem[]
 }
 
 interface ZohoSidebarProps {
-  collapsed: boolean
-  onToggle: () => void
+  collapsed: boolean;
+  onToggle: () => void;
 }
 
 export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
   const pathname = usePathname()
   const { userPermissions, logout } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['settings'])
+  const [expandedItems, setExpandedItems] = useState<string[]>(['settings'])
 
   const menuItems: MenuItem[] = [
     // MAIN Section
@@ -209,14 +210,6 @@ export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
     }
   ]
 
-  const toggleMenu = (menuId: string) => {
-    setExpandedMenus(prev => 
-      prev.includes(menuId) 
-        ? prev.filter(id => id !== menuId)
-        : [...prev, menuId]
-    )
-  }
-
   // Filter menu items based on user permissions
   const filterMenuByPermissions = (items: MenuItem[]): MenuItem[] => {
     return items.filter(item => {
@@ -319,57 +312,73 @@ export function ZohoSidebar({ collapsed, onToggle }: ZohoSidebarProps) {
             }
 
             // Menu Items
+            const hasChildren = item.items && item.items.length > 0
+            const isExpanded = expandedItems.includes(item.id)
+            
             return (
               <div key={item.id}>
-                {/* Main Menu Item */}
-                <Link
-                  href={item.href || '#'}
-                  onClick={(e) => {
-                    if (item.children) {
-                      e.preventDefault()
-                      toggleExpanded(item.id)
-                    }
-                  }}
-                  className={`
-                    flex items-center justify-between px-3 py-2.5 rounded-[4px]
-                    transition-all duration-200 group
-                    ${
-                      isActive(item.href || '')
-                        ? 'bg-[#2C7BE5] text-white'
-                        : 'text-[#12263F] dark:text-gray-300 hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
-                    }
-                    ${collapsed ? 'justify-center' : ''}
-                  `}
-                >
-                  <div className="flex items-center space-x-3">
-                    {item.icon && <item.icon className={`w-5 h-5 ${collapsed ? '' : 'flex-shrink-0'}`} />}
-                    {!collapsed && (
-                      <span className="font-medium text-sm">{item.label}</span>
-                    )}
-                  </div>
-                  
-                  {!collapsed && (
-                    <div className="flex items-center space-x-2">
-                      {item.badge && (
-                        <span className="px-2 py-0.5 text-xs bg-[#2C7BE5] text-white rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
-                      {item.children && (
-                        <ChevronRight 
-                          className={`w-4 h-4 transition-transform ${
-                            expandedItems.includes(item.id) ? 'rotate-90' : ''
-                          }`} 
-                        />
+                {hasChildren ? (
+                  <button
+                    onClick={() => toggleExpanded(item.id)}
+                    className={`
+                      w-full flex items-center justify-between px-3 py-2.5 rounded-[4px]
+                      transition-all duration-200 group
+                      ${
+                        isActive(item.href || '')
+                          ? 'bg-[#2C7BE5] text-white'
+                          : 'text-[#12263F] dark:text-gray-300 hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
+                      }
+                      ${collapsed ? 'justify-center' : ''}
+                    `}
+                  >
+                    <div className="flex items-center space-x-3">
+                      {item.icon && <item.icon className={`w-5 h-5 ${collapsed ? '' : 'flex-shrink-0'}`} />}
+                      {!collapsed && (
+                        <span className="font-medium text-sm">{item.label}</span>
                       )}
                     </div>
-                  )}
-                </Link>
+                    
+                    {!collapsed && (
+                      <ChevronRight 
+                        className={`w-4 h-4 transition-transform ${
+                          isExpanded ? 'rotate-90' : ''
+                        }`} 
+                      />
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href || '#'}
+                    className={`
+                      flex items-center justify-between px-3 py-2.5 rounded-[4px]
+                      transition-all duration-200 group
+                      ${
+                        isActive(item.href || '')
+                          ? 'bg-[#2C7BE5] text-white'
+                          : 'text-[#12263F] dark:text-gray-300 hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
+                      }
+                      ${collapsed ? 'justify-center' : ''}
+                    `}
+                  >
+                    <div className="flex items-center space-x-3">
+                      {item.icon && <item.icon className={`w-5 h-5 ${collapsed ? '' : 'flex-shrink-0'}`} />}
+                      {!collapsed && (
+                        <span className="font-medium text-sm">{item.label}</span>
+                      )}
+                    </div>
+                    
+                    {!collapsed && item.badge && (
+                      <span className="px-2 py-0.5 text-xs bg-[#2C7BE5] text-white rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                )}
 
                 {/* Submenu */}
-                {item.children && !collapsed && expandedItems.includes(item.id) && (
+                {hasChildren && !collapsed && isExpanded && (
                   <div className="ml-6 mt-1 space-y-1">
-                    {item.children.map((child) => (
+                    {item.items!.map((child) => (
                       <Link
                         key={child.id}
                         href={child.href || '#'}
