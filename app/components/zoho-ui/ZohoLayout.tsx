@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, ReactNode } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { ZohoSidebar } from './ZohoSidebar'
 import { ZohoHeader } from './ZohoHeader'
 import { ZohoBreadcrumb } from './ZohoBreadcrumb'
@@ -12,6 +13,10 @@ interface ZohoLayoutProps {
 
 export function ZohoLayout({ children, breadcrumbs }: ZohoLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const pathname = usePathname()
+
+  // Persist sidebar state across navigation
+  // Don't auto-close on route changes
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
