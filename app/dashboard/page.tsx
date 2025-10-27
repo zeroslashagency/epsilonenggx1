@@ -13,11 +13,31 @@ import {
   Activity,
   ArrowUp,
   ArrowDown,
-  BarChart3
+  BarChart3,
+  Target,
+  Zap,
+  Settings,
+  Download,
+  Filter,
+  Search,
+  Bell,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Wrench,
+  PlayCircle,
+  PauseCircle,
+  Award,
+  TrendingDown,
+  PieChart,
+  FileText,
+  Plus
 } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface DashboardStats {
   totalEmployees: number
@@ -165,30 +185,94 @@ export default function DashboardPage() {
 
   return (
     <ZohoLayout breadcrumbs={[{ label: 'Dashboard' }]}>
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white">
-              Dashboard
-            </h1>
-            <p className="text-sm text-[#95AAC9] mt-1">
-              Welcome back, User
-            </p>
+      <div className="space-y-4">
+        {/* Global Header Bar */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 rounded-xl p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Activity className="w-7 h-7" />
+                  Production Dashboard
+                </h1>
+                <p className="text-blue-100 text-sm mt-1">Real-time manufacturing intelligence</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Quick Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Quick search..."
+                  className="pl-9 w-64 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                />
+              </div>
+              
+              {/* Sync Status */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg border border-white/20">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-white font-medium">Live</span>
+                <span className="text-xs text-blue-100">{lastUpdate.toLocaleTimeString()}</span>
+              </div>
+
+              {/* Notifications */}
+              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 relative">
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">3</span>
+              </Button>
+
+              {/* Refresh */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchDashboardData}
+                disabled={loading}
+                className="text-white hover:bg-white/10"
+              >
+                <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-[#95AAC9]">
-              Last updated: {lastUpdate.toLocaleTimeString()}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchDashboardData}
-              disabled={loading}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+        </div>
+
+        {/* Filters Bar */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-4">
+            <Filter className="w-5 h-5 text-gray-500" />
+            <Select defaultValue="today">
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select defaultValue="all-shifts">
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-shifts">All Shifts</SelectItem>
+                <SelectItem value="shift-a">Shift A</SelectItem>
+                <SelectItem value="shift-b">Shift B</SelectItem>
+                <SelectItem value="shift-c">Shift C</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select defaultValue="all-machines">
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-machines">All Machines</SelectItem>
+                <SelectItem value="vmc">VMC Machines</SelectItem>
+                <SelectItem value="cnc">CNC Machines</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" className="ml-auto gap-2">
+              <Download className="w-4 h-4" />
+              Export
             </Button>
           </div>
         </div>
@@ -217,235 +301,470 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Loading State */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 animate-pulse">
-                <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
-                <div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
-                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-1"></div>
-                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        {/* ROW A: KPI Strip - 6 Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {loading ? (
+            <>
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-4 animate-pulse border border-gray-200 dark:border-gray-700">
+                  <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                  <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              {/* KPI Card 1: Total Employees */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer group">
+                <div className="flex items-start justify-between mb-2">
+                  <Users className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                    <ArrowUp className="w-3 h-3" />
+                    <span>+2%</span>
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  {stats.totalEmployees}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Employees</div>
+                <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full w-full bg-gradient-to-r from-purple-500 to-purple-600"></div>
+                </div>
               </div>
-            ))}
+
+              {/* KPI Card 2: Present Today */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+                <div className="flex items-start justify-between mb-2">
+                  <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                    <ArrowUp className="w-3 h-3" />
+                    <span>{stats.attendancePercentage}%</span>
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  {stats.presentToday}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Present Today</div>
+                <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-green-500 to-green-600" style={{ width: `${stats.attendancePercentage}%` }}></div>
+                </div>
+              </div>
+
+              {/* KPI Card 3: Active Orders */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+                <div className="flex items-start justify-between mb-2">
+                  <Calendar className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <span>—</span>
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  {stats.activeOrders}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Active Orders</div>
+                <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full w-0 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                </div>
+              </div>
+
+              {/* KPI Card 4: Machines Running */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+                <div className="flex items-start justify-between mb-2">
+                  <Factory className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <span>{stats.utilizationRate}%</span>
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  {stats.machinesRunning}/{stats.totalMachines}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Machines Running</div>
+                <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-orange-500 to-orange-600" style={{ width: `${stats.utilizationRate}%` }}></div>
+                </div>
+              </div>
+
+              {/* KPI Card 5: Overall Efficiency */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+                <div className="flex items-start justify-between mb-2">
+                  <Zap className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+                  <div className="flex items-center gap-1 text-xs text-green-600">
+                    <ArrowUp className="w-3 h-3" />
+                    <span>+5%</span>
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  87%
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Overall Efficiency</div>
+                <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full w-[87%] bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
+                </div>
+              </div>
+
+              {/* KPI Card 6: Units Produced */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer">
+                <div className="flex items-start justify-between mb-2">
+                  <Target className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                  <div className="flex items-center gap-1 text-xs text-green-600">
+                    <ArrowUp className="w-3 h-3" />
+                    <span>+12%</span>
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  1,247
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Units Today</div>
+                <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full w-[78%] bg-gradient-to-r from-indigo-500 to-indigo-600"></div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ROW B: Main Chart + Right Rail */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Main Chart Area (2/3 width) */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Production Timeline Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <BarChart3 className="w-6 h-6 text-blue-600" />
+                    Production Timeline
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Real-time production metrics</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">Daily</Button>
+                  <Button variant="outline" size="sm">Weekly</Button>
+                  <Button variant="outline" size="sm">Monthly</Button>
+                </div>
+              </div>
+              
+              {/* Chart Placeholder */}
+              <div className="h-80 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <div className="text-center">
+                  <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600 dark:text-gray-400 font-medium">Production Chart</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">Interactive visualization coming soon</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick KPI Cards Below Chart */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-4 border border-green-200 dark:border-green-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-5 h-5 text-green-600" />
+                  <span className="text-xs font-semibold text-green-700 dark:text-green-400">TARGET</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">1,500</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">83% achieved</div>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">QUALITY</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">98.5%</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Pass rate</div>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-5 h-5 text-orange-600" />
+                  <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">UTILIZATION</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">76%</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Active time</div>
+              </div>
+
+              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wrench className="w-5 h-5 text-red-600" />
+                  <span className="text-xs font-semibold text-red-700 dark:text-red-400">MAINTENANCE</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">2</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Due soon</div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Stat Cards - Real Data */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Total Employees */}
-              <div className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200/50 dark:border-purple-700/50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-200/30 dark:bg-purple-700/20 rounded-full -mr-16 -mt-16"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <Users className="w-10 h-10 text-purple-600 dark:text-purple-400" />
-                    <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/50 px-2 py-1 rounded-full">
-                      TOTAL
-                    </div>
-                  </div>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
-                    {stats.totalEmployees}
-                  </div>
-                  <div className="text-sm text-purple-700 dark:text-purple-300 font-medium">Total Employees</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">Registered in system</div>
-                </div>
-              </div>
 
-              {/* Present Today */}
-              <div className="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200/50 dark:border-green-700/50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-green-200/30 dark:bg-green-700/20 rounded-full -mr-16 -mt-16"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <TrendingUp className="w-10 h-10 text-green-600 dark:text-green-400" />
-                    <div className="flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400">
-                      <ArrowUp className="w-3 h-3" />
-                      {stats.attendancePercentage}%
-                    </div>
-                  </div>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
-                    {stats.presentToday}
-                  </div>
-                  <div className="text-sm text-green-700 dark:text-green-300 font-medium">Present Today</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                    {stats.attendancePercentage}% attendance rate
-                  </div>
-                </div>
+          {/* Right Rail (1/3 width) */}
+          <div className="space-y-4">
+            {/* Alerts & Urgent Items */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 mb-4">
+                <Bell className="w-5 h-5 text-red-600" />
+                <h3 className="font-bold text-gray-900 dark:text-white">Alerts</h3>
+                <span className="ml-auto bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-1 rounded-full">3</span>
               </div>
-
-              {/* Active Orders */}
-              <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/30 dark:bg-blue-700/20 rounded-full -mr-16 -mt-16"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <Calendar className="w-10 h-10 text-blue-600 dark:text-blue-400" />
-                    <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded-full">
-                      ACTIVE
-                    </div>
-                  </div>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
-                    {stats.activeOrders}
-                  </div>
-                  <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Active Orders</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">In production queue</div>
-                </div>
-              </div>
-
-              {/* Machines Running */}
-              <div className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border border-orange-200/50 dark:border-orange-700/50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-200/30 dark:bg-orange-700/20 rounded-full -mr-16 -mt-16"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <Factory className="w-10 h-10 text-orange-600 dark:text-orange-400" />
-                    <div className="text-xs font-semibold text-orange-600 dark:text-orange-400">
-                      {stats.utilizationRate}%
-                    </div>
-                  </div>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
-                    {stats.machinesRunning}/{stats.totalMachines}
-                  </div>
-                  <div className="text-sm text-orange-700 dark:text-orange-300 font-medium">Machines Running</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">Current utilization</div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Attendance Trend Chart */}
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-lg">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-blue-600" />
-                  Attendance Trend
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Last 7 days attendance overview
-                </p>
-              </div>
-            </div>
-
-            {attendanceTrend.length > 0 ? (
               <div className="space-y-3">
-                {attendanceTrend.map((day, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">{day.date}</span>
-                      <div className="flex items-center gap-4">
-                        <span className="text-green-600 dark:text-green-400">{day.present} present</span>
-                        <span className="text-red-600 dark:text-red-400">{day.absent} absent</span>
-                        <span className="font-semibold text-blue-600 dark:text-blue-400">{day.percentage}%</span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                      <div
-                        className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
-                        style={{ width: `${day.percentage}%` }}
-                      />
-                    </div>
+                <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
+                  <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Machine VMC-3 Down</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">2 hours ago</p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
-                <Activity className="w-12 h-12 mb-3 opacity-50" />
-                <p>Loading attendance trend...</p>
-              </div>
-            )}
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-lg">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-orange-600" />
-                  Recent Activity
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Latest punch records today
-                </p>
+                </div>
+                <div className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Low Attendance</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">32% present</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <Clock className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Order Delayed</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">ORD-1234</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {recentActivity.length > 0 ? (
+            {/* Quick Actions */}
+            <div className="bg-gradient-to-br from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 rounded-xl p-5 shadow-lg">
+              <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                Quick Actions
+              </h3>
+              <div className="space-y-2">
+                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add New Order
+                </Button>
+                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2">
+                  <PlayCircle className="w-4 h-4" />
+                  Run Schedule
+                </Button>
+                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start gap-2">
+                  <FileText className="w-4 h-4" />
+                  Generate Report
+                </Button>
+              </div>
+            </div>
+
+            {/* Today's Summary */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Today's Summary</h3>
               <div className="space-y-3">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${activity.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {activity.employee_name}
-                        </p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {activity.action}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                      {activity.time}
-                    </span>
-                  </div>
-                ))}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Units Produced</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">1,247</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Downtime</span>
+                  <span className="text-sm font-bold text-red-600">2.5 hrs</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Efficiency</span>
+                  <span className="text-sm font-bold text-green-600">87%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Quality Rate</span>
+                  <span className="text-sm font-bold text-blue-600">98.5%</span>
+                </div>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
-                <Clock className="w-12 h-12 mb-3 opacity-50" />
-                <p>No recent activity</p>
-              </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-6 shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <a
-              href="/attendance"
-              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700"
-            >
-              <Users className="w-6 h-6 text-blue-600" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">View Attendance</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Full attendance records</p>
+        {/* ROW C: Tactical Widgets - 3 Columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Recent Activity / Live Feed */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-5 h-5 text-blue-600" />
+                Live Activity Feed
+              </h3>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            </div>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {recentActivity.length > 0 ? recentActivity.map((activity) => (
+                <div key={activity.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${activity.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{activity.employee_name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{activity.action}</p>
+                  </div>
+                  <span className="text-xs text-gray-400">{activity.time}</span>
+                </div>
+              )) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Clock className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No activity yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Operators */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+              <Award className="w-5 h-5 text-yellow-600" />
+              Top Operators
+            </h3>
+            <div className="space-y-4">
+              {[
+                { name: 'John Smith', efficiency: 95, units: 156 },
+                { name: 'Sarah Johnson', efficiency: 92, units: 148 },
+                { name: 'Mike Davis', efficiency: 89, units: 142 },
+                { name: 'Emily Brown', efficiency: 87, units: 138 }
+              ].map((operator, idx) => (
+                <div key={idx} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-gray-400">#{idx + 1}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{operator.name}</span>
+                    </div>
+                    <span className="text-sm font-bold text-green-600">{operator.efficiency}%</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-green-500 to-green-600" style={{ width: `${operator.efficiency}%` }}></div>
+                    </div>
+                    <span className="text-xs text-gray-500">{operator.units} units</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Downtime Breakdown */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+              <PieChart className="w-5 h-5 text-red-600" />
+              Downtime Breakdown
+            </h3>
+            <div className="space-y-3">
+              {[
+                { reason: 'Machine Maintenance', minutes: 85, color: 'bg-red-500' },
+                { reason: 'Material Shortage', minutes: 42, color: 'bg-orange-500' },
+                { reason: 'Setup Time', minutes: 28, color: 'bg-yellow-500' },
+                { reason: 'Quality Issues', minutes: 15, color: 'bg-purple-500' }
+              ].map((item, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded ${item.color}`}></div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{item.reason}</span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{item.minutes}m</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden ml-5">
+                    <div className={`h-full ${item.color}`} style={{ width: `${(item.minutes / 170) * 100}%` }}></div>
+                  </div>
+                </div>
+              ))}
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Total Downtime</span>
+                  <span className="text-lg font-bold text-red-600">170 min</span>
+                </div>
               </div>
-            </a>
-            <a
-              href="/personnel"
-              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700"
-            >
-              <Users className="w-6 h-6 text-purple-600" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">Personnel</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Manage employees</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ROW D: Production Tables */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <FileText className="w-6 h-6 text-blue-600" />
+              Machine Status
+            </h3>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Filter className="w-4 h-4" />
+                Filter
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Download className="w-4 h-4" />
+                Export CSV
+              </Button>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Machine</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Current Order</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Operator</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Utilization</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { machine: 'VMC-1', status: 'running', order: 'ORD-1234', operator: 'John Smith', utilization: 95 },
+                  { machine: 'VMC-2', status: 'running', order: 'ORD-1235', operator: 'Sarah Johnson', utilization: 87 },
+                  { machine: 'VMC-3', status: 'down', order: '—', operator: '—', utilization: 0 },
+                  { machine: 'CNC-1', status: 'idle', order: '—', operator: 'Mike Davis', utilization: 15 },
+                  { machine: 'CNC-2', status: 'running', order: 'ORD-1236', operator: 'Emily Brown', utilization: 92 }
+                ].map((row, idx) => (
+                  <tr key={idx} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">{row.machine}</td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                        row.status === 'running' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        row.status === 'down' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      }`}>
+                        {row.status === 'running' && <PlayCircle className="w-3 h-3" />}
+                        {row.status === 'down' && <XCircle className="w-3 h-3" />}
+                        {row.status === 'idle' && <PauseCircle className="w-3 h-3" />}
+                        {row.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{row.order}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{row.operator}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden max-w-[100px]">
+                          <div className={`h-full ${row.utilization > 80 ? 'bg-green-500' : row.utilization > 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${row.utilization}%` }}></div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{row.utilization}%</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Button variant="ghost" size="sm" className="h-8 px-2">
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Footer Status Bar */}
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-gray-600 dark:text-gray-400">Auto-Sync: Active</span>
               </div>
-            </a>
-            <a
-              href="/analytics"
-              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700"
-            >
-              <BarChart3 className="w-6 h-6 text-green-600" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">Analytics</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">View reports</p>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-500" />
+                <span className="text-gray-600 dark:text-gray-400">Last updated: {lastUpdate.toLocaleString()}</span>
               </div>
-            </a>
-            <a
-              href="/settings"
-              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700"
-            >
-              <Activity className="w-6 h-6 text-orange-600" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">Settings</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">System configuration</p>
-              </div>
+            </div>
+            <a href="/settings" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+              View System Logs
+              <ArrowUp className="w-3 h-3 rotate-45" />
             </a>
           </div>
         </div>
