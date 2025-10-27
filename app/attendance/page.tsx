@@ -156,71 +156,10 @@ export default function AttendancePage() {
       return
     }
     
-    // Calculate date range
-    const now = new Date()
-    let startDate: Date
-    let endDate: Date = new Date(now)
-    
-    switch(dateRange) {
-      case 'today':
-        startDate = new Date(now)
-        endDate = new Date(now)
-        break
-      case 'yesterday':
-        const yesterday = new Date(now)
-        yesterday.setDate(yesterday.getDate() - 1)
-        startDate = endDate = yesterday
-        break
-      case 'week':
-        startDate = new Date(now)
-        startDate.setDate(startDate.getDate() - now.getDay())
-        endDate = new Date(now)
-        break
-      case 'prev-week':
-        const prevWeekEnd = new Date(now)
-        prevWeekEnd.setDate(prevWeekEnd.getDate() - now.getDay() - 1)
-        const prevWeekStart = new Date(prevWeekEnd)
-        prevWeekStart.setDate(prevWeekStart.getDate() - 6)
-        startDate = prevWeekStart
-        endDate = prevWeekEnd
-        break
-      case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        break
-      case 'prev-month':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0)
-        break
-      case 'quarter':
-        startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
-        endDate = new Date(now)
-        break
-      case 'prev-quarter':
-        startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
-        endDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
-        break
-      case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1)
-        endDate = new Date(now)
-        break
-      case 'prev-year':
-        startDate = new Date(now.getFullYear() - 1, 0, 1)
-        endDate = new Date(now.getFullYear() - 1, 11, 31)
-        break
-      case 'custom':
-        if (fromDate && toDate) {
-          startDate = new Date(fromDate)
-          endDate = new Date(toDate)
-        } else {
-          startDate = new Date(now)
-          endDate = new Date(now)
-        }
-        break
-      default:
-        startDate = new Date(now)
-        endDate = new Date(now)
-    }
+    // Use centralized date calculation utility
+    const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRange, fromDate, toDate)
+    const startDate = new Date(fromDateStr)
+    const endDate = new Date(toDateStr)
     
     // Filter logs by selected employees
     const filteredLogs = dataSource.allLogs.filter((log: any) =>
