@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
-  // ✅ PERMISSION CHECK: Require manage_users permission
-  const authResult = await requirePermission(request, 'manage_users')
-  if (authResult instanceof NextResponse) return authResult
-  const user = authResult
-
   try {
-    const supabase = getSupabaseClient().from('employee_master')
-      .select('employee_code, employee_name, department, designation, status')
-      .order('employee_name', { ascending: true })
+    const supabase = getSupabaseClient()
     
     console.log('📊 Fetching employees from employee_master table...')
     
+    // Fetch all employees from employee_master table
     const { data: employees, error } = await supabase
+      .from('employee_master')
+      .select('employee_code, employee_name, department, designation, status')
+      .order('employee_name', { ascending: true })
     
     if (error) {
       console.error('Supabase error:', error)
