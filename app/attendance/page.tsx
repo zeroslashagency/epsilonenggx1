@@ -208,7 +208,21 @@ export default function AttendancePage() {
       // Add employee name header
       sheetData.push([employeeName.toUpperCase()])
       sheetData.push([]) // Empty row
-      sheetData.push(['Week', 'Date', 'Punch Times', 'Status'])
+      
+      // Find max punches in a day to determine column count
+      const maxPunches = Math.max(...logs.map(log => {
+        const dateStr = new Date(log.log_date).toDateString()
+        const dayLogs = logs.filter(l => new Date(l.log_date).toDateString() === dateStr)
+        return dayLogs.length
+      }), 0)
+      
+      // Create header with separate punch columns
+      const headerRow = ['Week', 'Date']
+      for (let i = 1; i <= Math.max(maxPunches, 4); i++) {
+        headerRow.push(`Punch ${i}`)
+      }
+      headerRow.push('Status')
+      sheetData.push(headerRow)
       
       // Generate ALL dates in the range
       const allDates: Date[] = []
@@ -247,12 +261,16 @@ export default function AttendancePage() {
           
           if (dateLogs.length === 0) {
             // No logs for this date - show as absent
-            sheetData.push([
+            const row = [
               isFirstDateInWeek ? weekKey : '',
-              dateKey,
-              '',
-              'Absent'
-            ])
+              dateKey
+            ]
+            // Add empty punch columns
+            for (let i = 0; i < Math.max(maxPunches, 4); i++) {
+              row.push('')
+            }
+            row.push('Absent')
+            sheetData.push(row)
             isFirstDateInWeek = false
           } else {
             // Sort logs by time for this date
@@ -260,8 +278,14 @@ export default function AttendancePage() {
               new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
             )
             
-            // Show ALL punch logs for this date - combine all times in one row
-            const allTimes = sortedDateLogs.map(log => {
+            // Create row with separate punch columns
+            const row = [
+              isFirstDateInWeek ? weekKey : '',
+              dateKey
+            ]
+            
+            // Add each punch in separate column
+            sortedDateLogs.forEach(log => {
               const time = new Date(log.log_date).toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -269,21 +293,26 @@ export default function AttendancePage() {
                 hour12: false
               })
               const direction = log.punch_direction?.toLowerCase() === 'in' ? 'in' : 'out'
-              return `${time}(${direction})`
-            }).join(',')
+              row.push(`${time}(${direction})`)
+            })
             
-            sheetData.push([
-              isFirstDateInWeek ? weekKey : '',
-              dateKey,
-              allTimes,
-              sortedDateLogs.length > 0 ? 'Present' : 'Absent'
-            ])
+            // Fill remaining punch columns with empty strings
+            while (row.length < 2 + Math.max(maxPunches, 4)) {
+              row.push('')
+            }
+            
+            row.push(sortedDateLogs.length > 0 ? 'Present' : 'Absent')
+            sheetData.push(row)
             isFirstDateInWeek = false
           }
           
           // Add Sunday separator
           if (date.getDay() === 0) { // Sunday
-            sheetData.push(['SUNDAY', '', '', ''])
+            const sundayRow = ['SUNDAY']
+            for (let i = 0; i < 1 + Math.max(maxPunches, 4) + 1; i++) {
+              sundayRow.push('')
+            }
+            sheetData.push(sundayRow)
           }
         })
       })
@@ -292,12 +321,16 @@ export default function AttendancePage() {
       const ws = XLSX.utils.aoa_to_sheet(sheetData)
       
       // Set column widths
-      ws['!cols'] = [
+      const colWidths = [
         { width: 15 }, // Week
-        { width: 15 }, // Date
-        { width: 60 }, // Punch Times (wider to fit all times)
-        { width: 12 }  // Status
+        { width: 15 }  // Date
       ]
+      // Add width for each punch column
+      for (let i = 0; i < Math.max(maxPunches, 4); i++) {
+        colWidths.push({ width: 18 })
+      }
+      colWidths.push({ width: 12 }) // Status
+      ws['!cols'] = colWidths
       
       // Add sheet to workbook (limit sheet name to 31 characters)
       const sheetName = employeeName.substring(0, 31)
