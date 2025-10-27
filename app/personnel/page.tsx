@@ -343,49 +343,123 @@ export default function PersonnelPage() {
               </div>
             </div>
 
-            {/* Right: Attendance Chart */}
-            <div className="col-span-8">
-              <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg p-6 h-full">
-                <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Attendance Summary</h3>
-                <p className="text-sm text-[#95AAC9] mb-6">This month's attendance tracking</p>
-                <div className="flex items-center justify-center h-80">
-                  {selectedEmployee?.employee_code ? (
+            {/* Right: Attendance Details */}
+            <div className="col-span-8 space-y-6">
+              {/* Performance Metrics */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-4 text-white">
+                  <div className="text-3xl font-bold">{loadingStats ? '...' : attendanceStats.presentDays}</div>
+                  <div className="text-sm opacity-90 mt-1">Days Present</div>
+                  <div className="text-xs opacity-75 mt-2">This Month</div>
+                </div>
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-4 text-white">
+                  <div className="text-3xl font-bold">{loadingStats ? '...' : attendanceStats.totalPunches}</div>
+                  <div className="text-sm opacity-90 mt-1">Total Punches</div>
+                  <div className="text-xs opacity-75 mt-2">In/Out Records</div>
+                </div>
+                <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg p-4 text-white">
+                  <div className="text-3xl font-bold">{loadingStats ? '...' : attendanceStats.lateArrivals}</div>
+                  <div className="text-sm opacity-90 mt-1">Late Arrivals</div>
+                  <div className="text-xs opacity-75 mt-2">After 9:00 AM</div>
+                </div>
+                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 text-white">
+                  <div className="text-3xl font-bold">
+                    {loadingStats ? '...' : attendanceStats.presentDays > 0 
+                      ? `${Math.round((attendanceStats.lateArrivals / attendanceStats.presentDays) * 100)}%`
+                      : '0%'
+                    }
+                  </div>
+                  <div className="text-sm opacity-90 mt-1">Late Ratio</div>
+                  <div className="text-xs opacity-75 mt-2">Performance</div>
+                </div>
+              </div>
+
+              {/* Attendance Chart */}
+              <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Attendance Summary</h3>
+                    <p className="text-sm text-[#95AAC9]">Monthly attendance tracking and performance</p>
+                  </div>
+                </div>
+                
+                {loadingStats ? (
+                  <div className="flex items-center justify-center h-64">
                     <div className="text-center">
-                      {loadingStats ? (
-                        <div className="text-[#95AAC9]">Loading attendance data...</div>
-                      ) : attendanceStats.totalPunches > 0 ? (
-                        <div className="w-full">
-                          <div className="grid grid-cols-2 gap-6 mb-6">
-                            <div className="text-center">
-                              <p className="text-4xl font-bold text-green-600">{attendanceStats.presentDays}</p>
-                              <p className="text-sm text-[#95AAC9] mt-2">Days Present</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-4xl font-bold text-blue-600">{attendanceStats.totalPunches}</p>
-                              <p className="text-sm text-[#95AAC9] mt-2">Total Punches</p>
-                            </div>
-                          </div>
-                          <div className="text-center mt-8">
-                            <p className="text-2xl font-bold text-yellow-600">{attendanceStats.lateArrivals}</p>
-                            <p className="text-sm text-[#95AAC9] mt-2">Late Arrivals (after 9 AM)</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <User className="w-16 h-16 text-[#95AAC9] mx-auto mb-4" />
-                          <h4 className="text-lg font-medium text-[#12263F] dark:text-white">No Attendance Data</h4>
-                          <p className="text-sm text-[#95AAC9]">No attendance records found for this month</p>
-                        </div>
-                      )}
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2C7BE5] mx-auto mb-4"></div>
+                      <p className="text-[#95AAC9]">Loading attendance data...</p>
                     </div>
-                  ) : (
+                  </div>
+                ) : attendanceStats.totalPunches > 0 ? (
+                  <div className="space-y-6">
+                    {/* Visual Progress Bars */}
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-[#12263F] dark:text-white font-medium">Attendance Rate</span>
+                          <span className="text-green-600 font-bold">
+                            {Math.round((attendanceStats.presentDays / 30) * 100)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                          <div 
+                            className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all"
+                            style={{ width: `${Math.min((attendanceStats.presentDays / 30) * 100, 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-[#12263F] dark:text-white font-medium">Punctuality Score</span>
+                          <span className="text-blue-600 font-bold">
+                            {attendanceStats.presentDays > 0 
+                              ? Math.round(((attendanceStats.presentDays - attendanceStats.lateArrivals) / attendanceStats.presentDays) * 100)
+                              : 0
+                            }%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                          <div 
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all"
+                            style={{ 
+                              width: `${attendanceStats.presentDays > 0 
+                                ? ((attendanceStats.presentDays - attendanceStats.lateArrivals) / attendanceStats.presentDays) * 100
+                                : 0
+                              }%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Summary Stats Grid */}
+                    <div className="grid grid-cols-3 gap-4 pt-4 border-t border-[#E3E6F0] dark:border-gray-700">
+                      <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{attendanceStats.presentDays}</div>
+                        <div className="text-xs text-[#95AAC9] mt-1">Days Worked</div>
+                      </div>
+                      <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-yellow-600">{attendanceStats.lateArrivals}</div>
+                        <div className="text-xs text-[#95AAC9] mt-1">Late Days</div>
+                      </div>
+                      <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {attendanceStats.presentDays - attendanceStats.lateArrivals}
+                        </div>
+                        <div className="text-xs text-[#95AAC9] mt-1">On-Time Days</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64">
                     <div className="text-center">
                       <User className="w-16 h-16 text-[#95AAC9] mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-[#12263F] dark:text-white">No Employee Code</h4>
-                      <p className="text-sm text-[#95AAC9]">This employee doesn't have an employee code assigned</p>
+                      <h4 className="text-lg font-medium text-[#12263F] dark:text-white">No Attendance Data</h4>
+                      <p className="text-sm text-[#95AAC9]">No attendance records found for this month</p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
