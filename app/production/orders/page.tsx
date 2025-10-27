@@ -22,6 +22,12 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     let isMounted = true
@@ -30,12 +36,19 @@ export default function OrdersPage() {
       setLoading(true)
       try {
         const params = new URLSearchParams()
+        params.append('page', page.toString())
+        params.append('limit', pageSize.toString())
         if (statusFilter !== 'all') params.append('status', statusFilter)
+        if (searchTerm) params.append('search', searchTerm)
         
         const data = await apiGet(`/api/production/orders?${params.toString()}`)
         
         if (isMounted && data.success) {
           setOrders(data.data || [])
+          if (data.pagination) {
+            setTotalPages(data.pagination.totalPages || 1)
+            setTotalCount(data.pagination.totalCount || 0)
+          }
         } else if (isMounted) {
           console.error('Error fetching orders:', data.error)
           setOrders([])
@@ -57,7 +70,7 @@ export default function OrdersPage() {
     return () => {
       isMounted = false
     }
-  }, [statusFilter])
+  }, [page, pageSize, statusFilter, searchTerm])
 
   const getStatusBadge = (status: string) => {
     const colors = {
@@ -79,13 +92,8 @@ export default function OrdersPage() {
     return colors[priority as keyof typeof colors] || 'bg-gray-100 text-gray-800'
   }
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  // Filtering now handled server-side
+  const filteredOrders = orders
 
   return (
     <ZohoLayout>
@@ -118,13 +126,19 @@ export default function OrdersPage() {
                 type="text"
                 placeholder="Search orders..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setPage(1)
+                }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value)
+                setPage(1)
+              }}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="all">All Status</option>
@@ -133,10 +147,25 @@ export default function OrdersPage() {
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value))
+                setPage(1)
+              }}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="25">25 per page</option>
+              <option value="50">50 per page</option>
+              <option value="100">100 per page</option>
+            </select>
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <Download className="w-4 h-4" />
               Export
             </button>
+          </div>
+          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Showing {((page - 1) * pageSize) + 1}-{Math.min(page * pageSize, totalCount)} of {totalCount} orders
           </div>
         </div>
 
@@ -224,6 +253,60 @@ export default function OrdersPage() {
               </table>
             )}
           </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow mt-4 p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Page {page} of {totalPages}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(1)}
+                    disabled={page === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={page}
+                    onChange={(e) => {
+                      const newPage = parseInt(e.target.value)
+                      if (newPage >= 1 && newPage <= totalPages) {
+                        setPage(newPage)
+                      }
+                    }}
+                    className="w-16 px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  />
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setPage(totalPages)}
+                    disabled={page === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Last
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </ZohoLayout>
