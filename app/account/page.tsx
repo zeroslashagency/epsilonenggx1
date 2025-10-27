@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react'
 import { User, Mail, Shield, Calendar, Activity, Key } from 'lucide-react'
 import { ZohoLayout } from '../components/zoho-ui'
 import { useAuth } from '../lib/contexts/auth-context'
-import { createClient } from '@/app/lib/utils/supabase/client'
+import { getSupabaseClient } from '../lib/services/supabase-client'
 
 export default function AccountPage() {
-  const { user, userPermissions } = useAuth()
+  const { userPermissions } = useAuth()
   const [userData, setUserData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
-  const supabase = createClient()
+  const supabase = getSupabaseClient()
 
   useEffect(() => {
     // Fetch current user data from Supabase
@@ -49,7 +49,7 @@ export default function AccountPage() {
     }
 
     fetchUserData()
-  }, [user])
+  }, [])
 
   const handlePasswordReset = async () => {
     if (!userData?.email) {
