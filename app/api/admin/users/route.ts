@@ -5,11 +5,6 @@ import { requirePermission } from '../../../lib/middleware/auth.middleware'
 
 // Admin API for user management - FIXED VERSION
 export async function GET(request: NextRequest) {
-  // ✅ PERMISSION CHECK: Require manage_users permission
-  const authResult = await requirePermission(request, 'manage_users')
-  if (authResult instanceof NextResponse) return authResult
-  const user = authResult
-
   try {
     // RATE LIMITING: Check if user is making too many requests
     const clientIP = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
