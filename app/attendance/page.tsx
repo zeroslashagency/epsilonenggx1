@@ -24,12 +24,11 @@ interface AttendanceLog {
 }
 
 export default function AttendancePage() {
-  // Separate state for each section to prevent conflicts
-  const [todayDateRange, setTodayDateRange] = useState("today")  // For Today's Recent Activity
-  const [allTrackDateRange, setAllTrackDateRange] = useState("today")  // For All Track Records
+  const [dateRange, setDateRange] = useState("today")
   const [employeeFilter, setEmployeeFilter] = useState("all")
   const [loading, setLoading] = useState(false)
-  const [attendanceData, setAttendanceData] = useState<any>(null)
+  const [todayData, setTodayData] = useState<any>(null)
+  const [todayLoading, setTodayLoading] = useState(false)
   const [recentLogs, setRecentLogs] = useState<AttendanceLog[]>([])
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
@@ -44,31 +43,30 @@ export default function AttendancePage() {
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false)
 
-  // Fetch attendance data for Today's Recent Activity
-  // ALWAYS fetches TODAY only - never affected by All Track Records filters
-  const fetchAttendanceData = async () => {
-    setLoading(true)
+  // Fetch TODAY's data only (independent from filters)
+  const fetchTodayData = async () => {
+    setTodayLoading(true)
     try {
-      // Force TODAY only - ignore any other date range selections
-      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange('today', '', '')
+      // Always fetch today's data only
+      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange('today')
       
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
       params.append('toDate', toDateParam)
       
-      console.log(`📅 Fetching TODAY's attendance: ${fromDateParam}`)
+      console.log(`📅 Fetching TODAY's data: ${fromDateParam}`)
       
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
-        setAttendanceData(response.data)
+        setTodayData(response.data)
         setRecentLogs(response.data.recentLogs || [])
         setLastSyncTime(new Date())
-        console.log(`✅ Loaded ${response.data.allLogs?.length || 0} TODAY's logs`)
+        console.log(`✅ Loaded ${response.data.allLogs?.length || 0} today's logs`)
       }
     } catch (error) {
-      console.error('Error fetching attendance:', error)
+      console.error('Error fetching today\'s data:', error)
     } finally {
-      setLoading(false)
+      setTodayLoading(false)
     }
   }
 
@@ -77,7 +75,7 @@ export default function AttendancePage() {
     setAllTrackLoading(true)
     try {
       // Use centralized date calculation utility
-      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(allTrackDateRange, fromDate, toDate)
+      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(dateRange, fromDate, toDate)
       
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
@@ -99,7 +97,7 @@ export default function AttendancePage() {
 
   // Load today's data on mount
   useEffect(() => {
-    fetchAttendanceData()  // Always fetches today
+    fetchTodayData()
     fetchAllEmployees()
   }, [])
 
@@ -139,7 +137,7 @@ export default function AttendancePage() {
   }
 
   const getDateRangeLabel = () => {
-    return 'Today'  // Always shows Today
+    return getDateLabel(dateRange)
   }
 
   // Helper function to get week number
@@ -152,16 +150,15 @@ export default function AttendancePage() {
   // Export to Excel
   const exportToExcel = (source: 'today' | 'allTrack' = 'today') => {
     // Choose correct data source based on which section triggered export
-    const dataSource = source === 'allTrack' ? allTrackData : attendanceData
+    const dataSource = source === 'allTrack' ? allTrackData : todayData
     
     if (!dataSource?.allLogs) {
       alert('No data to export. Please load data first.')
       return
     }
     
-    // Use centralized date calculation utility - use correct dateRange based on source
-    const dateRangeToUse = source === 'allTrack' ? allTrackDateRange : 'today'  // Today section always exports today
-    const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRangeToUse, fromDate, toDate)
+    // Use centralized date calculation utility
+    const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRange, fromDate, toDate)
     const startDate = new Date(fromDateStr)
     const endDate = new Date(toDateStr)
     
@@ -307,7 +304,7 @@ export default function AttendancePage() {
     console.log(`✅ Exported ${Object.keys(employeeGroups).length} employee sheets`)
   }
 
-  const stats = attendanceData?.summary || {
+  const stats = todayData?.summary || {
     totalEmployees: 47,
     present: 0,
     absent: 47,
@@ -316,7 +313,7 @@ export default function AttendancePage() {
   }
 
   const activePunches = recentLogs.length
-  const activeUsers = attendanceData?.todayStatus?.length || 0
+  const activeUsers = todayData?.todayStatus?.length || 0
 
   return (
     <ZohoLayout breadcrumbs={[
@@ -354,7 +351,10 @@ export default function AttendancePage() {
         <div className="flex flex-wrap items-center gap-4 bg-gradient-to-r from-white to-gray-50 p-5 rounded-xl border border-gray-200 shadow-md">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
-            <Select value="today" disabled>
+            <Select value={dateRange} onValueChange={(value) => {
+              setDateRange(value)
+              if (value !== 'custom') fetchAttendanceData(value)
+            }}>
               <SelectTrigger className="w-[200px] bg-background border-border/50 font-medium shadow-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -418,6 +418,30 @@ export default function AttendancePage() {
             )}
           </div>
 
+          {dateRange === 'custom' && (
+            <>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="w-[150px]"
+                placeholder="From Date"
+              />
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="w-[150px]"
+                placeholder="To Date"
+              />
+              <Button 
+                onClick={() => fetchAttendanceData('custom')}
+                className="gap-2 font-semibold"
+              >
+                Apply
+              </Button>
+            </>
+          )}
 
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
@@ -502,7 +526,7 @@ export default function AttendancePage() {
                   variant="outline" 
                   size="sm" 
                   className="gap-2 font-semibold bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 shadow-md"
-                  onClick={() => fetchAttendanceData()}
+                  onClick={() => fetchAttendanceData(dateRange)}
                   disabled={loading}
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -511,7 +535,7 @@ export default function AttendancePage() {
               </div>
             </div>
 
-            {loading ? (
+            {todayLoading ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-5">
                 <RefreshCw className="h-12 w-12 text-primary animate-spin" />
                 <p className="text-muted-foreground">Loading attendance data...</p>
@@ -592,8 +616,8 @@ export default function AttendancePage() {
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Date Range</label>
-                <Select value={allTrackDateRange} onValueChange={(value) => {
-                  setAllTrackDateRange(value)
+                <Select value={dateRange} onValueChange={(value) => {
+                  setDateRange(value)
                 }}>
                   <SelectTrigger className="bg-card">
                     <SelectValue />
@@ -614,7 +638,7 @@ export default function AttendancePage() {
                 </Select>
               </div>
               
-              {allTrackDateRange === 'custom' && (
+              {dateRange === 'custom' && (
                 <>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">From Date</label>
