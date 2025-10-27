@@ -150,7 +150,7 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
         {
           id: 'add-users',
           label: 'Add Users',
-          href: '/settings/users/add',
+          href: '/settings/add-users',
           icon: UserPlus
         },
         {
