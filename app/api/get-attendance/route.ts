@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const fromDate = searchParams.get('fromDate')
     const toDate = searchParams.get('toDate')
     const employeeCode = searchParams.get('employeeCode')
+    const employeeCodes = searchParams.get('employeeCodes') // Multiple employees (comma-separated)
     const limit = parseInt(searchParams.get('limit') || '50000') // Default to large number for all records
     const offset = parseInt(searchParams.get('offset') || '0')
     
@@ -56,6 +57,10 @@ export async function GET(request: NextRequest) {
     
     if (employeeCode) {
       countQuery = countQuery.eq('employee_code', employeeCode)
+    } else if (employeeCodes) {
+      const codes = employeeCodes.split(',').map(code => code.trim())
+      countQuery = countQuery.in('employee_code', codes)
+      console.log(`🔍 Filtering by ${codes.length} employee codes:`, codes)
     }
     
     const { count: totalCount, error: countError } = await countQuery
@@ -88,6 +93,9 @@ export async function GET(request: NextRequest) {
       // Add employee filter if specified
       if (employeeCode) {
         query = query.eq('employee_code', employeeCode)
+      } else if (employeeCodes) {
+        const codes = employeeCodes.split(',').map(code => code.trim())
+        query = query.in('employee_code', codes)
       }
       
       const { data: batchLogs, error } = await query

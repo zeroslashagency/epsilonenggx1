@@ -81,7 +81,13 @@ export default function AttendancePage() {
       params.append('fromDate', fromDateParam)
       params.append('toDate', toDateParam)
       
-      console.log(`📅 Fetching All Track Records from ${fromDateParam} to ${toDateParam}`)
+      // Add employee filter if specific employees selected
+      if (selectedEmployees.length > 0 && selectedEmployees.length < allEmployees.length) {
+        params.append('employeeCodes', selectedEmployees.join(','))
+        console.log(`📅 Fetching All Track Records from ${fromDateParam} to ${toDateParam} for ${selectedEmployees.length} employees`)
+      } else {
+        console.log(`📅 Fetching All Track Records from ${fromDateParam} to ${toDateParam} for all employees`)
+      }
       
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
