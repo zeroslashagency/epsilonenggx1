@@ -45,24 +45,25 @@ export default function AttendancePage() {
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false)
 
   // Fetch attendance data for Today's Recent Activity
-  const fetchAttendanceData = async (range: string = todayDateRange) => {
+  // ALWAYS fetches TODAY only - never affected by All Track Records filters
+  const fetchAttendanceData = async () => {
     setLoading(true)
     try {
-      // Use centralized date calculation utility
-      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(range, fromDate, toDate)
+      // Force TODAY only - ignore any other date range selections
+      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange('today', '', '')
       
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
       params.append('toDate', toDateParam)
       
-      console.log(`📅 Fetching attendance from ${fromDateParam} to ${toDateParam}`)
+      console.log(`📅 Fetching TODAY's attendance: ${fromDateParam}`)
       
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
         setAttendanceData(response.data)
         setRecentLogs(response.data.recentLogs || [])
         setLastSyncTime(new Date())
-        console.log(`✅ Loaded ${response.data.allLogs?.length || 0} attendance logs`)
+        console.log(`✅ Loaded ${response.data.allLogs?.length || 0} TODAY's logs`)
       }
     } catch (error) {
       console.error('Error fetching attendance:', error)
@@ -98,7 +99,7 @@ export default function AttendancePage() {
 
   // Load today's data on mount
   useEffect(() => {
-    fetchAttendanceData('today')
+    fetchAttendanceData()  // Always fetches today
     fetchAllEmployees()
   }, [])
 
@@ -138,7 +139,7 @@ export default function AttendancePage() {
   }
 
   const getDateRangeLabel = () => {
-    return getDateLabel(todayDateRange)
+    return 'Today'  // Always shows Today
   }
 
   // Helper function to get week number
@@ -159,7 +160,7 @@ export default function AttendancePage() {
     }
     
     // Use centralized date calculation utility - use correct dateRange based on source
-    const dateRangeToUse = source === 'allTrack' ? allTrackDateRange : todayDateRange
+    const dateRangeToUse = source === 'allTrack' ? allTrackDateRange : 'today'  // Today section always exports today
     const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRangeToUse, fromDate, toDate)
     const startDate = new Date(fromDateStr)
     const endDate = new Date(toDateStr)
@@ -353,10 +354,7 @@ export default function AttendancePage() {
         <div className="flex flex-wrap items-center gap-4 bg-gradient-to-r from-white to-gray-50 p-5 rounded-xl border border-gray-200 shadow-md">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
-            <Select value={todayDateRange} onValueChange={(value) => {
-              setTodayDateRange(value)
-              if (value !== 'custom') fetchAttendanceData(value)
-            }}>
+            <Select value="today" disabled>
               <SelectTrigger className="w-[200px] bg-background border-border/50 font-medium shadow-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -420,30 +418,6 @@ export default function AttendancePage() {
             )}
           </div>
 
-          {todayDateRange === 'custom' && (
-            <>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="w-[150px]"
-                placeholder="From Date"
-              />
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="w-[150px]"
-                placeholder="To Date"
-              />
-              <Button 
-                onClick={() => fetchAttendanceData('custom')}
-                className="gap-2 font-semibold"
-              >
-                Apply
-              </Button>
-            </>
-          )}
 
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
@@ -528,7 +502,7 @@ export default function AttendancePage() {
                   variant="outline" 
                   size="sm" 
                   className="gap-2 font-semibold bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 shadow-md"
-                  onClick={() => fetchAttendanceData(todayDateRange)}
+                  onClick={() => fetchAttendanceData()}
                   disabled={loading}
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
