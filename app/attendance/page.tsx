@@ -119,11 +119,63 @@ export default function AttendancePage() {
     return labels[dateRange] || 'Today'
   }
 
+  // Helper function to get week number
+  const getWeekNumber = (date: Date): number => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1)
+    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)
+  }
+
   // Export to Excel
   const exportToExcel = () => {
     if (!attendanceData?.allLogs) return
     
-    const workbook = XLSX.utils.book_new()
+    // Calculate date range
+    const now = new Date()
+    let startDate: Date
+    let endDate: Date = new Date(now)
+    
+    switch(dateRange) {
+      case 'today':
+        startDate = new Date(now)
+        break
+      case 'yesterday':
+        startDate = endDate = new Date(now.setDate(now.getDate() - 1))
+        break
+      case 'week':
+        startDate = new Date(now)
+        startDate.setDate(startDate.getDate() - now.getDay())
+        break
+      case 'prev-week':
+        endDate = new Date(now)
+        endDate.setDate(endDate.getDate() - now.getDay() - 1)
+        startDate = new Date(endDate)
+        startDate.setDate(startDate.getDate() - 6)
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'prev-month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0)
+        break
+      case 'quarter':
+        startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+        break
+      case 'prev-quarter':
+        startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
+        endDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        break
+      case 'prev-year':
+        startDate = new Date(now.getFullYear() - 1, 0, 1)
+        endDate = new Date(now.getFullYear() - 1, 11, 31)
+        break
+      default:
+        startDate = new Date(now)
+    }
     
     // Filter logs by selected employees
     const filteredLogs = attendanceData.allLogs.filter((log: any) =>
@@ -134,50 +186,126 @@ export default function AttendancePage() {
     const employeeGroups: Record<string, any[]> = {}
     filteredLogs.forEach((log: any) => {
       const empCode = log.employee_code
-      if (!employeeGroups[empCode]) {
-        employeeGroups[empCode] = []
-      }
-      employeeGroups[empCode].push(log)
-    })
-    
-    // Create a sheet for each employee
-    Object.entries(employeeGroups).forEach(([empCode, logs]) => {
       const employee = allEmployees.find(e => e.code === empCode)
       const employeeName = employee?.name || `Employee ${empCode}`
       
-      // Format data for this employee
-      const excelData = logs.map((log: any) => {
-        const logDate = new Date(log.log_date)
-        return {
-          'Date': logDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-          'Time': logDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          'Day': logDate.toLocaleDateString('en-US', { weekday: 'long' }),
-          'Direction': log.punch_direction || 'N/A',
-          'Employee Code': empCode,
-          'Employee Name': employeeName
-        }
-      })
-      
-      const worksheet = XLSX.utils.json_to_sheet(excelData)
-      
-      // Set column widths
-      worksheet['!cols'] = [
-        { wch: 12 }, // Date
-        { wch: 12 }, // Time
-        { wch: 12 }, // Day
-        { wch: 10 }, // Direction
-        { wch: 15 }, // Employee Code
-        { wch: 25 }  // Employee Name
-      ]
-      
-      // Sheet name (limit to 31 characters)
-      const sheetName = `${employeeName.substring(0, 25)}_${empCode}`.substring(0, 31)
-      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+      if (!employeeGroups[employeeName]) {
+        employeeGroups[employeeName] = []
+      }
+      employeeGroups[employeeName].push(log)
     })
     
-    // Download file
-    const fileName = `attendance_${getDateRangeLabel().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
-    XLSX.writeFile(workbook, fileName)
+    const wb = XLSX.utils.book_new()
+    
+    // Create a sheet for each employee
+    Object.entries(employeeGroups).forEach(([employeeName, logs]) => {
+      // Sort logs by date
+      const sortedLogs = logs.sort((a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime())
+      
+      // Create sheet data
+      const sheetData: any[] = []
+      
+      // Add employee name header
+      sheetData.push([employeeName.toUpperCase()])
+      sheetData.push([]) // Empty row
+      sheetData.push(['Week', 'Date', 'Punch Times', 'Status'])
+      
+      // Generate ALL dates in the range
+      const allDates: Date[] = []
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        allDates.push(new Date(d))
+      }
+      
+      // Group all dates by week
+      const weekDateGroups: Record<string, Date[]> = {}
+      allDates.forEach(date => {
+        const weekNumber = getWeekNumber(date)
+        const weekKey = `WEEK ${weekNumber}`
+        
+        if (!weekDateGroups[weekKey]) {
+          weekDateGroups[weekKey] = []
+        }
+        weekDateGroups[weekKey].push(date)
+      })
+      
+      // Add data for each week
+      Object.entries(weekDateGroups).forEach(([weekKey, weekDates]) => {
+        let isFirstDateInWeek = true
+        
+        weekDates.forEach(date => {
+          const dateKey = date.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: '2-digit'
+          })
+          
+          // Find all logs for this date
+          const dateLogs = logs.filter(log => {
+            const logDate = new Date(log.log_date).toDateString()
+            return logDate === date.toDateString()
+          })
+          
+          if (dateLogs.length === 0) {
+            // No logs for this date - show as absent
+            sheetData.push([
+              isFirstDateInWeek ? weekKey : '',
+              dateKey,
+              '',
+              'Absent'
+            ])
+            isFirstDateInWeek = false
+          } else {
+            // Sort logs by time for this date
+            const sortedDateLogs = dateLogs.sort((a, b) => 
+              new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
+            )
+            
+            // Show ALL punch logs for this date - combine all times in one row
+            const allTimes = sortedDateLogs.map(log => {
+              const time = new Date(log.log_date).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              })
+              const direction = log.punch_direction?.toLowerCase() === 'in' ? 'in' : 'out'
+              return `${time}(${direction})`
+            }).join(',')
+            
+            sheetData.push([
+              isFirstDateInWeek ? weekKey : '',
+              dateKey,
+              allTimes,
+              sortedDateLogs.length > 0 ? 'Present' : 'Absent'
+            ])
+            isFirstDateInWeek = false
+          }
+          
+          // Add Sunday separator
+          if (date.getDay() === 0) { // Sunday
+            sheetData.push(['SUNDAY', '', '', ''])
+          }
+        })
+      })
+      
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(sheetData)
+      
+      // Set column widths
+      ws['!cols'] = [
+        { width: 15 }, // Week
+        { width: 15 }, // Date
+        { width: 60 }, // Punch Times (wider to fit all times)
+        { width: 12 }  // Status
+      ]
+      
+      // Add sheet to workbook (limit sheet name to 31 characters)
+      const sheetName = employeeName.substring(0, 31)
+      XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    })
+    
+    const fileName = `attendance_${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(wb, fileName)
     
     console.log(`✅ Exported ${Object.keys(employeeGroups).length} employee sheets`)
   }
