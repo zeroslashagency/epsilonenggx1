@@ -1,5 +1,4 @@
 {
   "version": 2,
-  "framework": "nextjs",
-  "buildCommand": "next build"
+  "framework": "nextjs"
 }
