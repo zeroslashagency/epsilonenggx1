@@ -91,23 +91,27 @@ export default function EditRolePage() {
       
       if (data.success && data.data) {
         const role = data.data
+        console.log('✅ Role fetched from Supabase:', role)
         
-        console.log('✅ Role loaded from Supabase:', role)
-        
-        setRoleName(role.name)
+        setRoleName(role.name || '')
         setDescription(role.description || '')
         setIsManufacturingRole(role.is_manufacturing_role || false)
         
-        // Load permissions if available
-        if (role.permissions_json) {
-          setPermissionModules(role.permissions_json)
-        } else if (role.name === 'Super Admin') {
-          // Set all permissions for Super Admin if not in DB
-          setPermissionModules(prev => {
-            const updated = { ...prev }
-            Object.keys(updated).forEach(moduleKey => {
-              Object.keys(updated[moduleKey].items).forEach(itemKey => {
-                updated[moduleKey].items[itemKey] = {
+        // Load permissions from database if available
+        if (role.permissions_json && typeof role.permissions_json === 'object') {
+          console.log('📋 Loading 82-item permission structure from database')
+          
+          // Merge saved permissions with initial structure to ensure all new items exist
+          const mergedPermissions = { ...initialPermissionModules }
+          
+          Object.keys(role.permissions_json).forEach(moduleKey => {
+            if (mergedPermissions[moduleKey]) {
+              // Merge items, preserving new items from initial structure
+              mergedPermissions[moduleKey] = {
+                ...mergedPermissions[moduleKey],
+                items: {
+                  ...mergedPermissions[moduleKey].items,
+                  ...role.permissions_json[moduleKey].items
                   full: true,
                   view: true,
                   create: true,
@@ -372,6 +376,11 @@ export default function EditRolePage() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      // Count total permissions for logging
+      const totalItems = Object.values(permissionModules).reduce((sum, module) => 
+        sum + Object.keys(module.items).length, 0
+      )
+      
       const roleData = {
         name: roleName,
         description: description,
@@ -380,7 +389,15 @@ export default function EditRolePage() {
         updated_at: new Date().toISOString()
       }
       
-      console.log('💾 Saving role:', roleData)
+      console.log(`💾 Saving role with ${totalItems} permission items across ${Object.keys(permissionModules).length} modules`)
+      console.log('📊 Permission structure:', {
+        modules: Object.keys(permissionModules),
+        totalItems,
+        sample: Object.keys(permissionModules)[0] ? {
+          module: Object.keys(permissionModules)[0],
+          items: Object.keys(permissionModules[Object.keys(permissionModules)[0]].items).length
+        } : null
+      })
       
       // Try to save to Supabase
       try {
