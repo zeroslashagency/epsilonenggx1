@@ -339,7 +339,7 @@ export default function AttendancePage() {
   }
 
   const activePunches = recentLogs.length
-  const activeUsers = todayData?.todayStatus?.length || 0
+  const activeUsers = new Set(recentLogs.map(log => log.employee_code)).size
 
   return (
     <ZohoLayout breadcrumbs={[
