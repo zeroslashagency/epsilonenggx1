@@ -158,25 +158,25 @@ Special Permissions:
 
 ```
 Attendance (Parent Item)
-  Actions: Full, View, Create, Edit, Delete, Approve
+  Actions: View
   Controls: Entire /app/attendance page
+  Note: Read-only - no modifications allowed
   
   Sub-Items (Collapsible):
-    ├─ View Attendance
-    │   Actions: Full, View, Create, Edit, Delete
-    │   Controls: Attendance viewing interface
+    ├─ Today's Recent Activity
+    │   Actions: View
+    │   Controls: View today's attendance activity
+    │   Note: Read-only display
     │
-    ├─ Mark Attendance
-    │   Actions: Full, View, Create, Edit, Delete
-    │   Controls: Attendance marking functionality
+    ├─ All Track Records
+    │   Actions: View, Export
+    │   Controls: View all attendance records and download reports
+    │   Note: Can view and export data
     │
-    ├─ Attendance Reports
-    │   Actions: Full, View, Create, Edit, Delete
-    │   Controls: Attendance reporting section
-    │
-    └─ Leave Management
-        Actions: Full, View, Create, Edit, Delete, Approve
-        Controls: Leave requests and approvals
+    └─ Export Excel
+        Actions: Export
+        Controls: Download attendance data as Excel
+        Note: Export functionality only
 
 Standalone Attendance (Parent Item)
   Actions: Full, View, Create, Edit, Delete
