@@ -15,8 +15,12 @@ import { ZohoLayout } from '../components/zoho-ui'
 import * as XLSX from 'xlsx'
 import { calculateDateRange, getDateRangeLabel as getDateLabel } from '@/lib/utils/date-utils'
 import { AttendanceLog, TodayAttendanceData, AllTrackData } from '@/app/types'
+import { AttendancePermissions } from '@/app/lib/utils/permission-checker'
+import type { PermissionModule } from '@/app/lib/utils/permission-checker'
 
 export default function AttendancePage() {
+  // Permission state (would come from user session/context in production)
+  const [userPermissions, setUserPermissions] = useState<Record<string, PermissionModule> | null>(null)
   const [dateRange, setDateRange] = useState("today")
   const [employeeFilter, setEmployeeFilter] = useState("all")
   const [loading, setLoading] = useState(false)
@@ -118,9 +122,20 @@ export default function AttendancePage() {
 
   // Load today's data on mount
   useEffect(() => {
+    // TODO: Load user permissions from session/context
+    // For now, using mock permissions for demonstration
+    // In production, this would come from authenticated user's role
     fetchTodayData()
-    
-    let isMounted = true
+    fetchEmployees()
+  }, [])
+
+  // Check permissions
+  const canViewTodaysActivity = AttendancePermissions.canViewTodaysActivity(userPermissions)
+  const canViewAllRecords = AttendancePermissions.canViewAllRecords(userPermissions)
+  const canExportRecords = AttendancePermissions.canExportRecords(userPermissions)
+  const canExportExcel = AttendancePermissions.canExportExcel(userPermissions)
+
+  let isMounted = true
     
     const loadEmployees = async () => {
       try {
@@ -486,14 +501,16 @@ export default function AttendancePage() {
             </Select>
           </div>
 
-          <Button 
-            variant="outline" 
-            className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md ml-auto"
-            onClick={() => exportToExcel('today')}
-          >
-            <Download className="h-4 w-4" />
-            Export Excel
-          </Button>
+          {canExportExcel && (
+            <Button 
+              variant="outline" 
+              className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md ml-auto"
+              onClick={() => exportToExcel('today')}
+            >
+              <Download className="h-4 w-4" />
+              Export Excel
+            </Button>
+          )}
         </div>
 
         {/* Stats Cards */}
