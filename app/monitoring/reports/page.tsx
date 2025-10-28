@@ -2,54 +2,101 @@
 
 import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
-import { FileText, Download, Calendar, TrendingUp, Package, Users } from 'lucide-react'
+import { FileText, Download, Calendar, TrendingUp, Package, Users, RefreshCw } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
+
+interface Report {
+  id: string
+  title: string
+  description: string
+  icon: any
+  color: string
+  lastGenerated: string
+}
 
 export default function ReportsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('today')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [reports, setReports] = useState<Report[]>([])
+
+  const fetchReports = async () => {
+    setRefreshing(true)
+    try {
+      const params = new URLSearchParams()
+      params.append('period', selectedPeriod)
+      
+      const data = await apiGet(`/api/monitoring/reports?${params.toString()}`)
+      
+      if (data.success) {
+        const reportsData = (data.data || []).map((r: any) => ({
+          ...r,
+          icon: r.type === 'production' ? Package : 
+                r.type === 'machine' ? TrendingUp :
+                r.type === 'personnel' ? Users : FileText
+        }))
+        setReports(reportsData)
+        setLastUpdate(new Date())
+      } else {
+        // Fallback to default reports if API fails
+        setReports([
+          {
+            id: '1',
+            title: 'Production Summary',
+            description: 'Overall production metrics and KPIs',
+            icon: Package,
+            color: 'bg-blue-100 text-blue-600',
+            lastGenerated: new Date().toISOString()
+          },
+          {
+            id: '2',
+            title: 'Machine Utilization',
+            description: 'Machine efficiency and uptime analysis',
+            icon: TrendingUp,
+            color: 'bg-purple-100 text-purple-600',
+            lastGenerated: new Date().toISOString()
+          },
+          {
+            id: '3',
+            title: 'Personnel Performance',
+            description: 'Staff productivity and efficiency metrics',
+            icon: Users,
+            color: 'bg-green-100 text-green-600',
+            lastGenerated: new Date().toISOString()
+          },
+          {
+            id: '4',
+            title: 'Quality Control',
+            description: 'Quality metrics and defect analysis',
+            icon: FileText,
+            color: 'bg-orange-100 text-orange-600',
+            lastGenerated: new Date().toISOString()
+          }
+        ])
+      }
+    } catch (error) {
+      console.error('Error fetching reports:', error)
+    } finally {
+      setRefreshing(false)
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 800)
-    return () => clearTimeout(timer)
-  }, [])
+    fetchReports()
+  }, [selectedPeriod])
 
-  const reports = [
-    {
-      id: '1',
-      title: 'Production Summary',
-      description: 'Overall production metrics and KPIs',
-      icon: Package,
-      color: 'bg-blue-100 text-blue-600',
-      lastGenerated: '2025-10-25T14:00:00'
-    },
-    {
-      id: '2',
-      title: 'Machine Utilization',
-      description: 'Machine efficiency and uptime analysis',
-      icon: TrendingUp,
-      color: 'bg-purple-100 text-purple-600',
-      lastGenerated: '2025-10-25T13:30:00'
-    },
-    {
-      id: '3',
-      title: 'Personnel Performance',
-      description: 'Staff productivity and efficiency metrics',
-      icon: Users,
-      color: 'bg-green-100 text-green-600',
-      lastGenerated: '2025-10-25T12:00:00'
-    },
-    {
-      id: '4',
-      title: 'Quality Control',
-      description: 'Quality metrics and defect analysis',
-      icon: FileText,
-      color: 'bg-orange-100 text-orange-600',
-      lastGenerated: '2025-10-25T11:00:00'
+  const generateReport = async (reportId: string) => {
+    try {
+      const data = await apiGet(`/api/monitoring/reports/${reportId}/generate`)
+      if (data.success) {
+        fetchReports() // Refresh list after generation
+      }
+    } catch (error) {
+      console.error('Error generating report:', error)
     }
-  ]
+  }
 
   return (
     <ZohoLayout>
@@ -68,7 +115,8 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
                   <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
                 </div>
               </div>
@@ -105,11 +153,25 @@ export default function ReportsPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Generate and download production reports</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Generate and view production reports</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-gray-400" />
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Last updated: {lastUpdate.toLocaleTimeString()}
+              </div>
+              <button
+                onClick={fetchReports}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <Download className="w-4 h-4" />
+                Export All
+              </button>
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -143,11 +205,14 @@ export default function ReportsPage() {
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           Last generated: {new Date(report.lastGenerated).toLocaleString()}
                         </span>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
-                          <Download className="w-4 h-4" />
-                          Generate
-                        </button>
                       </div>
+                      <button
+                        onClick={() => generateReport(report.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Generate
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -236,10 +236,12 @@ export default function DashboardPage() {
     }
   }, [stats.totalEmployees])
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 30 seconds (only when page is visible)
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchDashboardData()
+      if (document.visibilityState === 'visible') {
+        fetchDashboardData()
+      }
     }, 30000)
     
     return () => clearInterval(interval)

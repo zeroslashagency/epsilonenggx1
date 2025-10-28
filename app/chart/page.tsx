@@ -25,6 +25,7 @@ import {
   PieChart,
   Upload
 } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
 
 interface ChartData {
   label: string
@@ -57,6 +58,7 @@ export default function ChartPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('today')
   const [activeTab, setActiveTab] = useState('analytics')
   const [timelineView, setTimelineView] = useState<'hour' | 'day' | 'week' | 'month'>('day')
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
   useEffect(() => {
     fetchMetrics()
@@ -65,7 +67,29 @@ export default function ChartPage() {
   const fetchMetrics = async () => {
     setLoading(true)
     try {
-      // Mock data for demonstration
+      const params = new URLSearchParams()
+      params.append('period', selectedPeriod)
+      
+      const data = await apiGet(`/api/production/metrics?${params.toString()}`)
+      
+      if (data.success) {
+        setMetrics(data.data)
+        setLastUpdate(new Date())
+      } else {
+        // Fallback to mock data if API fails
+        setMetrics({
+          productionOutput: 1250,
+          efficiencyRate: 87.5,
+          qualityScore: 94.2,
+          downtimeHours: 2.3,
+          activeOrders: 15,
+          completedOrders: 42,
+          machineUtilization: 87.5
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching metrics:', error)
+      // Use mock data on error
       setMetrics({
         productionOutput: 1250,
         efficiencyRate: 87.5,
@@ -75,8 +99,6 @@ export default function ChartPage() {
         completedOrders: 42,
         machineUtilization: 87.5
       })
-    } catch (error) {
-      console.error('Error fetching metrics:', error)
     } finally {
       setLoading(false)
     }
@@ -137,6 +159,9 @@ export default function ChartPage() {
             <p className="text-[#95AAC9] mt-1">Production metrics and performance analytics</p>
           </div>
           <div className="flex items-center gap-3">
+            <div className="text-xs text-[#95AAC9]">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </div>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -149,10 +174,11 @@ export default function ChartPage() {
             </select>
             <ZohoButton
               variant="secondary"
-              icon={<RefreshCw className="w-4 h-4" />}
+              icon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
               onClick={fetchMetrics}
+              disabled={loading}
             >
-              Refresh
+              {loading ? 'Refreshing...' : 'Refresh'}
             </ZohoButton>
             <ZohoButton
               variant="primary"

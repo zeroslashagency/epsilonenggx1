@@ -20,19 +20,40 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
 
 export default function AnalyticsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('month')
   const [reportType, setReportType] = useState('production')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [analyticsData, setAnalyticsData] = useState<any>(null)
+
+  const fetchAnalyticsData = async () => {
+    setRefreshing(true)
+    try {
+      const params = new URLSearchParams()
+      params.append('period', selectedPeriod)
+      params.append('type', reportType)
+      
+      const data = await apiGet(`/api/analytics/reports?${params.toString()}`)
+      
+      if (data.success) {
+        setAnalyticsData(data.data)
+        setLastUpdate(new Date())
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error)
+    } finally {
+      setRefreshing(false)
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 800)
-    return () => clearTimeout(timer)
-  }, [])
+    fetchAnalyticsData()
+  }, [selectedPeriod, reportType])
 
   return (
     <ZohoLayout breadcrumbs={[
@@ -102,6 +123,9 @@ export default function AnalyticsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <div className="text-xs text-[#95AAC9]">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </div>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -113,6 +137,14 @@ export default function AnalyticsPage() {
               <option value="quarter">This Quarter</option>
               <option value="year">This Year</option>
             </select>
+            <ZohoButton
+              variant="secondary"
+              icon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
+              onClick={fetchAnalyticsData}
+              disabled={refreshing}
+            >
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </ZohoButton>
             <ZohoButton
               variant="primary"
               icon={<Download className="w-4 h-4" />}
