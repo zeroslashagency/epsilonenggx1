@@ -62,14 +62,14 @@ export default function EpsilonLogoParticles() {
       )
 
       // Draw the "Epsilo" text below the logo - make it bigger and clearer
-      ctx.font = 'bold 64px Arial'
+      ctx.font = 'bold 72px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillStyle = 'white'
       
       // Add text stroke for better clarity
-      ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)'
-      ctx.lineWidth = 2
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+      ctx.lineWidth = 3
       
       const textY = centerY + logoSize / 2 + 100 // Position below logo
       ctx.strokeText('Epsilo', centerX, textY) // Draw stroke first
