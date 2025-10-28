@@ -29,38 +29,40 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check if employee already has a profile
-    const { data: existingEmployeeProfile } = await supabase
+    // Check if employee already has a profile (check by employee_code AND email)
+    const { data: existingProfiles } = await supabase
       .from('profiles')
-      .select('id, email')
-      .eq('employee_code', employee_code)
-      .single()
+      .select('id, email, employee_code')
+      .or(`employee_code.eq.${employee_code},email.eq.${email}`)
 
-    // Check if profile has an auth user
-    if (existingEmployeeProfile) {
+    if (existingProfiles && existingProfiles.length > 0) {
+      // Check each existing profile
       const { data: existingAuthUsers } = await supabase.auth.admin.listUsers()
-      const hasAuthUser = existingAuthUsers.users.some(u => u.id === existingEmployeeProfile.id)
       
-      if (hasAuthUser) {
-        return NextResponse.json({ 
-          error: 'This employee already has a complete user account' 
-        }, { status: 400 })
+      for (const profile of existingProfiles) {
+        const hasAuthUser = existingAuthUsers.users.some(u => u.id === profile.id)
+        
+        if (hasAuthUser) {
+          return NextResponse.json({ 
+            error: `A user account already exists for ${profile.employee_code === employee_code ? 'this employee' : 'this email'} (${profile.email})` 
+          }, { status: 400 })
+        }
+        
+        // Profile exists but no auth user - delete the orphaned profile
+        console.log(`⚠️ Found orphaned profile (${profile.employee_code}), deleting it...`)
+        const { error: deleteError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', profile.id)
+        
+        if (deleteError) {
+          console.error('Failed to delete orphaned profile:', deleteError)
+          return NextResponse.json({ 
+            error: `Failed to clean up orphaned profile: ${deleteError.message}` 
+          }, { status: 500 })
+        }
+        console.log('✅ Orphaned profile deleted:', profile.id)
       }
-      
-      // Profile exists but no auth user - delete the orphaned profile first
-      console.log('⚠️ Found orphaned profile, deleting it first...')
-      const { error: deleteError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', existingEmployeeProfile.id)
-      
-      if (deleteError) {
-        console.error('Failed to delete orphaned profile:', deleteError)
-        return NextResponse.json({ 
-          error: `Failed to clean up orphaned profile: ${deleteError.message}` 
-        }, { status: 500 })
-      }
-      console.log('✅ Orphaned profile deleted')
     }
 
     console.log('🔑 Creating auth user in Supabase Auth')
