@@ -47,6 +47,9 @@ node_modules/
 
 # Task files
 # tasks.json
+
+# Windsurf/Cascade config with secrets
+.windsurf/mcp.json
 # tasks/
 
 # Temporary files
