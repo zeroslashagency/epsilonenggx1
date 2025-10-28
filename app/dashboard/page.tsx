@@ -94,10 +94,10 @@ export default function DashboardPage() {
       const employeesResponse = await apiGet('/api/employee-master')
       
       if (attendanceResponse.success && employeesResponse.success) {
-        const attendanceData = attendanceResponse.data
-        const employeesData = employeesResponse.data
+        const attendanceData = attendanceResponse.data || {}
+        const employeesData = employeesResponse.data || []
         
-        const totalEmployees = employeesData.length
+        const totalEmployees = Array.isArray(employeesData) ? employeesData.length : 0
         const presentToday = attendanceData.employeeStatus?.length || 0
         const attendancePercentage = totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 0
         
@@ -112,13 +112,15 @@ export default function DashboardPage() {
         })
         
         // Set recent activity
-        const recentLogs = (attendanceData.recentLogs || []).slice(0, 5).map((log: any) => ({
-          id: log.id || Math.random().toString(),
-          employee_name: log.employee_name,
-          action: log.punch_direction === 'in' ? 'Punched In' : 'Punched Out',
-          time: new Date(log.log_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          type: log.punch_direction?.toLowerCase() === 'in' ? 'in' : 'out'
-        }))
+        const recentLogs = Array.isArray(attendanceData.recentLogs) 
+          ? attendanceData.recentLogs.slice(0, 5).map((log: any) => ({
+              id: log.id || Math.random().toString(),
+              employee_name: log.employee_name || 'Unknown',
+              action: log.punch_direction === 'in' ? 'Punched In' : 'Punched Out',
+              time: new Date(log.log_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              type: log.punch_direction?.toLowerCase() === 'in' ? 'in' : 'out'
+            }))
+          : []
         setRecentActivity(recentLogs)
         
         setLastUpdate(new Date())
@@ -145,7 +147,7 @@ export default function DashboardPage() {
         const response = await apiGet(`/api/get-attendance?fromDate=${dateStr}&toDate=${dateStr}`)
         
         if (response.success) {
-          const present = response.data.employeeStatus?.length || 0
+          const present = response.data?.employeeStatus?.length || 0
           const total = stats.totalEmployees || 156
           const percentage = total > 0 ? Math.round((present / total) * 100) : 0
           
@@ -176,12 +178,12 @@ export default function DashboardPage() {
         
         if (!isMounted) return
         
-        if (data.success) {
+        if (data.success && data.data) {
           const rawData = Array.isArray(data.data) ? data.data : []
           const today = new Date().toISOString().split('T')[0]
           const todayData = rawData.filter((r: any) => r.date?.startsWith(today))
-          const totalEmployees = new Set(rawData.map((r: any) => r.employee_id)).size
-          const presentToday = new Set(todayData.filter((r: any) => r.status === 'present').map((r: any) => r.employee_id)).size
+          const totalEmployees = new Set(rawData.map((r: any) => r.employee_id).filter(Boolean)).size
+          const presentToday = new Set(todayData.filter((r: any) => r.status === 'present').map((r: any) => r.employee_id).filter(Boolean)).size
           
           setStats({
             ...stats,
