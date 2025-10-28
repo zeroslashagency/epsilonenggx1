@@ -24,19 +24,18 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
-    // Update user contact information
-    const { data: updatedUser, error: updateError } = await supabase
-      .from('users')
-      .update({
-        phone,
-        employee_code,
-        department,
-        designation,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId)
-      .select()
-      .single()
+    // Update user contact information in auth.users metadata
+    const { data: updatedUser, error: updateError } = await supabase.auth.admin.updateUserById(
+      userId,
+      {
+        user_metadata: {
+          phone,
+          employee_code,
+          department,
+          designation
+        }
+      }
+    )
     
     if (updateError) {
       console.error('Error updating user contact:', updateError)
