@@ -16,7 +16,8 @@ import {
   Package,
   Zap,
   Target,
-  Activity
+  Activity,
+  Factory
 } from 'lucide-react'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 import { DashboardData } from '@/app/types'

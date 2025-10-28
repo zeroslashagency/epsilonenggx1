@@ -43,11 +43,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme(newTheme)
   }
 
-  // Prevent flash of unstyled content
-  if (!mounted) {
-    return <div className="opacity-0">{children}</div>
-  }
-
+  // Always render children - SSR compatible
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
@@ -58,7 +54,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export function useTheme() {
   const context = useContext(ThemeContext)
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider')
+    // Return default values instead of throwing during SSR
+    return { theme: 'light' as Theme, toggleTheme: () => {}, setTheme: () => {} }
   }
   return context
 }
