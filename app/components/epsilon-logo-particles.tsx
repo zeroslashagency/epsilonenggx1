@@ -72,8 +72,8 @@ export default function EpsilonLogoParticles() {
       ctx.lineWidth = 3
       
       const textY = centerY + logoSize / 2 + 100 // Position below logo
-      ctx.strokeText('Epsilo', centerX, textY) // Draw stroke first
-      ctx.fillText('Epsilo', centerX, textY) // Then draw fill
+      ctx.strokeText('Epsilon', centerX, textY) // Draw stroke first
+      ctx.fillText('Epsilon', centerX, textY) // Then draw fill
 
       textImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
