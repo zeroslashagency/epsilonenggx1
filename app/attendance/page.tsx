@@ -637,20 +637,6 @@ export default function AttendancePage() {
                 </Table>
               </div>
             )}
-            
-            {!showAllTrackRecords && (
-              <div className="flex flex-col items-center justify-center py-20 space-y-5">
-                <div className="h-24 w-24 rounded-2xl bg-muted/50 flex items-center justify-center border border-border/50">
-                  <Clock className="h-12 w-12 text-muted-foreground" />
-                </div>
-                <div className="text-center space-y-2">
-                  <p className="text-lg font-semibold text-foreground">No Filters Applied</p>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    Select date range, employees, and click Apply Filters to view records
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         </Card>
 
