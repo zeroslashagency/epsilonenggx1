@@ -48,6 +48,8 @@ export default function UsersPageZoho() {
   const [permissions, setPermissions] = useState<string[]>([])
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [userActivityLogs, setUserActivityLogs] = useState<any[]>([])
+  const [loadingActivity, setLoadingActivity] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editedRole, setEditedRole] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
@@ -98,6 +100,20 @@ export default function UsersPageZoho() {
   useEffect(() => {
     console.log('🎨 Permissions state changed:', permissions)
   }, [permissions])
+
+  const fetchUserActivityLogs = async (userId: string) => {
+    setLoadingActivity(true)
+    try {
+      const data = await apiGet(`/api/admin/user-activity-logs?userId=${userId}`)
+      if (data.success) {
+        setUserActivityLogs(data.logs || [])
+      }
+    } catch (error) {
+      console.error('Error fetching user activity logs:', error)
+    } finally {
+      setLoadingActivity(false)
+    }
+  }
 
   const fetchUsers = async () => {
     try {
@@ -775,28 +791,49 @@ export default function UsersPageZoho() {
                   )}
 
                   {/* Activity Tab */}
-                  {activeTab === 'activity' && (
+                  {activeTab === 'activity' && selectedUser && (
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Recent Activity</h3>
-                        <Link 
-                          href="/settings/activity-logs"
-                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#2C7BE5] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                        <button 
+                          onClick={() => fetchUserActivityLogs(selectedUser.id)}
+                          disabled={loadingActivity}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#2C7BE5] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors disabled:opacity-50"
                         >
-                          <RefreshCw className="w-4 h-4" />
-                          View All Activity Logs
-                        </Link>
+                          <RefreshCw className={`w-4 h-4 ${loadingActivity ? 'animate-spin' : ''}`} />
+                          Refresh
+                        </button>
                       </div>
-                      <div className="text-center py-8">
-                        <p className="text-[#95AAC9]">User-specific activity logs coming soon</p>
-                        <p className="text-sm text-[#95AAC9] mt-2">For now, view all activity logs in Settings → Activity Logs</p>
-                        <Link 
-                          href="/settings/activity-logs"
-                          className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-[#2C7BE5] text-white rounded hover:bg-blue-600 transition-colors"
-                        >
-                          Go to Activity Logs
-                        </Link>
-                      </div>
+                      
+                      {loadingActivity ? (
+                        <div className="text-center py-8">
+                          <RefreshCw className="w-8 h-8 animate-spin text-[#2C7BE5] mx-auto mb-2" />
+                          <p className="text-[#95AAC9]">Loading activity logs...</p>
+                        </div>
+                      ) : userActivityLogs.length > 0 ? (
+                        <div className="space-y-3">
+                          {userActivityLogs.map((log) => (
+                            <div key={log.id} className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <p className="text-sm text-[#12263F] dark:text-white font-medium">{log.description}</p>
+                                  <p className="text-xs text-[#95AAC9] mt-1">
+                                    {new Date(log.created_at).toLocaleString()}
+                                  </p>
+                                </div>
+                                <span className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-[#2C7BE5] rounded">
+                                  {log.action.replace('_', ' ')}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-[#95AAC9]">No activity logs found for this user</p>
+                          <p className="text-sm text-[#95AAC9] mt-2">Activity will appear here when actions are performed on or by this user</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
