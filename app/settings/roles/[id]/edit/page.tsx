@@ -112,19 +112,21 @@ export default function EditRolePage() {
                 items: {
                   ...mergedPermissions[moduleKey].items,
                   ...role.permissions_json[moduleKey].items
-                  full: true,
-                  view: true,
-                  create: true,
-                  edit: true,
-                  delete: true,
-                  ...(updated[moduleKey].items[itemKey].approve !== undefined && { approve: true })
                 }
-              })
-            })
-            return updated
+              }
+            }
           })
+          
+          setPermissionModules(mergedPermissions)
+          console.log('✅ Loaded and merged permissions with', Object.keys(mergedPermissions).length, 'modules')
+        } else {
+          console.log('📋 No saved permissions, using initial 82-item structure')
         }
+        
+        return
       } else {
+        console.warn('⚠️ Supabase fetch failed, using mock data:', data.error)
+        
         // Fallback to mock data if Supabase fails
         console.warn('⚠️ Supabase failed, using mock data for role:', roleId)
         
