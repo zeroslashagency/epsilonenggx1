@@ -120,22 +120,15 @@ export default function AttendancePage() {
     }
   }
 
-  // Load today's data on mount
-  useEffect(() => {
-    // TODO: Load user permissions from session/context
-    // For now, using mock permissions for demonstration
-    // In production, this would come from authenticated user's role
-    fetchTodayData()
-    fetchEmployees()
-  }, [])
-
   // Check permissions
   const canViewTodaysActivity = AttendancePermissions.canViewTodaysActivity(userPermissions)
   const canViewAllRecords = AttendancePermissions.canViewAllRecords(userPermissions)
   const canExportRecords = AttendancePermissions.canExportRecords(userPermissions)
   const canExportExcel = AttendancePermissions.canExportExcel(userPermissions)
 
-  let isMounted = true
+  // Fetch employees from API
+  const fetchEmployees = async () => {
+    let isMounted = true
     
     const loadEmployees = async () => {
       try {
@@ -154,11 +147,22 @@ export default function AttendancePage() {
       } catch (error) {
         if (isMounted) {
           console.error('Failed to fetch employees:', error)
+          setEmployeeError(getErrorMessage(error))
         }
       }
     }
     
-    loadEmployees()
+    await loadEmployees()
+    return () => { isMounted = false }
+  }
+
+  // Load today's data on mount
+  useEffect(() => {
+    // TODO: Load user permissions from session/context
+    // For now, using mock permissions for demonstration
+    // In production, this would come from authenticated user's role
+    fetchTodayData()
+    fetchEmployees()
   }, [])
 
   const toggleEmployee = (employeeCode: string) => {
@@ -553,8 +557,9 @@ export default function AttendancePage() {
         </div>
 
         {/* Today's Recent Activity */}
-        <Card className="shadow-xl border border-gray-200 overflow-hidden bg-gradient-to-br from-white to-gray-50">
-          <div className="p-8 space-y-6">
+        {canViewTodaysActivity && (
+          <Card className="shadow-xl border border-gray-200 overflow-hidden bg-gradient-to-br from-white to-gray-50">
+            <div className="p-8 space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200">
@@ -791,14 +796,16 @@ export default function AttendancePage() {
               </div>
               
               <div className="flex items-end gap-2">
-                <Button 
-                  variant="outline"
-                  className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md"
-                  onClick={() => exportToExcel('allTrack')}
-                >
-                  <Download className="h-4 w-4" />
-                  Export Excel
-                </Button>
+                {canExportRecords && (
+                  <Button 
+                    variant="outline"
+                    className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 shadow-md"
+                    onClick={() => exportToExcel('allTrack')}
+                  >
+                    <Download className="h-4 w-4" />
+                    Export Excel
+                  </Button>
+                )}
                 <Button 
                   className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
                   onClick={() => {
