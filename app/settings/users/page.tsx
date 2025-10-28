@@ -304,6 +304,25 @@ export default function UsersPageZoho() {
     }
   }
 
+  const handleSendPasswordReset = async () => {
+    if (!selectedUser) return
+    
+    try {
+      const result = await apiPost('/api/admin/send-password-reset', {
+        userEmail: selectedUser.email
+      })
+      
+      if (result.success) {
+        alert(`✅ Password reset email sent to ${selectedUser.email}`)
+      } else {
+        alert(`❌ Error: ${result.error}`)
+      }
+    } catch (error: any) {
+      console.error('Password reset error:', error)
+      alert(`❌ Failed to send password reset email: ${error.message}`)
+    }
+  }
+
   const handleDeleteUser = async () => {
     if (!selectedUser) return
 
