@@ -38,13 +38,16 @@ export function calculateDateRange(
   customFromDate?: string,
   customToDate?: string
 ): DateRange {
+  // Use local timezone for "today" to match user's current date
   const now = new Date()
+  const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
   let fromDateParam: string
   let toDateParam: string
   
   switch(range) {
     case 'today':
-      fromDateParam = toDateParam = now.toISOString().split('T')[0]
+      // Use local date to ensure "today" matches user's timezone
+      fromDateParam = toDateParam = localDate.toISOString().split('T')[0]
       break
       
     case 'yesterday':
