@@ -6,12 +6,16 @@ import { User, Key, Mail, Shield, Activity } from 'lucide-react'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
 import { UserData } from '@/app/types'
+import { apiPost } from '@/app/lib/utils/api-client'
 
 export default function AccountPage() {
   const { userPermissions } = useAuth()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
+  const [isEditingEmail, setIsEditingEmail] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [confirmEmail, setConfirmEmail] = useState('')
   const supabase = getSupabaseClient()
 
   useEffect(() => {
@@ -83,6 +87,42 @@ export default function AccountPage() {
     } finally {
       setResetting(false)
     }
+  }
+
+  const handleEmailChange = async () => {
+    if (newEmail !== confirmEmail) {
+      alert('❌ Emails do not match')
+      return
+    }
+
+    if (!newEmail) {
+      alert('❌ Please enter a new email')
+      return
+    }
+
+    try {
+      const result = await apiPost('/api/user/update-email', {
+        newEmail: newEmail
+      })
+
+      if (result.success) {
+        alert('✅ ' + result.message)
+        setIsEditingEmail(false)
+        setNewEmail('')
+        setConfirmEmail('')
+      } else {
+        alert('❌ Error: ' + result.error)
+      }
+    } catch (error: any) {
+      console.error('Email change error:', error)
+      alert('❌ Failed to change email: ' + error.message)
+    }
+  }
+
+  const handleCancelEmailChange = () => {
+    setIsEditingEmail(false)
+    setNewEmail('')
+    setConfirmEmail('')
   }
 
   if (loading) {
@@ -221,9 +261,11 @@ export default function AccountPage() {
         <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
           <h2 className="text-lg font-semibold text-[#12263F] dark:text-white mb-4 flex items-center gap-2">
             <Key className="w-5 h-5" />
-            Security
+            Security & Settings
           </h2>
-          <div className="flex items-center justify-between">
+          
+          {/* Change Password */}
+          <div className="flex items-center justify-between pb-6 border-b border-[#E3E6F0] dark:border-gray-700">
             <div>
               <p className="font-medium text-[#12263F] dark:text-white">Password</p>
               <p className="text-sm text-[#95AAC9]">Reset your password via email</p>
@@ -235,6 +277,75 @@ export default function AccountPage() {
             >
               {resetting ? 'Sending...' : 'Change Password'}
             </button>
+          </div>
+
+          {/* Change Email */}
+          <div className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="font-medium text-[#12263F] dark:text-white">Email Address</p>
+                <p className="text-sm text-[#95AAC9]">Update your email address</p>
+              </div>
+              {!isEditingEmail && (
+                <button 
+                  onClick={() => setIsEditingEmail(true)}
+                  className="px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                >
+                  Change Email
+                </button>
+              )}
+            </div>
+
+            {isEditingEmail && (
+              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded p-4 space-y-4">
+                <div className="flex items-start gap-2 text-sm text-blue-700 dark:text-blue-300">
+                  <Mail className="w-4 h-4 mt-0.5" />
+                  <p>You will receive confirmation emails at both your old and new email addresses. You must confirm from both to complete the change.</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">
+                    New Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="Enter new email"
+                    className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2C7BE5] dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">
+                    Confirm New Email
+                  </label>
+                  <input
+                    type="email"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    placeholder="Confirm new email"
+                    className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2C7BE5] dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleEmailChange}
+                    disabled={!newEmail || !confirmEmail || newEmail !== confirmEmail}
+                    className="px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Update Email
+                  </button>
+                  <button
+                    onClick={handleCancelEmailChange}
+                    className="px-4 py-2 border border-[#E3E6F0] dark:border-gray-700 text-[#12263F] dark:text-white text-sm rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
