@@ -464,23 +464,6 @@ Administration (Parent Section)
           Actions: Full, View, Create, Edit, Delete
           Controls: Third-party integrations
 
-  Organization Settings (Parent Item)
-    Actions: Full, View, Create, Edit, Delete
-    Controls: Organization configuration page
-    
-    Sub-Items (Collapsible):
-      ├─ Company Profile
-      │   Actions: Full, View, Create, Edit, Delete
-      │   Controls: Company information
-      │
-      ├─ Department Management
-      │   Actions: Full, View, Create, Edit, Delete
-      │   Controls: Department structure
-      │
-      └─ Location Management
-          Actions: Full, View, Create, Edit, Delete
-          Controls: Plant/facility locations
-
   Account (Parent Item)
     Actions: View, Edit
     Controls: Entire /app/account page
@@ -514,8 +497,8 @@ Special Permissions:
 | Attendance | 2 | 6 | 8 | 2 levels |
 | Production | 4 | 12 | 16 | 2 levels |
 | Monitoring | 4 | 12 | 16 | 2 levels |
-| Administration | 7 | 17 | 24 | 2 levels |
-| **TOTAL** | **22** | **64** | **86** | |
+| Administration | 6 | 14 | 20 | 2 levels |
+| **TOTAL** | **21** | **61** | **82** | |
 
 ---
 
