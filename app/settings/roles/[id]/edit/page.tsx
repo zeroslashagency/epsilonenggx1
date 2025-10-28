@@ -192,58 +192,175 @@ export default function EditRolePage() {
   const updatePermission = (moduleKey: string, itemKey: string, permission: keyof ModulePermission, value: boolean) => {
     setPermissionModules(prev => {
       const currentItem = prev[moduleKey].items[itemKey]
+      const isParent = currentItem.isCollapsible
+      const isChild = currentItem.isSubItem
+      
+      let updated = { ...prev }
       
       // If "Full" is checked, automatically check all other permissions
       if (permission === 'full' && value) {
-        return {
-          ...prev,
+        updated = {
+          ...updated,
           [moduleKey]: {
-            ...prev[moduleKey],
+            ...updated[moduleKey],
             items: {
-              ...prev[moduleKey].items,
+              ...updated[moduleKey].items,
               [itemKey]: {
+                ...currentItem,
                 full: true,
                 view: true,
                 create: true,
                 edit: true,
                 delete: true,
-                ...(currentItem.approve !== undefined && { approve: true })
+                ...(currentItem.approve !== undefined && { approve: true }),
+                ...(currentItem.export !== undefined && { export: true })
               }
             }
           }
         }
+        
+        // If parent, also check all children
+        if (isParent) {
+          Object.entries(updated[moduleKey].items).forEach(([childKey, childItem]) => {
+            if (childItem.isSubItem && childItem.parent === itemKey) {
+              updated[moduleKey].items[childKey] = {
+                ...childItem,
+                full: true,
+                view: true,
+                create: true,
+                edit: true,
+                delete: true,
+                ...(childItem.approve !== undefined && { approve: true }),
+                ...(childItem.export !== undefined && { export: true })
+              }
+            }
+          })
+        }
+        
+        return updated
       }
       
       // If "Full" is unchecked, uncheck all permissions
       if (permission === 'full' && !value) {
-        return {
-          ...prev,
+        updated = {
+          ...updated,
           [moduleKey]: {
-            ...prev[moduleKey],
+            ...updated[moduleKey],
             items: {
-              ...prev[moduleKey].items,
+              ...updated[moduleKey].items,
               [itemKey]: {
+                ...currentItem,
                 full: false,
                 view: false,
                 create: false,
                 edit: false,
                 delete: false,
-                ...(currentItem.approve !== undefined && { approve: false })
+                ...(currentItem.approve !== undefined && { approve: false }),
+                ...(currentItem.export !== undefined && { export: false })
               }
             }
           }
         }
+        
+        // If parent, also uncheck all children
+        if (isParent) {
+          Object.entries(updated[moduleKey].items).forEach(([childKey, childItem]) => {
+            if (childItem.isSubItem && childItem.parent === itemKey) {
+              updated[moduleKey].items[childKey] = {
+                ...childItem,
+                full: false,
+                view: false,
+                create: false,
+                edit: false,
+                delete: false,
+                ...(childItem.approve !== undefined && { approve: false }),
+                ...(childItem.export !== undefined && { export: false })
+              }
+            }
+          })
+        }
+        
+        return updated
       }
       
-      // For other permissions, just update that specific permission
+      // For other permissions on parent items
+      if (isParent && permission !== 'full') {
+        // Update parent permission
+        updated = {
+          ...updated,
+          [moduleKey]: {
+            ...updated[moduleKey],
+            items: {
+              ...updated[moduleKey].items,
+              [itemKey]: {
+                ...currentItem,
+                [permission]: value
+              }
+            }
+          }
+        }
+        
+        // Update all children with same permission
+        Object.entries(updated[moduleKey].items).forEach(([childKey, childItem]) => {
+          if (childItem.isSubItem && childItem.parent === itemKey && permission in childItem) {
+            updated[moduleKey].items[childKey] = {
+              ...childItem,
+              [permission]: value
+            }
+          }
+        })
+        
+        return updated
+      }
+      
+      // For child items, update child and check if parent should be updated
+      if (isChild) {
+        updated = {
+          ...updated,
+          [moduleKey]: {
+            ...updated[moduleKey],
+            items: {
+              ...updated[moduleKey].items,
+              [itemKey]: {
+                ...currentItem,
+                [permission]: value
+              }
+            }
+          }
+        }
+        
+        // Find parent and check if all children have this permission
+        const parentKey = currentItem.parent
+        if (parentKey) {
+          const siblings = Object.entries(updated[moduleKey].items)
+            .filter(([_, item]) => item.isSubItem && item.parent === parentKey)
+          
+          // Check if all siblings have the permission enabled
+          const allSiblingsHavePermission = siblings.every(([_, sibling]) => 
+            permission in sibling && (sibling as any)[permission] === true
+          )
+          
+          // Update parent if all children have permission, or uncheck if not all have it
+          if (parentKey in updated[moduleKey].items) {
+            updated[moduleKey].items[parentKey] = {
+              ...updated[moduleKey].items[parentKey],
+              [permission]: allSiblingsHavePermission
+            }
+          }
+        }
+        
+        return updated
+      }
+      
+      // For standalone items (no parent, no children), just update that specific permission
       return {
-        ...prev,
+        ...updated,
         [moduleKey]: {
-          ...prev[moduleKey],
+          ...updated[moduleKey],
           items: {
-            ...prev[moduleKey].items,
+            ...updated[moduleKey].items,
             [itemKey]: {
-              ...prev[moduleKey].items[itemKey],
+              ...currentItem,
               [permission]: value
             }
           }
