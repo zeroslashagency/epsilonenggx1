@@ -460,9 +460,36 @@ export default function EditRolePage() {
                 </thead>
                 
                 <tbody>
-                  {Object.entries(module.items).map(([itemKey, item]) => (
-                    <tr key={itemKey} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600">{itemKey}</td>
+                  {Object.entries(module.items).map(([itemKey, item]) => {
+                    // Skip sub-items here, they'll be rendered after their parent
+                    if (item.isSubItem) return null
+                    
+                    const collapseKey = getCollapseKey(itemKey)
+                    const isCollapsed = collapsed[collapseKey] ?? true
+                    const hasSubItems = item.isCollapsible
+                    
+                    return (
+                      <>
+                        {/* Parent Row */}
+                        <tr key={itemKey} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="py-4 px-4 text-sm font-medium text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600">
+                            <div className="flex items-center gap-2">
+                              {hasSubItems && (
+                                <button
+                                  onClick={() => toggleCollapse(collapseKey)}
+                                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                  type="button"
+                                >
+                                  {isCollapsed ? (
+                                    <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                                  )}
+                                </button>
+                              )}
+                              <span className={hasSubItems ? "font-semibold" : ""}>{itemKey}</span>
+                            </div>
+                          </td>
                       
                       <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                         <input
@@ -509,18 +536,102 @@ export default function EditRolePage() {
                         />
                       </td>
                       
-                      {item.approve !== undefined && (
-                        <td className="py-4 px-4 text-center">
-                          <input
-                            type="checkbox"
-                            checked={item.approve}
-                            onChange={(e) => updatePermission(moduleKey, itemKey, 'approve', e.target.checked)}
-                            className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </td>
-                      )}
-                    </tr>
-                  ))}
+                          {item.approve !== undefined && (
+                            <td className="py-4 px-4 text-center">
+                              <input
+                                type="checkbox"
+                                checked={item.approve}
+                                onChange={(e) => updatePermission(moduleKey, itemKey, 'approve', e.target.checked)}
+                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </td>
+                          )}
+                        </tr>
+                        
+                        {/* Sub-Item Rows */}
+                        {hasSubItems && !isCollapsed && Object.entries(module.items)
+                          .filter(([_, subItem]) => subItem.isSubItem && subItem.parent === itemKey)
+                          .map(([subItemKey, subItem]) => (
+                            <tr key={subItemKey} className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/70">
+                              <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">
+                                <div className="flex items-center gap-2 pl-8">
+                                  <span className="text-gray-400">└─</span>
+                                  <span>{subItemKey}</span>
+                                </div>
+                              </td>
+                              
+                              <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                                <input
+                                  type="checkbox"
+                                  checked={subItem.full}
+                                  onChange={(e) => updatePermission(moduleKey, subItemKey, 'full', e.target.checked)}
+                                  className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                />
+                              </td>
+                              
+                              <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                                <input
+                                  type="checkbox"
+                                  checked={subItem.view}
+                                  onChange={(e) => updatePermission(moduleKey, subItemKey, 'view', e.target.checked)}
+                                  className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                />
+                              </td>
+                              
+                              <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                                <input
+                                  type="checkbox"
+                                  checked={subItem.create}
+                                  onChange={(e) => updatePermission(moduleKey, subItemKey, 'create', e.target.checked)}
+                                  className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                />
+                              </td>
+                              
+                              <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                                <input
+                                  type="checkbox"
+                                  checked={subItem.edit}
+                                  onChange={(e) => updatePermission(moduleKey, subItemKey, 'edit', e.target.checked)}
+                                  className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                />
+                              </td>
+                              
+                              <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                                <input
+                                  type="checkbox"
+                                  checked={subItem.delete}
+                                  onChange={(e) => updatePermission(moduleKey, subItemKey, 'delete', e.target.checked)}
+                                  className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                />
+                              </td>
+                              
+                              {subItem.approve !== undefined && (
+                                <td className="py-3 px-4 text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={subItem.approve}
+                                    onChange={(e) => updatePermission(moduleKey, subItemKey, 'approve', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </td>
+                              )}
+                              
+                              {subItem.export !== undefined && (
+                                <td className="py-3 px-4 text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={subItem.export}
+                                    onChange={(e) => updatePermission(moduleKey, subItemKey, 'export', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </td>
+                              )}
+                            </tr>
+                          ))
+                        }
+                      </>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
