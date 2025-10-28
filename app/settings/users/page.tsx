@@ -57,6 +57,9 @@ export default function UsersPageZoho() {
   const [editedEmployeeCode, setEditedEmployeeCode] = useState('')
   const [editedDepartment, setEditedDepartment] = useState('')
   const [editedDesignation, setEditedDesignation] = useState('')
+  const [isChangingEmail, setIsChangingEmail] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [confirmNewEmail, setConfirmNewEmail] = useState('')
 
   useEffect(() => {
     let isMounted = true
@@ -320,6 +323,41 @@ export default function UsersPageZoho() {
     } catch (error: any) {
       console.error('Password reset error:', error)
       alert(`❌ Failed to send password reset email: ${error.message}`)
+    }
+  }
+
+  const handleChangeEmail = async () => {
+    if (!selectedUser) return
+    
+    if (newEmail !== confirmNewEmail) {
+      alert('❌ Emails do not match')
+      return
+    }
+
+    if (!newEmail) {
+      alert('❌ Please enter a new email')
+      return
+    }
+
+    try {
+      const result = await apiPost('/api/admin/change-user-email', {
+        userId: selectedUser.id,
+        newEmail: newEmail
+      })
+      
+      if (result.success) {
+        alert(`✅ ${result.message}`)
+        setIsChangingEmail(false)
+        setNewEmail('')
+        setConfirmNewEmail('')
+        // Refresh user list
+        await fetchUsers()
+      } else {
+        alert(`❌ Error: ${result.error}`)
+      }
+    } catch (error: any) {
+      console.error('Email change error:', error)
+      alert(`❌ Failed to change email: ${error.message}`)
     }
   }
 
@@ -892,6 +930,69 @@ export default function UsersPageZoho() {
                           <Mail className="w-4 h-4" />
                           Send reset email
                         </button>
+                      </div>
+
+                      {/* Change Email */}
+                      <div className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4">
+                        <h4 className="text-sm font-semibold text-[#12263F] dark:text-white mb-2">Change Email Address</h4>
+                        <p className="text-xs text-[#95AAC9] mb-4">Update the user's email address. This will be auto-confirmed.</p>
+                        
+                        {!isChangingEmail ? (
+                          <button 
+                            onClick={() => setIsChangingEmail(true)}
+                            disabled={!selectedUser}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Mail className="w-4 h-4" />
+                            Change email
+                          </button>
+                        ) : (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs font-medium text-[#12263F] dark:text-white mb-1">Current Email</label>
+                              <p className="text-sm text-[#95AAC9]">{selectedUser?.email}</p>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-[#12263F] dark:text-white mb-1">New Email</label>
+                              <input
+                                type="email"
+                                value={newEmail}
+                                onChange={(e) => setNewEmail(e.target.value)}
+                                placeholder="Enter new email"
+                                className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2C7BE5] dark:bg-gray-800 dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-[#12263F] dark:text-white mb-1">Confirm New Email</label>
+                              <input
+                                type="email"
+                                value={confirmNewEmail}
+                                onChange={(e) => setConfirmNewEmail(e.target.value)}
+                                placeholder="Confirm new email"
+                                className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2C7BE5] dark:bg-gray-800 dark:text-white"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleChangeEmail}
+                                disabled={!newEmail || !confirmNewEmail || newEmail !== confirmNewEmail}
+                                className="px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Update Email
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setIsChangingEmail(false)
+                                  setNewEmail('')
+                                  setConfirmNewEmail('')
+                                }}
+                                className="px-4 py-2 border border-[#E3E6F0] dark:border-gray-700 text-[#12263F] dark:text-white text-sm rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
