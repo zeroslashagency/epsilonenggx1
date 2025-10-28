@@ -755,11 +755,8 @@ export default function UsersPageZoho() {
                           }
                         }}
                         onEdit={() => setIsEditing(true)}
-                        onCancel={() => {
-                          setIsEditing(false)
-                          setEditedRole(selectedUser.role)
-                        }}
-                        onSave={handleSavePermissions}
+                        onCancel={handleCancelEdit}
+                        onSave={handleSaveChanges}
                       />
                       
                       <PermissionsDisplay
