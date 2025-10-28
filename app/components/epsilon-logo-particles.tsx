@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react'
 
+// Epsilon logo particle animation with interactive effects
 export default function EpsilonLogoParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const mousePositionRef = useRef({ x: 0, y: 0 })
