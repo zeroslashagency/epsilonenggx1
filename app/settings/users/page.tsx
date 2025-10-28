@@ -865,7 +865,11 @@ export default function UsersPageZoho() {
                       <div className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4">
                         <h4 className="text-sm font-semibold text-[#12263F] dark:text-white mb-2">Send Password Reset Email</h4>
                         <p className="text-xs text-[#95AAC9] mb-4">Supabase will send a reset link to the user's email address if it's valid.</p>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors">
+                        <button 
+                          onClick={handleSendPasswordReset}
+                          disabled={!selectedUser}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                           <Mail className="w-4 h-4" />
                           Send reset email
                         </button>
