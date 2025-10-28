@@ -67,7 +67,9 @@ export default function UsersPageZoho() {
         const data = await apiGet(`/api/admin/users?${params.toString()}`)
         
         if (isMounted && data.success) {
-          setUsers(data.data || [])
+          // Ensure we always set an array
+          const usersData = data.data?.users || data.data || []
+          setUsers(Array.isArray(usersData) ? usersData : [])
           if (data.pagination) {
             setTotalPages(data.pagination.totalPages || 1)
             setTotalCount(data.pagination.totalCount || 0)
@@ -101,8 +103,9 @@ export default function UsersPageZoho() {
       const data = await apiGet('/api/admin/users')
       
       if (data.success) {
-        setUsers(data.data.users || [])
-        console.log(`✅ Loaded ${data.data.users?.length || 0} users from database`)
+        const usersData = data.data?.users || data.data || []
+        setUsers(Array.isArray(usersData) ? usersData : [])
+        console.log(`✅ Loaded ${Array.isArray(usersData) ? usersData.length : 0} users from database`)
       }
     } catch (error) {
       console.error('Failed to load users:', error)
