@@ -179,32 +179,27 @@ Attendance (Parent Item)
         Controls: Leave requests and approvals
 
 Standalone Attendance (Parent Item)
-  Actions: Access (Enable/Disable)
-  Controls: Standalone attendance website access (separate system)
-  Behavior: When enabled, redirects to standalone attendance portal
-  Requirement: Employee Code must be set for user
+  Actions: Full, View, Create, Edit, Delete
+  Controls: Standalone attendance system access
+  Note: Separate project - already built
   
   Sub-Items (Collapsible):
     ├─ Employee Self-Service
-    │   Actions: Access
-    │   Controls: Employee attendance portal access
-    │   Note: Requires employee code
+    │   Actions: Full, View, Create, Edit, Delete
+    │   Controls: Employee attendance portal
     │
-    └─ Attendance Sync
-        Actions: Access
-        Controls: Data synchronization between main system and standalone
-        Note: Future feature - not yet implemented
+    ├─ Attendance Sync
+    │   Actions: Full, View, Create, Edit, Delete
+    │   Controls: Data synchronization
+    │
+    └─ Attendance Reports
+        Actions: Full, View, Create, Edit, Delete
+        Controls: Standalone attendance reports
 
 Special Permissions:
   - Allow users to modify attendance for others
   - Allow users to approve leave requests
   - Allow users to sync attendance data
-
-⚠️ **Standalone Attendance Requirements:**
-  - User must have Employee Code set in profile
-  - When enabled, redirects to external attendance portal
-  - Currently redirects to placeholder (future: actual standalone system)
-  - Access is binary: enabled or disabled (not granular like other permissions)
 ```
 
 ---
@@ -520,7 +515,7 @@ Special Permissions:
 | Production | 4 | 12 | 16 | 2 levels |
 | Monitoring | 4 | 12 | 16 | 2 levels |
 | Administration | 7 | 17 | 24 | 2 levels |
-| **TOTAL** | **22** | **63** | **85** | |
+| **TOTAL** | **22** | **64** | **86** | |
 
 ---
 
