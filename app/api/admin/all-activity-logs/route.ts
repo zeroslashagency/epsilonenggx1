@@ -18,14 +18,20 @@ export async function GET(request: NextRequest) {
     let systemLogs: any[] = []
 
     try {
-      console.log('🔍 Checking for real audit logs (deletions, etc.)...')
+      console.log('🔍 Checking for real audit logs...')
       const { data: realAuditLogs, error } = await supabase
         .from('audit_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(1000)
+        .limit(100)
 
-      if (!error && realAuditLogs) {
+      console.log('📊 Audit logs query result:', { 
+        count: realAuditLogs?.length || 0, 
+        error: error?.message,
+        sample: realAuditLogs?.[0]
+      })
+
+      if (!error && realAuditLogs && realAuditLogs.length > 0) {
         // Convert audit_logs format to our expected format
         auditLogs = realAuditLogs.map((log: any) => ({
           id: log.id,
@@ -34,15 +40,15 @@ export async function GET(request: NextRequest) {
           action: log.action,
           description: log.meta_json?.description || generateActionDescription(log.action, log.meta_json),
           timestamp: log.created_at,
-          ip: log.ip,
+          ip: log.ip || 'unknown',
           details: log.meta_json || {}
         }))
-        console.log(`✅ Found ${auditLogs.length} real audit logs (including deletions)`)
+        console.log(`✅ Found ${auditLogs.length} real audit logs`)
       } else {
-        console.log('⚠️ No audit_logs table or error:', error?.message)
+        console.log('⚠️ No audit_logs found:', error?.message || 'Empty result')
       }
-    } catch (tableError) {
-      console.log('⚠️ audit_logs table not accessible:', tableError)
+    } catch (tableError: any) {
+      console.log('⚠️ audit_logs table error:', tableError?.message)
     }
 
     // Always get system activity data to supplement
