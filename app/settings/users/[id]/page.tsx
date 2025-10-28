@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { ZohoLayout, ZohoBadge, ZohoButton } from '@/app/components/zoho-ui'
 import { apiGet, apiPost } from '@/app/lib/utils/api-client'
+import { EditableRoleSection } from './components/EditableRoleSection'
+import { PermissionsDisplay } from './components/PermissionsDisplay'
 
 interface UserDetail {
   id: string
@@ -495,108 +497,25 @@ export default function UserDetailPage() {
 
           {/* Roles Tab */}
           {activeTab === 'roles' && (
-            <div className="col-span-12 bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Role Assignment</h3>
-                  <p className="text-xs text-[#95AAC9] mt-1">Permissions are determined by the user's role</p>
-                </div>
-                {!isEditing ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 text-sm text-[#2C7BE5] border border-[#2C7BE5] rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                    title="Change user role and standalone attendance access"
-                  >
-                    Edit Role & Access
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setIsEditing(false)
-                        fetchUser() // Reload to reset changes
-                      }}
-                      className="px-4 py-2 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveChanges}
-                      className="px-4 py-2 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded">
-                <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">Current Role</label>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  disabled={!isEditing}
-                  className={`w-full max-w-md px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
-                  <option value="">Select role</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Operator">Operator</option>
-                  <option value="Test User">Test User</option>
-                </select>
-                <p className="text-xs text-[#95AAC9] mt-2">
-                  {isEditing ? '✅ Changing role will update all permissions below' : '💡 Click "Edit Role & Access" to modify user role'}
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">System Functions</h3>
-                <p className="text-xs text-[#95AAC9] mt-1">✅ = Included in role | ⚙️ = Can be toggled independently</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {SYSTEM_FUNCTIONS.map((func) => {
-                  const isStandaloneAttendance = func.id === 'standalone_attendance'
-                  const isRoleBased = !isStandaloneAttendance
-                  
-                  return (
-                    <div 
-                      key={func.id} 
-                      className={`flex items-start gap-3 p-3 border rounded ${
-                        isStandaloneAttendance 
-                          ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10' 
-                          : 'border-[#E3E6F0] dark:border-gray-700'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={permissions.includes(func.id)}
-                        onChange={() => togglePermission(func.id)}
-                        disabled={!isEditing || isRoleBased}
-                        className={`mt-1 w-4 h-4 text-[#2C7BE5] border-gray-300 rounded focus:ring-[#2C7BE5] ${
-                          !isEditing || isRoleBased ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-                        }`}
-                        title={isRoleBased ? 'Controlled by role - cannot be changed individually' : 'Can be toggled independently'}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-medium text-[#12263F] dark:text-white">{func.label}</h4>
-                          {isStandaloneAttendance && (
-                            <span className="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">⚙️ Toggle</span>
-                          )}
-                          {isRoleBased && (
-                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded">✅ Role</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-[#95AAC9] mt-1">{func.description}</p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded">
-                <p className="text-xs text-yellow-800 dark:text-yellow-400">
-                  💡 <strong>Note:</strong> Most permissions are controlled by the user's role and cannot be changed individually. 
-                  Only <strong>Standalone Attendance</strong> can be toggled independently.
-                </p>
-              </div>
+            <div className="col-span-12 space-y-6">
+              <EditableRoleSection
+                isEditing={isEditing}
+                selectedRole={selectedRole}
+                standaloneAttendance={permissions.includes('standalone_attendance')}
+                onRoleChange={setSelectedRole}
+                onStandaloneToggle={() => togglePermission('standalone_attendance')}
+                onEdit={() => setIsEditing(true)}
+                onCancel={() => {
+                  setIsEditing(false)
+                  fetchUser()
+                }}
+                onSave={handleSaveChanges}
+              />
+              
+              <PermissionsDisplay
+                role={selectedRole || user?.role || 'Operator'}
+                standaloneAttendance={permissions.includes('standalone_attendance')}
+              />
             </div>
           )}
 
