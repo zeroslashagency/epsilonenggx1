@@ -1,25 +1,13 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, Save, X, User, UserPlus, Shield, ArrowUpDown, Zap, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Save, X, User, UserPlus, Shield, ArrowUpDown, Zap, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { ZohoLayout } from '../../../../components/zoho-ui'
+import { initialPermissionModules, ModulePermission, PermissionModule } from './permissionData'
 
-interface ModulePermission {
-  full: boolean
-  view: boolean
-  create: boolean
-  edit: boolean
-  delete: boolean
-  approve?: boolean
-}
-
-interface PermissionModule {
-  name: string
-  items: Record<string, ModulePermission>
-  specialPermissions?: string[]
-}
+// Types imported from permissionData.ts
 
 interface Role {
   id: string
@@ -39,205 +27,53 @@ export default function EditRolePage() {
   const [isManufacturingRole, setIsManufacturingRole] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  
-  // Initialize permission modules based on your system
-  const [permissionModules, setPermissionModules] = useState<Record<string, PermissionModule>>({
-    main_dashboard: {
-      name: 'MAIN - Dashboard',
-      items: {
-        'Dashboard': {
-          full: false,
-          view: true,
-          create: false,
-          edit: false,
-          delete: false
-        }
-      },
-      specialPermissions: ['Allow users to export dashboard data', 'Allow users to customize dashboard layout']
-    },
-    main_scheduling: {
-      name: 'MAIN - Scheduling',
-      items: {
-        'Schedule Generator': {
-          full: false,
-          view: true,
-          create: true,
-          edit: true,
-          delete: false,
-          approve: false
-        },
-        'Schedule Generator Dashboard': {
-          full: false,
-          view: true,
-          create: false,
-          edit: false,
-          delete: false
-        }
-      },
-      specialPermissions: ['Allow users to override schedule conflicts', 'Allow users to publish schedules']
-    },
-    main_analytics: {
-      name: 'MAIN - Analytics & Charts',
-      items: {
-        'Chart': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Analytics': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        }
-      },
-      specialPermissions: ['Allow users to export chart data', 'Allow users to create custom reports', 'Allow users to export sensitive data']
-    },
-    main_attendance: {
-      name: 'MAIN - Attendance',
-      items: {
-        'Attendance': {
-          full: false,
-          view: true,
-          create: true,
-          edit: false,
-          delete: false,
-          approve: false
-        },
-        'Standalone Attendance': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        }
-      },
-      specialPermissions: ['Allow users to modify attendance for others', 'Allow users to approve leave requests', 'Allow users to sync attendance data']
-    },
-    production: {
-      name: 'PRODUCTION',
-      items: {
-        'Orders': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false,
-          approve: false
-        },
-        'Machines': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Personnel': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Tasks': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false,
-          approve: false
-        }
-      },
-      specialPermissions: ['Allow users to halt production lines', 'Allow users to emergency stop machines', 'Allow users to modify production schedules']
-    },
-    monitoring: {
-      name: 'MONITORING',
-      items: {
-        'Alerts': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Reports': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Quality Control': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false,
-          approve: false
-        },
-        'Maintenance': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false,
-          approve: false
-        }
-      },
-      specialPermissions: ['Allow users to acknowledge critical alerts', 'Allow users to override quality checks', 'Allow users to schedule emergency maintenance']
-    },
-    system_administration: {
-      name: 'SYSTEM - Administration',
-      items: {
-        'User Management': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Add Users': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Role Profiles': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Activity Logging': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'System Settings': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        },
-        'Organization Settings': {
-          full: false,
-          view: false,
-          create: false,
-          edit: false,
-          delete: false
-        }
-      },
-      specialPermissions: ['Allow users to impersonate other users', 'Allow users to modify system configurations', 'Allow users to delete users', 'Allow users to reset passwords']
-    }
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    // Dashboard
+    dashboard: true,
+    // Scheduling
+    schedule_generator: true,
+    schedule_dashboard: true,
+    // Charts & Analytics
+    chart: true,
+    analytics: true,
+    // Attendance
+    attendance: true,
+    standalone_attendance: true,
+    // Production
+    orders: true,
+    machines: true,
+    personnel: true,
+    tasks: true,
+    // Monitoring
+    alerts: true,
+    reports: true,
+    quality_control: true,
+    maintenance: true,
+    // Administration
+    user_management: true,
+    add_users: true,
+    role_profiles: true,
+    activity_logging: true,
+    system_settings: true,
+    account: true
   })
+  
+  // Initialize permission modules from imported data
+  const [permissionModules, setPermissionModules] = useState<Record<string, PermissionModule>>(initialPermissionModules)
+  
+  // Toggle collapse state for parent items
+  const toggleCollapse = (itemKey: string) => {
+    setCollapsed(prev => ({
+      ...prev,
+      [itemKey]: !prev[itemKey]
+    }))
+  }
+
+  // Get normalized key for collapse state
+  const getCollapseKey = (itemName: string): string => {
+    return itemName.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+  }
+
 
   useEffect(() => {
     if (roleId) {
