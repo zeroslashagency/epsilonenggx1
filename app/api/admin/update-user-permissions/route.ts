@@ -112,21 +112,29 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ User permissions updated successfully')
+    
+    // Log to audit_logs with proper fields
     const { error: auditError } = await supabase
       .from('audit_logs')
       .insert({
-        action: 'user_permissions_updated',
+        actor_id: user.id,
+        target_id: userId,
+        action: 'role_change',
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         meta_json: {
-          user_id: userId,
-          role,
+          old_role: updateData[0]?.role,
+          new_role: role,
           permissions,
           standalone_attendance,
+          updated_by: user.email,
           updated_at: new Date().toISOString()
         }
       })
 
     if (auditError) {
       console.error('⚠️ Audit log error:', auditError)
+    } else {
+      console.log('✅ Audit log created for role change')
     }
 
     return NextResponse.json({
