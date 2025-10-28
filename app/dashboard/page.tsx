@@ -81,7 +81,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
-  // Fetch dashboard data
+  // Fetch dashboard data with safe null checks
   const fetchDashboardData = async () => {
     try {
       setError(null)
