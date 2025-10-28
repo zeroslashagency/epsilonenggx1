@@ -7,26 +7,13 @@
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-// Get environment variables (validation happens in respective functions)
+// Get environment variables (validation happens lazily in respective functions)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-// Validate client-side required variables
-if (!supabaseUrl) {
-  throw new Error(
-    '❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.'
-  )
-}
-
-if (!supabaseAnonKey) {
-  throw new Error(
-    '❌ NEXT_PUBLIC_SUPABASE_ANON_KEY is required. Please check your .env.local file.'
-  )
-}
-
-// Note: SUPABASE_SERVICE_ROLE_KEY is only validated when getSupabaseAdminClient() is called
-// This allows client-side code to import this module without errors
+// Note: Validation is deferred until client creation to support build-time imports
+// Environment variables may not be available during Next.js build process
 
 /**
  * Global type declarations for singleton instances
@@ -48,7 +35,19 @@ declare global {
  */
 export function getSupabaseClient(): SupabaseClient {
   if (!globalThis.__supabaseInstance) {
-    globalThis.__supabaseInstance = createClient(supabaseUrl!, supabaseAnonKey!, {
+    // Validate at runtime when client is actually needed
+    if (!supabaseUrl) {
+      throw new Error(
+        '❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.'
+      )
+    }
+    if (!supabaseAnonKey) {
+      throw new Error(
+        '❌ NEXT_PUBLIC_SUPABASE_ANON_KEY is required. Please check your .env.local file.'
+      )
+    }
+    
+    globalThis.__supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
@@ -99,9 +98,18 @@ export function getSupabaseAdminClient(): SupabaseClient {
 
 /**
  * Default client export for backward compatibility
+ * Note: This creates the client lazily on first access to avoid build-time errors
  * @deprecated Use getSupabaseClient() instead for better control
  */
-export const supabase = getSupabaseClient()
+let _supabaseInstance: SupabaseClient | null = null
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    if (!_supabaseInstance) {
+      _supabaseInstance = getSupabaseClient()
+    }
+    return (_supabaseInstance as any)[prop]
+  }
+})
 
 /**
  * Validate Supabase configuration
