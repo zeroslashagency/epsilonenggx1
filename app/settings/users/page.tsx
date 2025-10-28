@@ -779,14 +779,23 @@ export default function UsersPageZoho() {
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Recent Activity</h3>
-                        <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#2C7BE5] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
+                        <Link 
+                          href="/settings/activity-logs"
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#2C7BE5] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                        >
                           <RefreshCw className="w-4 h-4" />
-                          Refresh
-                        </button>
+                          View All Activity Logs
+                        </Link>
                       </div>
                       <div className="text-center py-8">
-                        <p className="text-[#95AAC9]">No activity logs found</p>
-                        <p className="text-xs text-[#95AAC9] mt-2">Permission and role changes will appear here</p>
+                        <p className="text-[#95AAC9]">User-specific activity logs coming soon</p>
+                        <p className="text-sm text-[#95AAC9] mt-2">For now, view all activity logs in Settings → Activity Logs</p>
+                        <Link 
+                          href="/settings/activity-logs"
+                          className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-[#2C7BE5] text-white rounded hover:bg-blue-600 transition-colors"
+                        >
+                          Go to Activity Logs
+                        </Link>
                       </div>
                     </div>
                   )}
