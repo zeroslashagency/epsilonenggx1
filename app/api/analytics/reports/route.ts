@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const period = searchParams.get('period') || 'month'
     const type = searchParams.get('type') || 'production'
     
-    const supabase = createClient()
+    const supabase = getSupabaseAdminClient()
 
     // Return mock data for now - implement actual analytics logic later
     const reports = {

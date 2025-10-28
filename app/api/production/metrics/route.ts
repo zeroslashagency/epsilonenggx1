@@ -1,14 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const period = searchParams.get('period') || 'today'
     
-    const supabase = createClient()
+    const supabase = getSupabaseAdminClient()
 
     // Return mock data for now - implement actual metrics logic later
     const metrics = {
