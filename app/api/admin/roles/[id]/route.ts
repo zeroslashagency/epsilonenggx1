@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 /**
  * Role Detail API Route
  * Handles operations for individual roles

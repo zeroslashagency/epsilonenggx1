@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 /**
  * Login API Route
  * Handles user authentication

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 /**
  * Logout API Route
  * Handles user logout

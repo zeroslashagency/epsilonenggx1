@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 /**
  * Current User API Route
  * Returns the currently authenticated user's profile

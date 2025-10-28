@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '../../../lib/services/supabase-client'
 import { userListLimiter } from '../../../lib/rate-limiter'
