@@ -378,10 +378,10 @@ export default function UsersPageZoho() {
   }
 
   const stats = {
-    total: users.length,
-    active: users.filter(u => u.status === 'active').length,
-    pending: users.filter(u => u.status === 'pending').length,
-    roles: new Set(users.map(u => u.role)).size
+    total: Array.isArray(users) ? users.length : 0,
+    active: Array.isArray(users) ? users.filter(u => u.status === 'active').length : 0,
+    pending: Array.isArray(users) ? users.filter(u => u.status === 'pending').length : 0,
+    roles: Array.isArray(users) ? new Set(users.map(u => u.role)).size : 0
   }
 
   return (
