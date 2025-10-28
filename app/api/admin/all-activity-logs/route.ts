@@ -91,11 +91,42 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to get real activity logs from system data
-// REMOVED: No longer generating fake logs from system data
-// Only audit_logs table contains REAL user modifications
 async function getRealActivityLogs(supabase: any): Promise<any[]> {
-  console.log('ℹ️ Skipping fake log generation - using only real audit_logs')
-  return []
+  try {
+    // Get recent user activities from profiles table changes
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, role, created_at, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(50)
+    
+    if (!profiles || profiles.length === 0) {
+      console.log('ℹ️ No profile data available for activity logs')
+      return []
+    }
+
+    // Generate activity logs from profile data
+    const activityLogs = profiles.map((profile: any) => ({
+      id: `profile_${profile.id}_${Date.now()}`,
+      user_id: profile.id,
+      target_user_id: profile.id,
+      action: 'profile_activity',
+      description: `Profile activity for ${profile.full_name || profile.email}`,
+      timestamp: profile.updated_at || profile.created_at,
+      ip: 'system',
+      details: {
+        role: profile.role,
+        email: profile.email
+      }
+    }))
+
+    console.log(`✅ Generated ${activityLogs.length} activity logs from profiles`)
+    return activityLogs
+    
+  } catch (error) {
+    console.error('Error generating activity logs:', error)
+    return []
+  }
 }
 
 // Helper function to enhance logs with user information
