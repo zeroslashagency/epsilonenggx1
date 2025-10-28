@@ -100,28 +100,64 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Auth user created:', authUser.user.id)
     
-    // Create profile explicitly (no waiting for trigger)
-    const { data: profileData, error: profileError } = await supabase
+    // Check if profile already exists (Supabase trigger might have created it)
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .insert({
-        id: authUser.user.id,
-        email: email,
-        full_name: employee_name,
-        employee_code,
-        department: department || 'Default',
-        designation: designation || 'Employee',
-        role: role || 'Operator',
-        standalone_attendance: 'NO'
-      })
-      .select()
+      .select('id')
+      .eq('id', authUser.user.id)
+      .single()
 
-    if (profileError) {
-      console.error('Profile creation error:', profileError)
-      // Clean up auth user if profile creation fails
-      await supabase.auth.admin.deleteUser(authUser.user.id)
-      return NextResponse.json({ 
-        error: `Failed to create user profile: ${profileError.message}` 
-      }, { status: 500 })
+    let profileData
+    if (existingProfile) {
+      // Profile exists (created by trigger), update it
+      console.log('📝 Profile exists, updating it...')
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          email: email,
+          full_name: employee_name,
+          employee_code,
+          department: department || 'Default',
+          designation: designation || 'Employee',
+          role: role || 'Operator',
+          standalone_attendance: 'NO'
+        })
+        .eq('id', authUser.user.id)
+        .select()
+
+      if (updateError) {
+        console.error('Profile update error:', updateError)
+        await supabase.auth.admin.deleteUser(authUser.user.id)
+        return NextResponse.json({ 
+          error: `Failed to update user profile: ${updateError.message}` 
+        }, { status: 500 })
+      }
+      profileData = updatedProfile
+    } else {
+      // Profile doesn't exist, create it
+      console.log('➕ Creating new profile...')
+      const { data: newProfile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authUser.user.id,
+          email: email,
+          full_name: employee_name,
+          employee_code,
+          department: department || 'Default',
+          designation: designation || 'Employee',
+          role: role || 'Operator',
+          standalone_attendance: 'NO'
+        })
+        .select()
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError)
+        await supabase.auth.admin.deleteUser(authUser.user.id)
+        return NextResponse.json({ 
+          error: `Failed to create user profile: ${profileError.message}` 
+        }, { status: 500 })
+      }
+      profileData = newProfile
     }
 
     console.log('✅ User profile updated successfully:', profileData)
