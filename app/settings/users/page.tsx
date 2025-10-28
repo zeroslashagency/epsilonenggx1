@@ -101,6 +101,13 @@ export default function UsersPageZoho() {
     console.log('🎨 Permissions state changed:', permissions)
   }, [permissions])
 
+  // Auto-fetch activity logs when activity tab is opened
+  useEffect(() => {
+    if (activeTab === 'activity' && selectedUser) {
+      fetchUserActivityLogs(selectedUser.id)
+    }
+  }, [activeTab, selectedUser])
+
   const fetchUserActivityLogs = async (userId: string) => {
     setLoadingActivity(true)
     try {
@@ -177,6 +184,14 @@ export default function UsersPageZoho() {
     setEditedEmployeeCode(user.employee_code || '')
     setEditedDepartment(user.department || '')
     setEditedDesignation(user.designation || '')
+    setEditedRole(user.role || 'Operator')
+    
+    // Set permissions based on standalone_attendance
+    const userPermissions = ['dashboard']
+    if (user.standalone_attendance === 'YES') {
+      userPermissions.push('standalone_attendance')
+    }
+    setPermissions(userPermissions)
     setIsEditing(false)
   }
 
@@ -796,7 +811,9 @@ export default function UsersPageZoho() {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Recent Activity</h3>
                         <button 
-                          onClick={() => fetchUserActivityLogs(selectedUser.id)}
+                          onClick={() => {
+                            fetchUserActivityLogs(selectedUser.id)
+                          }}
                           disabled={loadingActivity}
                           className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#2C7BE5] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors disabled:opacity-50"
                         >
