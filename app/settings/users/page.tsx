@@ -5,6 +5,8 @@ import { User, UserPlus, Shield, ArrowUpDown, Zap, Edit, Trash2, Download, Plus,
 import Link from 'next/link'
 import { ZohoLayout } from '../../components/zoho-ui'
 import { apiGet, apiPost, apiDelete } from '@/app/lib/utils/api-client'
+import { EditableRoleSection } from './[id]/components/EditableRoleSection'
+import { PermissionsDisplay } from './[id]/components/PermissionsDisplay'
 
 interface User {
   id: string
@@ -739,60 +741,31 @@ export default function UsersPageZoho() {
 
                   {/* Roles Tab */}
                   {activeTab === 'roles' && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#12263F] dark:text-white mb-4">Role Assignment</h3>
-                      <div className="mb-6">
-                        <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">Current Role</label>
-                        <select
-                          value={isEditing ? editedRole : selectedUser.role}
-                          onChange={(e) => setEditedRole(e.target.value)}
-                          disabled={!isEditing}
-                          className={`w-full max-w-md px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        >
-                          <option value="">Select role</option>
-                          <option value="Admin">Admin</option>
-                          <option value="Operator">Operator</option>
-                          <option value="Test User">Test User</option>
-                        </select>
-                        <p className="text-xs text-[#95AAC9] mt-2">
-                          {isEditing ? 'Select a role for this user' : 'Click "Edit" to modify user role'}
-                        </p>
-                      </div>
-
-                      <h3 className="text-lg font-semibold text-[#12263F] dark:text-white mb-4">System Functions</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        {SYSTEM_FUNCTIONS.map((func) => (
-                          <div key={func.id} className={`flex items-start gap-3 p-3 border border-[#E3E6F0] dark:border-gray-700 rounded ${!isEditing ? 'opacity-60' : ''}`}>
-                            <input
-                              type="checkbox"
-                              checked={permissions.includes(func.id)}
-                              disabled={!isEditing}
-                              onChange={() => {
-                                if (isEditing) {
-                                  console.log(`🔘 Checkbox clicked: ${func.id}, currently checked: ${permissions.includes(func.id)}`)
-                                  if (permissions.includes(func.id)) {
-                                    const newPerms = permissions.filter(p => p !== func.id)
-                                    console.log(`✂️ Removing ${func.id}, new permissions:`, newPerms)
-                                    setPermissions(newPerms)
-                                  } else {
-                                    const newPerms = [...permissions, func.id]
-                                    console.log(`➕ Adding ${func.id}, new permissions:`, newPerms)
-                                    setPermissions(newPerms)
-                                  }
-                                }
-                              }}
-                              className={`mt-1 w-4 h-4 text-[#2C7BE5] border-gray-300 rounded focus:ring-[#2C7BE5] ${!isEditing ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                            />
-                            <div>
-                              <h4 className="text-sm font-medium text-[#12263F] dark:text-white">{func.label}</h4>
-                              <p className="text-xs text-[#95AAC9] mt-1">{func.description}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-[#95AAC9] mt-4">
-                        {isEditing ? 'Check/uncheck permissions to modify user access' : 'Click "Edit" above to modify permissions'}
-                      </p>
+                    <div className="space-y-6">
+                      <EditableRoleSection
+                        isEditing={isEditing}
+                        selectedRole={isEditing ? editedRole : selectedUser.role}
+                        standaloneAttendance={permissions.includes('standalone_attendance')}
+                        onRoleChange={setEditedRole}
+                        onStandaloneToggle={() => {
+                          if (permissions.includes('standalone_attendance')) {
+                            setPermissions(permissions.filter(p => p !== 'standalone_attendance'))
+                          } else {
+                            setPermissions([...permissions, 'standalone_attendance'])
+                          }
+                        }}
+                        onEdit={() => setIsEditing(true)}
+                        onCancel={() => {
+                          setIsEditing(false)
+                          setEditedRole(selectedUser.role)
+                        }}
+                        onSave={handleSavePermissions}
+                      />
+                      
+                      <PermissionsDisplay
+                        role={isEditing ? editedRole : selectedUser.role}
+                        standaloneAttendance={permissions.includes('standalone_attendance')}
+                      />
                     </div>
                   )}
 
