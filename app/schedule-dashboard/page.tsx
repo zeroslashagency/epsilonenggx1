@@ -18,10 +18,26 @@ import {
   Target,
   Activity,
   Factory,
-  User
+  User,
+  Gauge,
+  Timer,
+  BarChart2,
+  PieChart,
+  CheckCircle,
+  AlertTriangle,
+  Cog,
+  LogOut,
+  LineChart,
+  Thermometer,
+  TrendingDown,
+  ArrowLeft
 } from 'lucide-react'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 import { DashboardData } from '@/app/types'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
 
 // Simple interfaces for dashboard data
 interface KPI {
