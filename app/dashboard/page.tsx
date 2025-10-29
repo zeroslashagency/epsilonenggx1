@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ZohoLayout } from '../components/zoho-ui/ZohoLayout'
 import { 
   Users, 
@@ -66,6 +67,7 @@ interface RecentActivity {
 
 export default function DashboardPage() {
   const auth = useAuth()
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     presentToday: 0,
@@ -164,6 +166,13 @@ export default function DashboardPage() {
     }
   }
 
+  // Authentication guard
+  useEffect(() => {
+    if (!auth.isLoading && !auth.isAuthenticated) {
+      router.push('/auth')
+    }
+  }, [auth.isAuthenticated, auth.isLoading, router])
+
   useEffect(() => {
     let isMounted = true
     
@@ -245,6 +254,23 @@ export default function DashboardPage() {
     
     return () => clearInterval(interval)
   }, [])
+
+  // Show loading while checking authentication
+  if (auth.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated
+  if (!auth.isAuthenticated) {
+    return null
+  }
 
   return (
     <ZohoLayout breadcrumbs={[{ label: 'Dashboard' }]}>
