@@ -6,6 +6,7 @@ import { requireAuth } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 [GET-ATTENDANCE] Request received at:', new Date().toISOString())
     const supabase = getSupabaseClient()
     const searchParams = request.nextUrl.searchParams
     
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
       startDate = new Date(fromDate)
       endDate = new Date(toDate)
       endDate.setHours(23, 59, 59, 999) // End of day
+      console.log('📅 [GET-ATTENDANCE] Using provided date range:', { fromDate, toDate, startDate: startDate.toISOString(), endDate: endDate.toISOString() })
     } else {
       // Fallback to dateRange parameter
       endDate = new Date()
@@ -114,7 +116,7 @@ export async function GET(request: NextRequest) {
     
     const attendanceLogs = allLogs
     
-    console.log('📊 Query results:', { 
+    console.log('📊 [GET-ATTENDANCE] Query results:', { 
       recordsFound: attendanceLogs?.length || 0, 
       totalCount, 
       dateRange: { start: startDate.toISOString(), end: endDate.toISOString() },
@@ -130,7 +132,7 @@ export async function GET(request: NextRequest) {
     if (employeeError) {
     }
 
-    console.log('👥 Employee data fetched:', { 
+    console.log('👥 [GET-ATTENDANCE] Employee data fetched:', { 
       employeeCount: employees?.length || 0,
       employeeError: employeeError?.message,
       sampleEmployee: employees?.[0]
@@ -165,7 +167,7 @@ export async function GET(request: NextRequest) {
     
     const todayLogs = todayError ? [] : (todayLogsFromDB || [])
     
-    console.log('📅 Today\'s data:', { 
+    console.log('📅 [GET-ATTENDANCE] Today\'s data:', { 
       today, 
       todayLogsCount: todayLogs.length, 
       todayError: todayError?.message,
@@ -210,7 +212,7 @@ export async function GET(request: NextRequest) {
       totalEmployees = (uniqueEmployeeData as any).count || 47
     }
     
-    console.log('👥 Employee count calculation:', { 
+    console.log('👥 [GET-ATTENDANCE] Employee count calculation:', { 
       uniqueEmployeeError: uniqueEmployeeError?.message,
       totalEmployees 
     })
@@ -258,6 +260,7 @@ export async function GET(request: NextRequest) {
       })
     }))).map(str => JSON.parse(str)) // Show all employees for export selection
     
+    console.log('✅ [GET-ATTENDANCE] Returning response with', attendanceLogs?.length || 0, 'logs')
     return NextResponse.json({
       success: true,
       data: {
@@ -311,6 +314,7 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
+    console.error('❌ [GET-ATTENDANCE] Error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch attendance data'
