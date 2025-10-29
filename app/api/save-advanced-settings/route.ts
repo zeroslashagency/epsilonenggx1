@@ -2,8 +2,13 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
 export async function POST(request: NextRequest) {
+  const authResult = await requirePermission(request, 'schedule.edit')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     
@@ -111,6 +116,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const authResult = await requirePermission(request, 'schedule.view')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     

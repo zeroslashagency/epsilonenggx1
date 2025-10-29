@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
 // Add CORS headers
 const corsHeaders = {
@@ -15,6 +16,10 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requirePermission(request, 'admin')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseClient()
     const { syncType } = await request.json()

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/app/lib/middleware/auth.middleware'
 
 // Add CORS headers
 const corsHeaders = {
@@ -14,6 +15,10 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth(request)
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const { deviceUrl } = await request.json()
     
