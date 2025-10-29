@@ -3,12 +3,18 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { checkRateLimit, strictRateLimit } from '@/app/lib/middleware/rate-limit.middleware'
 
 /**
  * POST /api/admin/send-password-reset
  * Send password reset email to user via Supabase Auth
+ * Rate limited: 5 requests per 15 minutes (prevents email spam)
  */
 export async function POST(request: NextRequest) {
+  // Check rate limit first (5 per 15 minutes to prevent email spam)
+  const rateLimitResult = await checkRateLimit(request, strictRateLimit)
+  if (!rateLimitResult.success) return rateLimitResult.response
+
   const authResult = await requirePermission(request, 'manage_users')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult

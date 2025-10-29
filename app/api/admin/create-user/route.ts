@@ -5,8 +5,13 @@ import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
 import { createUserSchema } from '@/app/lib/validation/schemas'
+import { checkRateLimit, strictRateLimit } from '@/app/lib/middleware/rate-limit.middleware'
 
 export async function POST(request: NextRequest) {
+  // Check rate limit first (10 per minute to prevent mass user creation)
+  const rateLimitResult = await checkRateLimit(request, strictRateLimit)
+  if (!rateLimitResult.success) return rateLimitResult.response
+
   // ✅ PERMISSION CHECK: Require manage_users permission
   const authResult = await requirePermission(request, 'manage_users')
   if (authResult instanceof NextResponse) return authResult
