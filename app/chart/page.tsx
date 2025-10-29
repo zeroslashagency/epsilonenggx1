@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/app/lib/contexts/auth-context'
 import { 
   ZohoLayout, 
   ZohoCard, 
@@ -45,6 +47,8 @@ interface ProductionMetrics {
 }
 
 export default function ChartPage() {
+  const auth = useAuth()
+  const router = useRouter()
   const [metrics, setMetrics] = useState<ProductionMetrics>({
     productionOutput: 1250,
     efficiencyRate: 87.5,
@@ -59,6 +63,13 @@ export default function ChartPage() {
   const [activeTab, setActiveTab] = useState('analytics')
   const [timelineView, setTimelineView] = useState<'hour' | 'day' | 'week' | 'month'>('day')
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+
+  // Authentication guard
+  useEffect(() => {
+    if (!auth.isLoading && !auth.isAuthenticated) {
+      router.push('/auth')
+    }
+  }, [auth.isAuthenticated, auth.isLoading, router])
 
   useEffect(() => {
     fetchMetrics()
@@ -148,6 +159,23 @@ export default function ChartPage() {
     )
   }
 
+  // Show loading while checking authentication
+  if (auth.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated
+  if (!auth.isAuthenticated) {
+    return null
+  }
+
   return (
     <ZohoLayout>
       <div className="space-y-6">
@@ -159,7 +187,7 @@ export default function ChartPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-xs text-[#95AAC9]">
-              Last updated: {lastUpdate.toLocaleTimeString()}
+              Last updated: {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading...'}
             </div>
             <select
               value={selectedPeriod}
