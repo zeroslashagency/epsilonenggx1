@@ -38,16 +38,18 @@ export function calculateDateRange(
   customFromDate?: string,
   customToDate?: string
 ): DateRange {
-  // Use local timezone for "today" to match user's current date
+  // Get current date in IST (UTC+5:30) timezone
   const now = new Date()
-  const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+  // IST offset is +5:30 = 330 minutes = 19800000 milliseconds
+  const istOffset = 330 * 60 * 1000
+  const istDate = new Date(now.getTime() + istOffset)
   let fromDateParam: string
   let toDateParam: string
   
   switch(range) {
     case 'today':
-      // Use local date to ensure "today" matches user's timezone
-      fromDateParam = toDateParam = localDate.toISOString().split('T')[0]
+      // Use IST date to match Indian timezone (where the data is)
+      fromDateParam = toDateParam = istDate.toISOString().split('T')[0]
       break
       
     case 'yesterday':
