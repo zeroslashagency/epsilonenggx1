@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError) {
-      console.error('Error creating user:', authError)
       return NextResponse.json({ error: authError.message }, { status: 400 })
     }
 
@@ -53,7 +52,6 @@ export async function POST(request: NextRequest) {
       })
 
     if (profileError) {
-      console.error('Error creating profile:', profileError)
       // Clean up auth user if profile creation fails
       await supabase.auth.admin.deleteUser(authUser.user.id)
       return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
@@ -68,7 +66,6 @@ export async function POST(request: NextRequest) {
       })
 
     if (roleError) {
-      console.error('Error assigning role:', roleError)
       // Try to clean up the created user
       await supabase.auth.admin.deleteUser(authUser.user.id)
       return NextResponse.json({ error: 'Failed to assign role' }, { status: 500 })
@@ -87,7 +84,6 @@ export async function POST(request: NextRequest) {
         .insert(permissionInserts)
 
       if (permError) {
-        console.error('Error adding custom permissions:', permError)
         // Note: We don't fail the entire operation for permission errors
       }
     }
@@ -113,7 +109,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

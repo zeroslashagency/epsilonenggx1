@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
   try {
     const { deviceUrl } = await request.json()
     
-    console.log(`🔍 Checking device status: ${deviceUrl}`)
 
     // Try to ping the SmartOffice device
     const controller = new AbortController()
@@ -40,7 +39,6 @@ export async function POST(request: NextRequest) {
       clearTimeout(timeoutId)
       
       if (response.ok) {
-        console.log('🟢 SmartOffice device is online')
         return NextResponse.json({
           success: true,
           online: true,
@@ -48,7 +46,6 @@ export async function POST(request: NextRequest) {
           timestamp: new Date().toISOString()
         }, { headers: corsHeaders })
       } else {
-        console.log(`🔴 SmartOffice device responded with status: ${response.status}`)
         return NextResponse.json({
           success: true,
           online: false,
@@ -58,7 +55,6 @@ export async function POST(request: NextRequest) {
       }
     } catch (fetchError) {
       clearTimeout(timeoutId)
-      console.log('🔴 SmartOffice device is unreachable:', fetchError)
       
       return NextResponse.json({
         success: true,
@@ -70,7 +66,6 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Device status check error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     
     return NextResponse.json(

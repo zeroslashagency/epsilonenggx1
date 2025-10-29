@@ -74,7 +74,6 @@ export default function UserDetailPage() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching user:', error)
         }
       } finally {
         if (isMounted) {
@@ -105,10 +104,8 @@ export default function UserDetailPage() {
       
       if (data.success) {
         setActivityLogs(data.logs || [])
-        console.log(`✅ Loaded ${data.logs?.length || 0} activity logs for user`)
       }
     } catch (error) {
-      console.error('Error fetching activity logs:', error)
     } finally {
       setLoadingActivity(false)
     }
@@ -150,11 +147,9 @@ export default function UserDetailPage() {
           }
           
           setPermissions(userPermissions)
-          console.log('✅ Loaded permissions for', foundUser.role, ':', userPermissions)
         }
       }
     } catch (error) {
-      console.error('Failed to load user:', error)
     } finally {
       setLoading(false)
     }
@@ -170,7 +165,6 @@ export default function UserDetailPage() {
 
   const handleSaveChanges = async () => {
     try {
-      console.log('💾 Saving changes...', { userId, role: selectedRole, permissions })
       
       // Determine standalone_attendance based on permissions
       const standalone_attendance = permissions.includes('standalone_attendance') ? 'YES' : 'NO'
@@ -182,17 +176,14 @@ export default function UserDetailPage() {
       })
 
       if (data.success) {
-        console.log('✅ Changes saved successfully')
         alert('Changes saved successfully!')
         setIsEditing(false)
         // Reload user data to show updated values
         fetchUser()
       } else {
-        console.error('❌ Failed to save:', data.error)
         alert(`Failed to save: ${data.error}`)
       }
     } catch (error) {
-      console.error('❌ Save error:', error)
       alert('Failed to save changes. Please try again.')
     }
   }
@@ -236,7 +227,6 @@ export default function UserDetailPage() {
         alert(`Failed to update: ${data.error}`)
       }
     } catch (error) {
-      console.error('Error updating contact info:', error)
       alert('Failed to update contact information')
     }
   }

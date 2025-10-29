@@ -83,7 +83,6 @@ export default function ScheduleDashboardSimple() {
           }
         }
       } catch (error) {
-        console.error('Error loading dashboard data:', error)
       } finally {
         setIsLoading(false)
       }

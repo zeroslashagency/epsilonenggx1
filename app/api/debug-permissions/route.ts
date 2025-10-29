@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Debug permissions error:', error)
     return NextResponse.json({
       error: error?.message || 'Debug failed'
     }, { status: 500 })

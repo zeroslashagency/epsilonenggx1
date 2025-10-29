@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { syncType = 'attendance' } = body
     
-    console.log(`🔄 Manual sync triggered: ${syncType}`)
     
     // In a real implementation, this would:
     // 1. Send a signal to the office computer
@@ -31,7 +30,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(syncResult)
     
   } catch (error) {
-    console.error('Manual sync error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Manual sync failed',
@@ -55,7 +53,6 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Manual sync status error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get sync status'

@@ -34,7 +34,6 @@ export async function apiClient(url: string, options: RequestInit = {}) {
   
   // Handle 401 Unauthorized - redirect to login
   if (!response.ok && response.status === 401) {
-    console.warn('🔒 Unauthorized request - redirecting to login')
     if (typeof window !== 'undefined') {
       window.location.href = '/login'
     }

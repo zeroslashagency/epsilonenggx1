@@ -10,7 +10,6 @@ export async function createUserRequest(userData: {
   notes?: string | null
   actorId?: string
 }) {
-  console.log('🚀 NEW USER CREATION SYSTEM ACTIVATED!')
   
   const response = await fetch('/api/admin/user-creation-requests', {
     method: 'POST',

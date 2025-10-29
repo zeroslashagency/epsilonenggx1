@@ -13,14 +13,12 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     
-    console.log('🔍 Fetching all activity logs from database...')
 
     // Try to get real audit logs first
     let auditLogs: any[] = []
     let systemLogs: any[] = []
 
     try {
-      console.log('🔍 Checking for real audit logs...')
       const { data: realAuditLogs, error } = await supabase
         .from('audit_logs')
         .select('*')
@@ -45,26 +43,20 @@ export async function GET(request: NextRequest) {
           ip: log.ip || 'unknown',
           details: log.meta_json || {}
         }))
-        console.log(`✅ Found ${auditLogs.length} real audit logs`)
       } else {
-        console.log('⚠️ No audit_logs found:', error?.message || 'Empty result')
       }
     } catch (tableError: any) {
-      console.log('⚠️ audit_logs table error:', tableError?.message)
     }
 
     // Always get system activity data to supplement
-    console.log('📝 Fetching system activity data...')
     systemLogs = await getRealActivityLogs(supabase)
 
     // Combine real audit logs with system logs
     const logs = [...auditLogs, ...systemLogs]
-    console.log(`📊 Total logs: ${auditLogs.length} audit + ${systemLogs.length} system = ${logs.length} total`)
 
     // Enhance logs with user information if not already present
     const enhancedLogs = await enhanceLogsWithUserInfo(supabase, logs)
 
-    console.log(`✅ Processed ${enhancedLogs.length} activity logs`)
 
     // Calculate statistics
     const stats = {
@@ -91,7 +83,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ All activity logs error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })
@@ -109,7 +100,6 @@ async function getRealActivityLogs(supabase: any): Promise<any[]> {
       .limit(50)
     
     if (!profiles || profiles.length === 0) {
-      console.log('ℹ️ No profile data available for activity logs')
       return []
     }
 
@@ -128,11 +118,9 @@ async function getRealActivityLogs(supabase: any): Promise<any[]> {
       }
     }))
 
-    console.log(`✅ Generated ${activityLogs.length} activity logs from profiles`)
     return activityLogs
     
   } catch (error) {
-    console.error('Error generating activity logs:', error)
     return []
   }
 }

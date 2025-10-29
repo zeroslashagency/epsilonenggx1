@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
       data: orders
     })
   } catch (error) {
-    console.error('Error fetching production orders:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch orders'
@@ -110,7 +109,6 @@ export async function POST(request: NextRequest) {
       message: 'Production order created successfully'
     })
   } catch (error) {
-    console.error('Error creating production order:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create order'
@@ -168,7 +166,6 @@ export async function PATCH(request: NextRequest) {
       message: 'Production order updated successfully'
     })
   } catch (error) {
-    console.error('Error updating production order:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update order'
@@ -221,7 +218,6 @@ export async function DELETE(request: NextRequest) {
       message: 'Production order deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting production order:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete order'

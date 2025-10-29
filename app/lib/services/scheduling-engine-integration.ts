@@ -75,12 +75,10 @@ export class SchedulingEngineIntegration {
       if (typeof window !== 'undefined' && (window as any).ModularSchedulingEngine) {
         this.engine = new (window as any).ModularSchedulingEngine()
         this.initialized = true
-        console.log('Scheduling engine initialized successfully')
       } else {
         throw new Error('ModularSchedulingEngine not available')
       }
     } catch (error) {
-      console.error('Failed to initialize scheduling engine:', error)
       throw error
     }
   }
@@ -112,7 +110,6 @@ export class SchedulingEngineIntegration {
     }
 
     try {
-      console.log(`Running schedule for ${orders.length} orders`)
 
       // Convert React orders to the format expected by the scheduling engine
       const ordersData = orders.map(order => ({
@@ -150,17 +147,13 @@ export class SchedulingEngineIntegration {
       // Process each order individually (same as original)
       for (const orderData of ordersData) {
         try {
-          console.log(`Scheduling order: ${orderData.partNumber}`)
           const orderResults = this.engine.scheduleOrder(orderData, [])
           
           if (orderResults && orderResults.length > 0) {
             results.push(...orderResults)
-            console.log(`✅ Order ${orderData.partNumber} scheduled: ${orderResults.length} operations`)
           } else {
-            console.warn(`⚠️ No results for order ${orderData.partNumber}`)
           }
         } catch (orderError) {
-          console.error(`❌ Error scheduling order ${orderData.partNumber}:`, orderError)
         }
       }
 
@@ -185,11 +178,9 @@ export class SchedulingEngineIntegration {
         status: result.Status || result.status || '✅'
       }))
 
-      console.log(`Schedule completed: ${formattedResults.length} operations scheduled`)
       return formattedResults
 
     } catch (error) {
-      console.error('Error running schedule:', error)
       
       // Fallback to detailed mock results that match the expected format
       return this.generateDetailedMockResults(orders)

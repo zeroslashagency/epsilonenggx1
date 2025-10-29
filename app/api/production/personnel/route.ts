@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
       data: personnel
     })
   } catch (error) {
-    console.error('Error fetching personnel:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch personnel'
@@ -106,7 +105,6 @@ export async function POST(request: NextRequest) {
       message: 'Personnel created successfully'
     })
   } catch (error) {
-    console.error('Error creating personnel:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create personnel'
@@ -163,7 +161,6 @@ export async function PATCH(request: NextRequest) {
       message: 'Personnel updated successfully'
     })
   } catch (error) {
-    console.error('Error updating personnel:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update personnel'

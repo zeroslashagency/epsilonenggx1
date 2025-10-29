@@ -44,7 +44,6 @@ export default function AnalyticsPage() {
         setLastUpdate(new Date())
       }
     } catch (error) {
-      console.error('Error fetching analytics:', error)
     } finally {
       setRefreshing(false)
       setLoading(false)

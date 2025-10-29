@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
     startDate.setDate(startDate.getDate() - days)
     const startDateStr = startDate.toISOString()
     
-    console.log('📊 Fetching logs from:', startDateStr, 'for', days, 'days')
     
     // Get attendance data - fetch ALL data for the date range (no limit!)
     // Supabase has default limit of 1000, so we need to paginate or increase limit
@@ -90,7 +89,6 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Analytics error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch analytics'
@@ -102,7 +100,6 @@ function calculateDailyTrends(logs: any[], days: number) {
   const trends = []
   const today = new Date()
   
-  console.log('🔍 Calculating trends for', days, 'days from', logs.length, 'total logs')
   
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today)
@@ -119,7 +116,6 @@ function calculateDailyTrends(logs: any[], days: number) {
     
     const uniqueEmployees = new Set(dayLogs.map(log => log.employee_code)).size
     
-    console.log(`📅 ${dateStr}: ${dayLogs.length} punches, ${uniqueEmployees} employees`)
     
     trends.push({
       date: dateStr,

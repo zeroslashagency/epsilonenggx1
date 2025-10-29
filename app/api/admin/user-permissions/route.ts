@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    console.log('Starting user-permissions API call...')
     
     // Get all users from profiles table
     const { data: profiles, error: profilesError } = await supabase
@@ -20,10 +19,8 @@ export async function GET(request: NextRequest) {
       .select('id, email, full_name, role, role_badge, created_at, updated_at')
       .order('created_at', { ascending: false })
 
-    console.log('Profiles query result:', { profiles: profiles?.length, error: profilesError })
 
     if (profilesError) {
-      console.error('Error fetching profiles:', profilesError)
       return NextResponse.json({ error: `Failed to fetch users: ${profilesError.message}` }, { status: 500 })
     }
 
@@ -32,10 +29,8 @@ export async function GET(request: NextRequest) {
       .from('user_roles')
       .select('user_id, role_id')
 
-    console.log('User roles query result:', { userRoles: userRoles?.length, error: userRolesError })
 
     if (userRolesError) {
-      console.error('Error fetching user roles:', userRolesError)
       return NextResponse.json({ error: `Failed to fetch user roles: ${userRolesError.message}` }, { status: 500 })
     }
 
@@ -45,10 +40,8 @@ export async function GET(request: NextRequest) {
       .select('id, name, description')
       .order('name')
 
-    console.log('Roles query result:', { allRoles: allRoles?.length, error: rolesError })
 
     if (rolesError) {
-      console.error('Error fetching roles:', rolesError)
       return NextResponse.json({ error: `Failed to fetch roles: ${rolesError.message}` }, { status: 500 })
     }
 
@@ -57,13 +50,11 @@ export async function GET(request: NextRequest) {
       .from('role_permissions')
       .select('role_id, permission_id')
 
-    console.log('Role permissions query result:', { rolePermissions: rolePermissions?.length, error: permError })
 
     // Get all permissions
     const { data: allPermissions, error: allPermError } = await supabase
       .from('permissions')
       .select('id, code, description')
-    console.log('Permissions query result:', { allPermissions: allPermissions?.length, error: allPermError })
 
     // Combine the data - Pure RBAC (no custom user permissions)
     const usersWithPermissions = profiles?.map(profile => {
@@ -91,8 +82,6 @@ export async function GET(request: NextRequest) {
       }
     }) || []
 
-    console.log('API Response - Total users:', usersWithPermissions.length)
-    console.log('API Response - Users:', usersWithPermissions.map(u => ({ email: u.email, role: u.role?.name })))
 
     return NextResponse.json({
       users: usersWithPermissions,
@@ -101,7 +90,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

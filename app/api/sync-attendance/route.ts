@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
     // Fetch logs from SmartOffice API
     const smartOfficeUrl = `${SMART_OFFICE_CONFIG.baseUrl}/GetDeviceLogs?APIKey=${SMART_OFFICE_CONFIG.apiKey}&FromDate=${fromDate}&ToDate=${toDate}`
     
-    console.log('Fetching from SmartOffice:', smartOfficeUrl)
     
     let response
     try {
@@ -40,7 +39,6 @@ export async function GET(request: NextRequest) {
         signal: AbortSignal.timeout(5000) // 5 second timeout
       })
     } catch (fetchError) {
-      console.warn('SmartOffice API not available:', fetchError)
       // Return success with 0 new logs when SmartOffice is not available
       return NextResponse.json({
         success: true,
@@ -54,7 +52,6 @@ export async function GET(request: NextRequest) {
     }
     
     if (!response.ok) {
-      console.warn(`SmartOffice API error: ${response.status} ${response.statusText}`)
       // Return success with 0 new logs when API returns error
       return NextResponse.json({
         success: true,
@@ -73,7 +70,6 @@ export async function GET(request: NextRequest) {
       throw new Error('Invalid response format from SmartOffice API')
     }
     
-    console.log(`Fetched ${logs.length} logs from SmartOffice`)
     
     // Transform logs for Supabase storage
     const transformedLogs = logs.map((log: any) => ({
@@ -115,9 +111,7 @@ export async function GET(request: NextRequest) {
         }
         
         newLogsCount = newLogs.length
-        console.log(`Inserted ${newLogsCount} new attendance logs from SmartOffice`)
       } else {
-        console.log('No new logs to insert - all data already exists')
       }
     }
     
@@ -132,7 +126,6 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Sync attendance error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -152,7 +145,6 @@ export async function POST(request: NextRequest) {
     const result = await GET(request)
     return result
   } catch (error) {
-    console.error('Manual sync error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Manual sync failed'

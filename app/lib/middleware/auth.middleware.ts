@@ -26,7 +26,6 @@ export async function getUserFromRequest(request: NextRequest): Promise<User | n
     const { data: { user }, error } = await supabase.auth.getUser(token)
 
     if (error || !user) {
-      console.error('Auth error:', error?.message)
       return null
     }
 
@@ -58,7 +57,6 @@ export async function getUserFromRequest(request: NextRequest): Promise<User | n
     }
 
   } catch (error) {
-    console.error('getUserFromRequest error:', error)
     return null
   }
 }
@@ -184,7 +182,6 @@ export async function hasPermission(user: User, permission: string): Promise<boo
       .eq('user_id', user.id)
     
     if (!userRoles || userRoles.length === 0) {
-      console.warn(`No roles found for user ${user.id}`)
       return false
     }
     
@@ -215,7 +212,6 @@ export async function hasPermission(user: User, permission: string): Promise<boo
     return allPermissions.includes(permission)
     
   } catch (error) {
-    console.error('Error checking permission:', error)
     return false
   }
 }
@@ -277,7 +273,6 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
     return [...new Set(allPermissions)]
     
   } catch (error) {
-    console.error('Error getting user permissions:', error)
     return []
   }
 }
@@ -358,6 +353,5 @@ export async function logAuthAttempt(
       }
     })
   } catch (error) {
-    console.error('Failed to log auth attempt:', error)
   }
 }

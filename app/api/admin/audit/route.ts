@@ -107,7 +107,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching audit logs:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch audit logs'
@@ -154,7 +153,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error creating audit log:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create audit log'

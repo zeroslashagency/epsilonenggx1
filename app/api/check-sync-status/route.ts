@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
       .single()
     
     if (error) {
-      console.error('Error fetching sync request:', error)
       return NextResponse.json({
         success: false,
         error: 'Failed to fetch sync request status'
@@ -52,7 +51,6 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Check sync status error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

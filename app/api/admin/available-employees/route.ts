@@ -17,10 +17,8 @@ export async function GET(request: NextRequest) {
       .from('employee_master')
       .select('employee_code, employee_name, department, designation')
 
-    console.log('Employees query result:', { employees: employees?.length || 0, error: employeesError })
 
     if (employeesError) {
-      console.error('Error fetching employees:', employeesError)
       return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 })
     }
 
@@ -35,7 +33,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Available employees API error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single()
       
       if (error || !profile) {
-        console.error('Failed to fetch user profile:', error)
         return
       }
       
@@ -62,9 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       setUserPermissions(permissions)
-      console.log('✅ User permissions loaded:', { role: profile.role, permissions })
     } catch (error) {
-      console.error('Error fetching user profile:', error)
     }
   }
   
@@ -84,11 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user?.id) {
-        console.log('🔄 Refreshing user permissions...')
         await fetchUserProfile(session.user.id)
       }
     } catch (error) {
-      console.error('Error refreshing permissions:', error)
     }
   }
 
@@ -115,7 +110,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserEmail(null)
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
         // Clear everything on error
         localStorage.clear()
         setIsAuthenticated(false)
@@ -194,7 +188,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/auth')
       router.refresh() // Force refresh to clear any cached data
     } catch (error) {
-      console.error('Logout error:', error)
       // Even if Supabase logout fails, clear local data
       localStorage.clear()
       sessionStorage.clear()

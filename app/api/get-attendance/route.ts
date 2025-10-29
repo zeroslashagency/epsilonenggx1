@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
       startDate = new Date(fromDate)
       endDate = new Date(toDate)
       endDate.setHours(23, 59, 59, 999) // End of day
-      console.log('📅 Using provided date range:', { fromDate, toDate, startDate: startDate.toISOString(), endDate: endDate.toISOString() })
     } else {
       // Fallback to dateRange parameter
       endDate = new Date()
@@ -62,7 +61,6 @@ export async function GET(request: NextRequest) {
     } else if (employeeCodes) {
       const codes = employeeCodes.split(',').map(code => code.trim())
       countQuery = countQuery.in('employee_code', codes)
-      console.log(`🔍 Filtering by ${codes.length} employee codes:`, codes)
     }
     
     const { count: totalCount, error: countError } = await countQuery
@@ -76,7 +74,6 @@ export async function GET(request: NextRequest) {
     const batchSize = isSingleDay ? 500 : 1000 // Smaller batches for single day
     const maxRecords = isSingleDay ? 2000 : 50000 // Limit for single day to avoid excessive fetching
     
-    console.log('🔍 Query optimization:', { isSingleDay, batchSize, maxRecords, dateRange: `${fromDate} to ${toDate}` })
     
     // Supabase has a default limit of 1000 rows, so we need to fetch in batches
     let allLogs: any[] = []
@@ -131,7 +128,6 @@ export async function GET(request: NextRequest) {
       .limit(10000)
 
     if (employeeError) {
-      console.warn('Could not fetch employee names:', employeeError)
     }
 
     console.log('👥 Employee data fetched:', { 
@@ -150,10 +146,7 @@ export async function GET(request: NextRequest) {
           designation: emp.designation
         })
       })
-      console.log('👥 Employee map created with', employeeMap.size, 'employees')
-      console.log('👥 Sample mappings:', Array.from(employeeMap.entries()).slice(0, 3))
     } else {
-      console.log('❌ No employees found in employee_master')
     }
     
     // Calculate today's summary - get today's data specifically
@@ -318,7 +311,6 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Get attendance error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch attendance data'

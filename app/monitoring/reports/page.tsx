@@ -76,7 +76,6 @@ export default function ReportsPage() {
         ])
       }
     } catch (error) {
-      console.error('Error fetching reports:', error)
     } finally {
       setRefreshing(false)
       setLoading(false)
@@ -94,7 +93,6 @@ export default function ReportsPage() {
         fetchReports() // Refresh list after generation
       }
     } catch (error) {
-      console.error('Error generating report:', error)
     }
   }
 

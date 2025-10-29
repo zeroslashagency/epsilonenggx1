@@ -72,7 +72,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Attendance dashboard error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

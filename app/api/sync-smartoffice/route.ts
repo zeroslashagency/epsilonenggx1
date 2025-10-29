@@ -17,8 +17,6 @@ export async function POST(request: NextRequest) {
   try {
     const { smartOfficeUrl, syncType } = await request.json()
 
-    console.log(`🔄 SmartOffice Sync Request: ${syncType}`)
-    console.log(`📡 Device URL: ${smartOfficeUrl}`)
 
     // Simulate fetching data from SmartOffice device
     // In a real implementation, this would connect to your actual SmartOffice device
@@ -39,7 +37,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('SmartOffice sync error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     
     return NextResponse.json(

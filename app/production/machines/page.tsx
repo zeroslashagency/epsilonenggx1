@@ -52,12 +52,10 @@ export default function MachinesPage() {
             setTotalCount(data.pagination.totalCount || 0)
           }
         } else if (isMounted) {
-          console.error('Error fetching machines:', data.error)
           setMachines([])
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching machines:', error)
           setMachines([])
         }
       } finally {

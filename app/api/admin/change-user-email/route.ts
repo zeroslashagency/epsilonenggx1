@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log(`📧 Admin changing user email: ${userId} → ${newEmail}`)
 
     const supabase = getSupabaseAdminClient()
 
@@ -43,7 +42,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('❌ Email update error:', error)
       return NextResponse.json({
         success: false,
         error: error.message
@@ -71,7 +69,6 @@ export async function POST(request: NextRequest) {
         }
       })
 
-    console.log('✅ Email changed successfully')
 
     return NextResponse.json({
       success: true,
@@ -79,7 +76,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ Change user email error:', error)
     return NextResponse.json({
       success: false,
       error: error?.message || 'Failed to change email'

@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching roles:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch roles'
@@ -165,7 +164,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error creating role:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create role'
@@ -254,7 +252,6 @@ export async function PATCH(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error updating role:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update role'

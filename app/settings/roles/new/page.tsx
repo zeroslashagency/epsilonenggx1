@@ -296,7 +296,6 @@ export default function NewRolePage() {
     }
 
     try {
-      console.log('Saving role:', { roleName, description, isManufacturingRole, permissionModules })
       
       // Convert permission modules to simple permission codes for API
       const permissionCodes: string[] = []
@@ -353,7 +352,6 @@ export default function NewRolePage() {
       alert('✅ Role created successfully!')
       router.push('/settings/roles')
     } catch (error) {
-      console.error('Error saving role:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       alert(`❌ Failed to save role:\n\n${errorMessage}`)
     }

@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
       .order('employee_code')
 
     if (empError) {
-      console.error('Error fetching employees:', empError)
       // Continue without employee names if table doesn't exist
     }
 
@@ -111,7 +110,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Raw attendance API error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })
@@ -240,7 +238,6 @@ export async function POST(request: NextRequest) {
     }, { status: 400 })
 
   } catch (error: any) {
-    console.error('Raw attendance calculation error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

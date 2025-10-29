@@ -16,7 +16,6 @@ export class SchedulingModulesLoader {
     if (this.modulesLoaded) return
 
     try {
-      console.log('Loading scheduling modules...')
 
       // Load all scheduling modules in the correct order
       await this.loadModule('/services/scheduling/core/config.js')
@@ -29,15 +28,12 @@ export class SchedulingModulesLoader {
       
       // Load Excel exporter module
       await this.loadModule('/services/excel-exporter.js')
-      console.log('✅ Excel exporter module loaded')
 
       // Wait for modules to be available in global scope
       await this.waitForModules()
 
       this.modulesLoaded = true
-      console.log('All scheduling modules loaded successfully')
     } catch (error) {
-      console.error('Failed to load scheduling modules:', error)
       throw error
     }
   }
@@ -55,12 +51,10 @@ export class SchedulingModulesLoader {
       script.async = false // Load synchronously to maintain order
       
       script.onload = () => {
-        console.log(`✅ Loaded module: ${modulePath}`)
         resolve()
       }
       
       script.onerror = () => {
-        console.error(`❌ Failed to load module: ${modulePath}`)
         reject(new Error(`Failed to load module: ${modulePath}`))
       }
 
@@ -96,7 +90,6 @@ export class SchedulingModulesLoader {
         })
 
         if (allLoaded) {
-          console.log('✅ All required modules are available')
           resolve()
         } else if (attempts >= maxAttempts) {
           const missingModules = requiredModules.filter(moduleName => 

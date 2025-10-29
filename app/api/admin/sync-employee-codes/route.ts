@@ -16,7 +16,6 @@ export async function POST(request: NextRequest) {
       .neq('employee_name', '')
 
     if (attendanceError) {
-      console.error('Error fetching attendance data:', attendanceError)
       return NextResponse.json({ 
         error: 'Failed to fetch attendance data' 
       }, { status: 500 })
@@ -39,7 +38,6 @@ export async function POST(request: NextRequest) {
       .select('id, full_name, employee_code')
 
     if (usersError) {
-      console.error('Error fetching users:', usersError)
       return NextResponse.json({ 
         error: 'Failed to fetch users' 
       }, { status: 500 })
@@ -63,7 +61,6 @@ export async function POST(request: NextRequest) {
             .eq('id', user.id)
 
           if (updateError) {
-            console.error(`Error updating user ${user.full_name}:`, updateError)
           } else {
             updates.push({
               user_id: user.id,
@@ -90,7 +87,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Sync employee codes error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

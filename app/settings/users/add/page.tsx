@@ -53,7 +53,6 @@ export default function AddUsersPage() {
   const fetchEmployees = async () => {
     setLoading(true)
     try {
-      console.log('🔄 Fetching real employees from employee_master table...')
       
       // Fetch real employee data from API
       const data = await apiGet('/api/get-employees')
@@ -68,12 +67,10 @@ export default function AddUsersPage() {
         }))
         
         setEmployees(transformedEmployees)
-        console.log(`✅ Loaded ${transformedEmployees.length} real employees from database`)
       } else {
         throw new Error('Invalid response format')
       }
     } catch (error) {
-      console.error('❌ Failed to fetch employees:', error)
       // Fallback to empty array instead of mock data
       setEmployees([])
     } finally {
@@ -112,7 +109,6 @@ export default function AddUsersPage() {
         alert('Failed to create user: ' + (result.error || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Error creating user:', error)
       alert('Failed to create user')
     }
   }
@@ -155,7 +151,6 @@ export default function AddUsersPage() {
       })
 
       if (result.success) {
-        console.log('✅ User created successfully:', result.user)
         
         let successMessage = '✅ User created successfully!'
         if (result.tempPassword) {
@@ -168,7 +163,6 @@ export default function AddUsersPage() {
         alert('❌ Failed to create user: ' + (result.error || 'Unknown error'))
       }
     } catch (error) {
-      console.error('❌ Error creating user from employee:', error)
       alert('❌ Failed to create user')
     }
   }

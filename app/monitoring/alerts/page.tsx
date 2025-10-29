@@ -49,12 +49,10 @@ export default function AlertsPage() {
             setTotalCount(data.pagination.totalCount || 0)
           }
         } else if (isMounted) {
-          console.error('Error fetching alerts:', data.error)
           setAlerts([])
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching alerts:', error)
           setAlerts([])
         }
       } finally {
@@ -84,11 +82,9 @@ export default function AlertsPage() {
         }))
         setAlerts(transformedAlerts)
       } else {
-        console.error('Error fetching alerts:', data.error)
         setAlerts([])
       }
     } catch (error) {
-      console.error('Error fetching alerts:', error)
       setAlerts([])
     } finally {
       setLoading(false)
@@ -114,11 +110,9 @@ export default function AlertsPage() {
           alert.id === id ? { ...alert, acknowledged: true } : alert
         ))
       } else {
-        console.error('Error acknowledging alert:', data.error)
         alert('Failed to acknowledge alert')
       }
     } catch (error) {
-      console.error('Error acknowledging alert:', error)
       alert('Failed to acknowledge alert')
     }
   }

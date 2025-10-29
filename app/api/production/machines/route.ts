@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
       data: machines
     })
   } catch (error) {
-    console.error('Error fetching machines:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch machines'
@@ -107,7 +106,6 @@ export async function POST(request: NextRequest) {
       message: 'Machine created successfully'
     })
   } catch (error) {
-    console.error('Error creating machine:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create machine'
@@ -164,7 +162,6 @@ export async function PATCH(request: NextRequest) {
       message: 'Machine updated successfully'
     })
   } catch (error) {
-    console.error('Error updating machine:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update machine'

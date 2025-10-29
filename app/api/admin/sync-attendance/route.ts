@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (requestError) {
-      console.error('Error creating sync request:', requestError)
       return NextResponse.json({
         error: 'Failed to create sync request'
       }, { status: 500 })
@@ -99,7 +98,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Sync attendance error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

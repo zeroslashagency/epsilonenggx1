@@ -44,9 +44,7 @@ export class BackendIntegrationService {
       await this.initializeSchedulingEngineIntegration()
       
       this.initialized = true
-      console.log('Backend services initialized successfully')
     } catch (error) {
-      console.error('Failed to initialize backend services:', error)
       throw error
     }
   }
@@ -57,9 +55,7 @@ export class BackendIntegrationService {
       const client = getSupabaseClient()
       this.services.supabase = client
       
-      console.log('Supabase client initialized')
     } catch (error) {
-      console.error('Failed to initialize Supabase:', error)
       throw error
     }
   }
@@ -73,9 +69,7 @@ export class BackendIntegrationService {
       // Make it globally available (same as original)
       MasterDataLoader.makeGloballyAvailable()
       
-      console.log(`Loaded ${masterData.length} operations from master data`)
     } catch (error) {
-      console.error('Failed to load master data:', error)
       throw error
     }
   }
@@ -108,15 +102,12 @@ export class BackendIntegrationService {
     this.services.orderManager = {
       addOrder: (order: any) => {
         // Implementation similar to original order manager
-        console.log('Adding order:', order)
         return order
       },
       updateOrder: (order: any) => {
-        console.log('Updating order:', order)
         return order
       },
       deleteOrder: (orderId: string) => {
-        console.log('Deleting order:', orderId)
         return true
       }
     }
@@ -127,7 +118,6 @@ export class BackendIntegrationService {
     this.services.schedulingEngine = {
       runSchedule: async (orders: any[], settings: any) => {
         // Implementation similar to original scheduling engine
-        console.log('Running schedule with orders:', orders.length)
         
         // Simulate scheduling process
         return new Promise((resolve) => {
@@ -163,7 +153,6 @@ export class BackendIntegrationService {
     const schedulingIntegration = SchedulingEngineIntegration.getInstance()
     await schedulingIntegration.initialize()
     this.services.schedulingEngineIntegration = schedulingIntegration
-    console.log('Scheduling engine integration initialized')
   }
 
   private getFallbackMasterData(): any[] {
@@ -267,7 +256,6 @@ export class BackendIntegrationService {
     try {
       return MasterDataLoader.getPartNumbers()
     } catch (error) {
-      console.error('Error getting part numbers:', error)
       return []
     }
   }
@@ -277,7 +265,6 @@ export class BackendIntegrationService {
     try {
       return MasterDataLoader.getOperationsForPart(partNumber)
     } catch (error) {
-      console.error('Error getting operations:', error)
       return []
     }
   }

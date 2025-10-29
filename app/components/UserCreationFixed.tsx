@@ -21,7 +21,6 @@ export function UserCreationFixed({ userData }: { userData: UserData }) {
     setIsSubmitting(true)
     
     try {
-      console.log('🚀 USING FIXED USER CREATION SYSTEM')
       
       const data = await apiPost('/api/admin/user-creation-requests', {
         email: userData.email,
@@ -48,7 +47,6 @@ An administrator will process this request and create the user account. You will
         throw new Error(result.error || 'Failed to submit user creation request')
       }
     } catch (error) {
-      console.error('User creation request failed:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       alert(`❌ Failed to submit user creation request: ${errorMessage}`)
     } finally {

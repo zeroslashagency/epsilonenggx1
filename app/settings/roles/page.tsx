@@ -97,7 +97,6 @@ export default function RolesPage() {
         ])
       }
     } catch (error) {
-      console.error('Failed to fetch roles:', error)
       setRoles([])
     } finally {
       setLoading(false)

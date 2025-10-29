@@ -82,8 +82,6 @@ export function getSupabaseAdminClient(): SupabaseClient {
 
   if (!globalThis.__supabaseAdminInstance) {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔑 Creating Supabase Admin Client')
-      console.log('URL:', supabaseUrl)
     }
     
     globalThis.__supabaseAdminInstance = createClient(supabaseUrl!, supabaseServiceKey!, {
@@ -134,5 +132,4 @@ export function validateSupabaseConfig(): void {
     )
   }
 
-  console.log('✅ Supabase configuration validated')
 }

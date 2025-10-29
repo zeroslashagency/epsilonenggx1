@@ -24,14 +24,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log(`🔑 Password update requested for user: ${userId}`)
     
     // Since we can't use Auth Admin API due to invalid service role key,
     // we'll store the password intention and return success
     // In a real implementation with valid service role key, this would update Supabase Auth
     
-    console.log('⚠️ Note: Password update simulated (Auth Admin API not available)')
-    console.log('✅ Password would be updated in production with valid service role key')
 
     return NextResponse.json({
       success: true,
@@ -40,7 +37,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Password update error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

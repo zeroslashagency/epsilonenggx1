@@ -16,7 +16,6 @@ export async function GET(
     const supabase = getSupabaseAdminClient()
     const userId = params.userId
 
-    console.log(`🔍 Fetching activity logs for user: ${userId}`)
 
     // Get logs where user is the actor OR the target
     const { data: auditLogs, error } = await supabase
@@ -27,7 +26,6 @@ export async function GET(
       .limit(100)
 
     if (error) {
-      console.error('❌ Error fetching user activity logs:', error)
       throw error
     }
 
@@ -46,7 +44,6 @@ export async function GET(
     // Enhance logs with user information
     const enhancedLogs = await enhanceLogsWithUserInfo(supabase, logs)
 
-    console.log(`✅ Found ${enhancedLogs.length} activity logs for user ${userId}`)
 
     return NextResponse.json({
       success: true,
@@ -55,7 +52,6 @@ export async function GET(
     })
 
   } catch (error: any) {
-    console.error('❌ User activity logs error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

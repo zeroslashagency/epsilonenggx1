@@ -37,12 +37,10 @@ export default function QualityControlPage() {
           }))
           setChecks(transformedChecks)
         } else if (isMounted) {
-          console.error('Error fetching quality checks:', data.error)
           setChecks([])
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching quality checks:', error)
           setChecks([])
         }
       } finally {

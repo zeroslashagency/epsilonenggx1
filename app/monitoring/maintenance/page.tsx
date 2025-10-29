@@ -50,12 +50,10 @@ export default function MaintenancePage() {
             setTotalCount(data.pagination.totalCount || 0)
           }
         } else if (isMounted) {
-          console.error('Error fetching maintenance records:', data.error)
           setRecords([])
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching maintenance records:', error)
           setRecords([])
         }
       } finally {

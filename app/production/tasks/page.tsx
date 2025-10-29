@@ -51,7 +51,6 @@ export default function TasksPage() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching tasks:', error)
         }
       } finally {
         if (isMounted) {
@@ -82,11 +81,9 @@ export default function TasksPage() {
         }))
         setTasks(transformedTasks)
       } else {
-        console.error('Error fetching tasks:', data.error)
         setTasks([])
       }
     } catch (error) {
-      console.error('Error fetching tasks:', error)
       setTasks([])
     } finally {
       setLoading(false)

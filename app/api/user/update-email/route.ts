@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log(`📧 Email change requested: ${user.email} → ${newEmail}`)
 
     // Update email using Supabase Auth
     const { data, error } = await supabase.auth.updateUser({
@@ -47,7 +46,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('❌ Email update error:', error)
       return NextResponse.json({
         success: false,
         error: error.message
@@ -70,7 +68,6 @@ export async function POST(request: NextRequest) {
         }
       })
 
-    console.log('✅ Email change confirmation sent')
 
     return NextResponse.json({
       success: true,
@@ -78,7 +75,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ Update email error:', error)
     return NextResponse.json({
       success: false,
       error: error?.message || 'Failed to update email'

@@ -25,7 +25,6 @@ export default function AccountPage() {
         const { data: { user: currentUser }, error } = await supabase.auth.getUser()
         
         if (error) {
-          console.error('Error fetching user:', error)
           return
         }
 
@@ -38,7 +37,6 @@ export default function AccountPage() {
             .single()
 
           if (profileError) {
-            console.error('Error fetching profile:', profileError)
           }
 
           setUserData({
@@ -54,7 +52,6 @@ export default function AccountPage() {
           })
         }
       } catch (error) {
-        console.error('Error fetching user data:', error)
       } finally {
         setLoading(false)
       }
@@ -76,13 +73,11 @@ export default function AccountPage() {
       })
 
       if (error) {
-        console.error('Error sending reset email:', error)
         alert('Failed to send password reset email: ' + error.message)
       } else {
         alert('Password reset email sent! Check your inbox.')
       }
     } catch (error) {
-      console.error('Error:', error)
       alert('Failed to send password reset email')
     } finally {
       setResetting(false)
@@ -114,7 +109,6 @@ export default function AccountPage() {
         alert('❌ Error: ' + result.error)
       }
     } catch (error: any) {
-      console.error('Email change error:', error)
       alert('❌ Failed to change email: ' + error.message)
     }
   }

@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
       data: records
     })
   } catch (error) {
-    console.error('Error fetching maintenance records:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch maintenance records'
@@ -125,7 +124,6 @@ export async function POST(request: NextRequest) {
       message: 'Maintenance record created successfully'
     })
   } catch (error) {
-    console.error('Error creating maintenance record:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create maintenance record'
@@ -192,7 +190,6 @@ export async function PATCH(request: NextRequest) {
       message: 'Maintenance record updated successfully'
     })
   } catch (error) {
-    console.error('Error updating maintenance record:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update maintenance record'

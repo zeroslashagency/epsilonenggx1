@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseClient()
     const { syncType } = await request.json()
 
-    console.log(`☁️ Database Sync Request: ${syncType}`)
 
     // Simulate syncing local data to Supabase cloud
     // In a real implementation, this would:
@@ -59,7 +58,6 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('Database sync error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     
     return NextResponse.json(

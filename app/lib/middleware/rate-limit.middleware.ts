@@ -56,10 +56,7 @@ if (isUpstashConfigured) {
     prefix: 'ratelimit:permissions',
   })
 
-  console.log('✅ Rate limiting enabled with Upstash Redis')
 } else {
-  console.warn('⚠️ Rate limiting disabled - Upstash Redis not configured')
-  console.warn('   Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in .env.local')
 }
 
 export { authRateLimit, apiRateLimit, strictRateLimit, permissionUpdateLimit }
@@ -86,7 +83,6 @@ export async function checkRateLimit(
     const { success, limit, remaining, reset } = await limiter.limit(ip)
 
     if (!success) {
-      console.warn(`Rate limit exceeded for IP: ${ip}`)
       
       return {
         success: false,
@@ -120,7 +116,6 @@ export async function checkRateLimit(
   } catch (error) {
     // If rate limiting fails, log error but allow request
     // This prevents rate limiting from breaking the app
-    console.error('Rate limit check failed:', error)
     return { success: true }
   }
 }

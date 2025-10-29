@@ -7,7 +7,6 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
     
-    console.log('📊 Fetching employees from employee_master table...')
     
     // Fetch all employees from employee_master table
     const { data: employees, error } = await supabase
@@ -16,11 +15,9 @@ export async function GET(request: NextRequest) {
       .order('employee_name', { ascending: true })
     
     if (error) {
-      console.error('Supabase error:', error)
       throw new Error(`Failed to fetch employees: ${error.message}`)
     }
     
-    console.log(`✅ Found ${employees?.length || 0} employees in database`)
     
     return NextResponse.json({
       success: true,
@@ -29,7 +26,6 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Get employees error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     
     return NextResponse.json(

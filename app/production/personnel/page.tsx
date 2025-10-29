@@ -33,7 +33,6 @@ export default function PersonnelPage() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching personnel:', error)
         }
       } finally {
         if (isMounted) {
@@ -62,11 +61,9 @@ export default function PersonnelPage() {
         }))
         setPersonnel(transformedPersonnel)
       } else {
-        console.error('Error fetching personnel:', data.error)
         setPersonnel([])
       }
     } catch (error) {
-      console.error('Error fetching personnel:', error)
       setPersonnel([])
     } finally {
       setLoading(false)

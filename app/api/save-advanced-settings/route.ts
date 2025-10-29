@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
         .select()
 
       if (error) {
-        console.error('Supabase error:', error)
         return NextResponse.json(
           { error: 'Failed to save advanced settings', details: error.message },
           { status: 500 }
@@ -92,7 +91,6 @@ export async function POST(request: NextRequest) {
         .eq('session_name', `Advanced Settings - ${userEmail}`)
 
       if (error) {
-        console.error('Supabase error:', error)
         return NextResponse.json(
           { error: 'Failed to unlock advanced settings', details: error.message },
           { status: 500 }
@@ -107,7 +105,6 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('API error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -136,7 +133,6 @@ export async function GET(request: NextRequest) {
       .limit(1)
 
     if (error) {
-      console.error('Supabase error:', error)
       return NextResponse.json(
         { error: 'Failed to load advanced settings', details: error.message },
         { status: 500 }
@@ -149,7 +145,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('API error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

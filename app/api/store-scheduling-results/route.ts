@@ -55,14 +55,12 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (error) {
-      console.error('Error storing scheduling results:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to store scheduling results', details: error },
         { status: 500 }
       )
     }
 
-    console.log('Scheduling results stored successfully:', formattedResults.length, 'records')
     
     return NextResponse.json({
       success: true,
@@ -72,7 +70,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in store-scheduling-results API:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error', details: error },
       { status: 500 }
@@ -94,7 +91,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching scheduling results:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to fetch scheduling results' },
         { status: 500 }
@@ -109,7 +105,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in GET store-scheduling-results API:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

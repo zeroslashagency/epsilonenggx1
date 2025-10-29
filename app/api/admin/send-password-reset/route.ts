@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log(`📧 Sending password reset email to: ${userEmail}`)
 
     const supabase = getSupabaseAdminClient()
 
@@ -33,7 +32,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('❌ Password reset error:', error)
       return NextResponse.json({
         success: false,
         error: error.message
@@ -54,7 +52,6 @@ export async function POST(request: NextRequest) {
         }
       })
 
-    console.log('✅ Password reset email sent successfully')
 
     return NextResponse.json({
       success: true,
@@ -62,7 +59,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ Send password reset error:', error)
     return NextResponse.json({
       success: false,
       error: error?.message || 'Failed to send password reset email'

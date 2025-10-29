@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
     return successResponse(null, 'Logout successful')
 
   } catch (error: any) {
-    console.error('Logout error:', error)
     return serverErrorResponse('Logout failed', error)
   }
 }

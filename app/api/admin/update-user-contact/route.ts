@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
     )
     
     if (updateError) {
-      console.error('Error updating user contact:', updateError)
       return NextResponse.json({
         success: false,
         error: updateError.message
@@ -71,7 +70,6 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error in update-user-contact:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update contact information'

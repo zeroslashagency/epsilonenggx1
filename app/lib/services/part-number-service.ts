@@ -58,7 +58,6 @@ export class PartNumberService {
       // Fallback to sample master data if database is empty
       return sampleMasterData
     } catch (error) {
-      console.error('Error fetching master data:', error)
       // Return sample data as fallback
       return sampleMasterData
     }
@@ -93,7 +92,6 @@ export class PartNumberService {
 
       return result.sort((a, b) => a.partnumber.localeCompare(b.partnumber))
     } catch (error) {
-      console.error('Error fetching part numbers:', error)
       return []
     }
   }
@@ -132,7 +130,6 @@ export class PartNumberService {
 
       return result.sort((a, b) => a.partnumber.localeCompare(b.partnumber))
     } catch (error) {
-      console.error('Error searching part numbers:', error)
       return []
     }
   }
@@ -156,7 +153,6 @@ export class PartNumberService {
         EligibleMachines: op.EligibleMachines
       }))
     } catch (error) {
-      console.error('Error fetching operations:', error)
       return []
     }
   }

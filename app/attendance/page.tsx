@@ -72,17 +72,14 @@ export default function AttendancePage() {
       params.append('fromDate', fromDateParam)
       params.append('toDate', toDateParam)
       
-      console.log(`📅 Fetching TODAY's data: ${fromDateParam}`)
       
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
         setTodayData(response.data)
         setRecentLogs(response.data.recentLogs || [])
         setLastSyncTime(new Date())
-        console.log(`✅ Loaded ${response.data.allLogs?.length || 0} today's logs`)
       }
     } catch (error) {
-      console.error('Error fetching today\'s data:', error)
       setTodayError(getErrorMessage(error))
     } finally {
       setTodayLoading(false)
@@ -103,18 +100,14 @@ export default function AttendancePage() {
       // Add employee filter if specific employees selected
       if (selectedEmployees.length > 0 && selectedEmployees.length < allEmployees.length) {
         params.append('employeeCodes', selectedEmployees.join(','))
-        console.log(`📅 Fetching All Track Records from ${fromDateParam} to ${toDateParam} for ${selectedEmployees.length} employees`)
       } else {
-        console.log(`📅 Fetching All Track Records from ${fromDateParam} to ${toDateParam} for all employees`)
       }
       
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
         setAllTrackData(response.data)
-        console.log(`✅ Loaded ${response.data.allLogs?.length || 0} All Track Records`)
       }
     } catch (error) {
-      console.error('Error fetching All Track Records:', error)
       setAllTrackError(getErrorMessage(error))
     } finally {
       setAllTrackLoading(false)
@@ -146,7 +139,6 @@ export default function AttendancePage() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Failed to fetch employees:', error)
           setEmployeeError(getErrorMessage(error))
         }
       }
@@ -343,7 +335,6 @@ export default function AttendancePage() {
     const fileName = `attendance_${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}.xlsx`
     XLSX.writeFile(wb, fileName)
     
-    console.log(`✅ Exported ${Object.keys(employeeGroups).length} employee sheets`)
   }
 
   const stats = todayData?.summary || {

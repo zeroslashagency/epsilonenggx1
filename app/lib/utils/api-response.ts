@@ -147,7 +147,6 @@ export function serverErrorResponse(
 ): NextResponse {
   // Log error for debugging
   if (error) {
-    console.error('Server error:', error)
   }
 
   return errorResponse(
@@ -193,7 +192,6 @@ export async function handleRoute<T>(
     const result = await handler()
     return successResponse(result)
   } catch (error: any) {
-    console.error('Route error:', error)
     return serverErrorResponse(error.message, error)
   }
 }

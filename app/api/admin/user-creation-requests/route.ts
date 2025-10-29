@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🚀 Creating user directly:', { email, full_name, role })
 
     // DIRECT USER CREATION - Create the Auth user immediately
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -35,13 +34,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (signUpError) {
-      console.error('❌ User signup failed:', signUpError)
       return NextResponse.json({ 
         error: `Failed to create user: ${signUpError.message}` 
       }, { status: 500 })
     }
 
-    console.log('✅ Auth user created:', signUpData.user?.id)
 
     // Create/Update the profile
     if (signUpData.user) {
@@ -62,10 +59,8 @@ export async function POST(request: NextRequest) {
         .select()
 
       if (profileError) {
-        console.error('❌ Profile creation failed:', profileError)
         // Don't fail the whole process for this
       } else {
-        console.log('✅ Profile created successfully')
       }
 
       // Get role ID and assign role
@@ -84,9 +79,7 @@ export async function POST(request: NextRequest) {
           })
 
         if (roleAssignError) {
-          console.error('⚠️ Role assignment failed:', roleAssignError)
         } else {
-          console.log('✅ Role assigned successfully')
         }
       }
     }
@@ -103,7 +96,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('User creation request error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })
@@ -125,7 +117,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching user creation requests:', error)
       return NextResponse.json({ 
         error: 'Failed to fetch user creation requests' 
       }, { status: 500 })
@@ -137,7 +128,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Fetch user creation requests error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

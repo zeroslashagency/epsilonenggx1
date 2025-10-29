@@ -83,7 +83,6 @@ export default function EditRolePage() {
 
   const fetchRole = async () => {
     try {
-      console.log('🔍 Fetching role from Supabase, ID:', roleId)
       
       // Try to fetch role from Supabase API
       const response = await fetch(`/api/admin/roles/${roleId}`)
@@ -91,7 +90,6 @@ export default function EditRolePage() {
       
       if (data.success && data.data) {
         const role = data.data
-        console.log('✅ Role fetched from Supabase:', role)
         
         setRoleName(role.name || '')
         setDescription(role.description || '')
@@ -99,7 +97,6 @@ export default function EditRolePage() {
         
         // Load permissions from database if available
         if (role.permissions_json && typeof role.permissions_json === 'object') {
-          console.log('📋 Loading 82-item permission structure from database')
           
           // Merge saved permissions with initial structure to ensure all new items exist
           const mergedPermissions = { ...initialPermissionModules }
@@ -118,17 +115,13 @@ export default function EditRolePage() {
           })
           
           setPermissionModules(mergedPermissions)
-          console.log('✅ Loaded and merged permissions with', Object.keys(mergedPermissions).length, 'modules')
         } else {
-          console.log('📋 No saved permissions, using initial 82-item structure')
         }
         
         return
       } else {
-        console.warn('⚠️ Supabase fetch failed, using mock data:', data.error)
         
         // Fallback to mock data if Supabase fails
-        console.warn('⚠️ Supabase failed, using mock data for role:', roleId)
         
         const mockRoles: Record<string, any> = {
           '1': { name: 'Super Admin', description: 'Full administrator access across every module.', isManufacturingRole: true },
@@ -165,18 +158,14 @@ export default function EditRolePage() {
             })
           }
           
-          console.log('✅ Using mock data for role:', mockRole.name)
         } else {
-          console.error('❌ Role not found with ID:', roleId)
           alert('Role not found')
           router.push('/settings/roles')
         }
       }
     } catch (error) {
-      console.error('❌ Failed to fetch role:', error)
       
       // Fallback to mock data on error
-      console.warn('⚠️ Error occurred, using mock data')
       const mockRoles: Record<string, any> = {
         '1': { name: 'Super Admin', description: 'Full administrator access across every module.', isManufacturingRole: true },
         '2': { name: 'Admin', description: 'Operations leadership with scheduling, analytics, and user oversight.', isManufacturingRole: false },
@@ -188,7 +177,6 @@ export default function EditRolePage() {
         setRoleName(mockRole.name)
         setDescription(mockRole.description)
         setIsManufacturingRole(mockRole.isManufacturingRole)
-        console.log('✅ Using mock data for role:', mockRole.name)
       }
     } finally {
       setLoading(false)
@@ -391,7 +379,6 @@ export default function EditRolePage() {
         updated_at: new Date().toISOString()
       }
       
-      console.log(`💾 Saving role with ${totalItems} permission items across ${Object.keys(permissionModules).length} modules`)
       console.log('📊 Permission structure:', {
         modules: Object.keys(permissionModules),
         totalItems,
@@ -412,24 +399,19 @@ export default function EditRolePage() {
         const data = await response.json()
         
         if (data.success) {
-          console.log('✅ Role saved successfully to Supabase')
           alert(`✅ Role "${roleName}" updated successfully!\n\nChanges saved:\n- Name: ${roleName}\n- Description: ${description}\n- Manufacturing Role: ${isManufacturingRole ? 'Yes' : 'No'}\n- Permissions: Updated`)
           router.push('/settings/roles')
           return
         } else {
-          console.warn('⚠️ Supabase save failed, using mock save:', data.error)
         }
       } catch (apiError) {
-        console.warn('⚠️ API error, using mock save:', apiError)
       }
       
       // Fallback: Mock save (just show success message)
-      console.log('✅ Using mock save - changes logged but not persisted')
       alert(`✅ Role "${roleName}" updated successfully! (Mock Mode)\n\nChanges saved:\n- Name: ${roleName}\n- Description: ${description}\n- Manufacturing Role: ${isManufacturingRole ? 'Yes' : 'No'}\n- Permissions: Updated\n\n⚠️ Note: Changes are not persisted to database (using mock data)`)
       router.push('/settings/roles')
       
     } catch (error: any) {
-      console.error('❌ Failed to save role:', error)
       alert(`❌ Failed to save role\n\n${error.message || 'Please check the console for details'}`)
     } finally {
       setSaving(false)

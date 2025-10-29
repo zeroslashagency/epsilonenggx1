@@ -51,26 +51,19 @@ export async function POST(request: NextRequest) {
         }
         
         // Profile exists but no auth user - delete the orphaned profile
-        console.log(`⚠️ Found orphaned profile (${profile.employee_code}), deleting it...`)
         const { error: deleteError } = await supabase
           .from('profiles')
           .delete()
           .eq('id', profile.id)
         
         if (deleteError) {
-          console.error('Failed to delete orphaned profile:', deleteError)
           return NextResponse.json({ 
             error: `Failed to clean up orphaned profile: ${deleteError.message}` 
           }, { status: 500 })
         }
-        console.log('✅ Orphaned profile deleted:', profile.id)
       }
     }
 
-    console.log('🔑 Creating auth user in Supabase Auth')
-    console.log('📧 Email:', email)
-    console.log('👤 Name:', employee_name)
-    console.log('🔑 Password length:', password?.length)
     
     // Validate password
     if (!password || password.length < 6) {
@@ -92,15 +85,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError || !authUser.user) {
-      console.error('❌ Auth user creation error:', authError)
-      console.error('Error details:', JSON.stringify(authError, null, 2))
       return NextResponse.json({ 
         error: `Failed to create auth user: ${authError?.message || 'Unknown error'}`,
         details: authError
       }, { status: 500 })
     }
 
-    console.log('✅ Auth user created:', authUser.user.id)
     
     // Check if profile already exists (Supabase trigger might have created it)
     const { data: existingProfile } = await supabase
@@ -112,7 +102,6 @@ export async function POST(request: NextRequest) {
     let profileData
     if (existingProfile) {
       // Profile exists (created by trigger), update it
-      console.log('📝 Profile exists, updating it...')
       const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -128,7 +117,6 @@ export async function POST(request: NextRequest) {
         .select()
 
       if (updateError) {
-        console.error('Profile update error:', updateError)
         await supabase.auth.admin.deleteUser(authUser.user.id)
         return NextResponse.json({ 
           error: `Failed to update user profile: ${updateError.message}` 
@@ -137,7 +125,6 @@ export async function POST(request: NextRequest) {
       profileData = updatedProfile
     } else {
       // Profile doesn't exist, create it
-      console.log('➕ Creating new profile...')
       const { data: newProfile, error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -153,7 +140,6 @@ export async function POST(request: NextRequest) {
         .select()
 
       if (profileError) {
-        console.error('Profile creation error:', profileError)
         await supabase.auth.admin.deleteUser(authUser.user.id)
         return NextResponse.json({ 
           error: `Failed to create user profile: ${profileError.message}` 
@@ -162,7 +148,6 @@ export async function POST(request: NextRequest) {
       profileData = newProfile
     }
 
-    console.log('✅ User profile updated successfully:', profileData)
     
     return NextResponse.json({
       success: true,
@@ -177,7 +162,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('User creation error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

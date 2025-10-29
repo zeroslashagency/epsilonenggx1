@@ -47,7 +47,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error loading chart data:', error)
     return NextResponse.json({
       success: false,
       error: error.message || 'Failed to load chart data'

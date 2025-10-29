@@ -18,8 +18,6 @@ export default function HistoricalDataSync() {
     setResult(null)
 
     try {
-      console.log('🔄 Starting historical data sync...')
-      console.log('📅 Date Range:', fromDate, 'to', toDate)
 
       // Call Supabase Edge Function
       const response = await fetch(
@@ -45,10 +43,8 @@ export default function HistoricalDataSync() {
         throw new Error(data.error || 'Failed to sync historical data')
       }
 
-      console.log('✅ Sync successful:', data)
       setResult(data)
     } catch (err: any) {
-      console.error('❌ Sync failed:', err)
       setError(err.message)
     } finally {
       setLoading(false)

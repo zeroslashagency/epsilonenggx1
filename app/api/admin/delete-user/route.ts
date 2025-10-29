@@ -20,7 +20,6 @@ async function handleDeleteUser(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🗑️ Starting user deletion process for:', userId)
 
     const supabase = getSupabaseClient()
 
@@ -42,14 +41,11 @@ async function handleDeleteUser(request: NextRequest) {
       const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
       
       if (authDeleteError) {
-        console.error('Auth user deletion error:', authDeleteError)
         // Continue with profile deletion even if auth deletion fails
       } else {
-        console.log('✅ Auth user deleted successfully')
       }
 
     } catch (error) {
-      console.error('Auth deletion error:', error)
       // Continue with profile deletion
     }
 
@@ -60,13 +56,11 @@ async function handleDeleteUser(request: NextRequest) {
       .eq('id', userId)
 
     if (profileDeleteError) {
-      console.error('Profile deletion error:', profileDeleteError)
       return NextResponse.json({ 
         error: `Failed to delete user profile: ${profileDeleteError.message}` 
       }, { status: 500 })
     }
 
-    console.log('✅ User deleted successfully from database')
     
     // Log audit trail
     await supabase
@@ -96,7 +90,6 @@ async function handleDeleteUser(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ User deletion error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

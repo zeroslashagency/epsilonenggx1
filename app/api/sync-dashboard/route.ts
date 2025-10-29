@@ -67,7 +67,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Sync dashboard error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -90,7 +89,6 @@ export async function GET(request: NextRequest) {
       .limit(1)
 
     if (dashboardError) {
-      console.error('Dashboard data error:', dashboardError)
       return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 })
     }
 
@@ -122,7 +120,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Load dashboard error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

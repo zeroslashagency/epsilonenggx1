@@ -33,7 +33,6 @@ export async function GET(
     const supabase = getSupabaseAdminClient()
     const roleId = params.id
     
-    console.log('🔍 Fetching role with ID:', roleId)
     
     // Get role from database
     const { data: role, error: roleError } = await supabase
@@ -43,7 +42,6 @@ export async function GET(
       .single()
 
     if (roleError) {
-      console.error('❌ Error fetching role:', roleError)
       throw roleError
     }
 
@@ -54,7 +52,6 @@ export async function GET(
       }, { status: 404 })
     }
 
-    console.log('✅ Role found:', role)
 
     return NextResponse.json({
       success: true,
@@ -62,7 +59,6 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('❌ Error fetching role:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch role'
@@ -95,7 +91,6 @@ export async function PUT(
     
     const { name, description, is_manufacturing_role, permissions } = body
 
-    console.log('💾 Updating role:', roleId, body)
 
     // Prepare update data - only include fields that exist in the table
     const updateData: any = {
@@ -113,7 +108,6 @@ export async function PUT(
       updateData.permissions_json = permissions
     }
 
-    console.log('📝 Update data:', updateData)
 
     // Update the role
     const { error: updateError } = await supabase
@@ -122,8 +116,6 @@ export async function PUT(
       .eq('id', roleId)
 
     if (updateError) {
-      console.error('❌ Error updating role:', updateError)
-      console.error('❌ Error details:', JSON.stringify(updateError, null, 2))
       throw updateError
     }
 
@@ -146,7 +138,6 @@ export async function PUT(
         }
       })
 
-    console.log('✅ Role updated successfully')
 
     return NextResponse.json({
       success: true,
@@ -154,8 +145,6 @@ export async function PUT(
     })
 
   } catch (error: any) {
-    console.error('❌ Error updating role:', error)
-    console.error('❌ Full error object:', JSON.stringify(error, null, 2))
     
     // Return detailed error information
     return NextResponse.json({
@@ -189,7 +178,6 @@ export async function DELETE(
     const supabase = getSupabaseAdminClient()
     const roleId = params.id
     
-    console.log('🗑️ Deleting role:', roleId)
 
     // Delete the role
     const { error: deleteError } = await supabase
@@ -198,7 +186,6 @@ export async function DELETE(
       .eq('id', roleId)
 
     if (deleteError) {
-      console.error('❌ Error deleting role:', deleteError)
       throw deleteError
     }
 
@@ -215,7 +202,6 @@ export async function DELETE(
         }
       })
 
-    console.log('✅ Role deleted successfully')
 
     return NextResponse.json({
       success: true,
@@ -223,7 +209,6 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('❌ Error deleting role:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete role'

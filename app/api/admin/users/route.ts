@@ -37,9 +37,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    console.log('🔍 Fetching users... (Rate limit remaining:', rateLimitResult.remaining, ')')
     const supabase = getSupabaseAdminClient()
-    console.log('✅ Supabase client created')
     
     // Get all users from auth.users (the real authenticated users)
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
@@ -107,7 +105,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error fetching users:', error)
     console.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
@@ -221,7 +218,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error creating user:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create user'
@@ -313,7 +309,6 @@ export async function PATCH(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error updating user:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update user'
@@ -376,7 +371,6 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error deactivating user:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to deactivate user'

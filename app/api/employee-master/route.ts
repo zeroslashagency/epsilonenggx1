@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
       .order('employee_code', { ascending: true })
     
     if (error) {
-      console.error('Error fetching employee master:', error)
       return NextResponse.json({
         success: false,
         error: 'Failed to fetch employee master data'
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
       .limit(100)
     
     if (attendanceError) {
-      console.error('Error fetching attendance logs:', attendanceError)
     }
     
     // Get unique employee codes
@@ -53,7 +51,6 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Employee master API error:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

@@ -199,7 +199,6 @@ export default function SchedulerPage() {
           }
         }
       } catch (error) {
-        console.error('Error loading saved settings:', error)
       }
     }
 
@@ -219,19 +218,15 @@ export default function SchedulerPage() {
     // Check if XLSX library is available
     const checkXLSX = () => {
       if (typeof window !== 'undefined') {
-        console.log('XLSX library check:', typeof (window as any).XLSX)
         if (typeof (window as any).XLSX === 'undefined') {
-          console.warn('XLSX library not loaded yet, retrying...')
           setTimeout(checkXLSX, 1000)
         } else {
-          console.log('✅ XLSX library loaded successfully')
         }
       }
     }
     
     // Listen for XLSX loaded event
     const handleXLSXLoaded = () => {
-      console.log('✅ XLSX library loaded event received')
     }
     
     if (typeof window !== 'undefined') {
@@ -271,10 +266,8 @@ export default function SchedulerPage() {
       })
       
       setPartNumbers(partNumbersData)
-      console.log(`Loaded ${partNumbersData.length} part numbers from backend services`)
       
     } catch (error) {
-      console.error('Failed to initialize backend services:', error)
       
       // Fallback to sample data
       setPartNumbers(samplePartNumbers)
@@ -594,7 +587,6 @@ export default function SchedulerPage() {
         }
       }
     } catch (error) {
-      console.error('Error toggling settings lock:', error)
       alert('Failed to toggle settings lock. Please try again.')
     }
   }
@@ -619,11 +611,9 @@ export default function SchedulerPage() {
       const startDateTime = advancedSettings.globalStartDateTime || (() => {
         const now = new Date()
         // Use actual current time, not forced to 6:00 AM
-        console.log('Using current time for scheduling:', now.toISOString().slice(0, 16))
         return now.toISOString().slice(0, 16)
       })()
       
-      console.log('Final startDateTime being passed to backend:', startDateTime)
       
       // Use the backend scheduling engine (same as original HTML version)
       const scheduleResults = await backendService.runSchedule(orders, {
@@ -639,12 +629,9 @@ export default function SchedulerPage() {
         breakdowns: breakdowns
       })
       
-      console.log('Raw scheduling results from backend:', scheduleResults)
-      console.log('First result sample:', scheduleResults[0])
       setResults(scheduleResults)
       setShowResults(true)
     } catch (error) {
-      console.error('Error running schedule:', error)
       // Fallback to mock results
       const mockResults = orders.map((order: Order, index: number) => ({
         id: order.id,
@@ -687,7 +674,6 @@ export default function SchedulerPage() {
       const file = e.target.files[0]
       if (file) {
         // Handle Excel import logic here
-        console.log('Importing Excel file:', file.name)
         // You can add actual Excel parsing logic here
       }
     }
@@ -702,10 +688,6 @@ export default function SchedulerPage() {
     
     try {
       // Check if Excel exporter is available
-      console.log('Checking Excel exporter availability...')
-      console.log('window.ExcelExporter:', typeof window !== 'undefined' ? (window as any).ExcelExporter : 'undefined')
-      console.log('window.exportToExcel:', typeof window !== 'undefined' ? (window as any).exportToExcel : 'undefined')
-      console.log('window.XLSX:', typeof window !== 'undefined' ? (window as any).XLSX : 'undefined')
       
       // Check if XLSX library is available
       if (typeof window !== 'undefined' && typeof (window as any).XLSX === 'undefined') {
@@ -743,14 +725,11 @@ export default function SchedulerPage() {
         const result = (window as any).exportToExcel(scheduleData, filename)
         
         if (result.success) {
-          console.log('✅ Excel file exported successfully:', result.filename)
         } else {
-          console.error('❌ Excel export failed:', result.error)
           alert('Failed to export Excel file: ' + result.error)
         }
       } else {
         // Fallback to CSV if Excel exporter not available
-        console.warn('Excel exporter not available, falling back to CSV export')
         
         const headers = ['Part Number', 'Order Qty', 'Priority', 'Batch ID', 'Batch Qty', 'Operation Seq', 'Operation Name', 'Machine', 'Person', 'Setup Start', 'Setup End', 'Run Start', 'Run End', 'Timing', 'Due Date', 'Status']
         const csvContent = [
@@ -785,7 +764,6 @@ export default function SchedulerPage() {
         window.URL.revokeObjectURL(url)
       }
     } catch (error) {
-      console.error('Export error:', error)
       alert('Failed to export file: ' + (error as Error).message)
     }
   }
@@ -821,7 +799,6 @@ export default function SchedulerPage() {
         currentTime = new Date(runEndTime.getTime() + (30 * 60 * 1000)) // 30 minute buffer
         
         // Debug: Log the actual result structure
-        console.log('Scheduling result:', result)
         
         return {
           id: `${result.partNumber || result.partnumber || 'PN'}-${result.batchId || result.batch_id || 'B'}-Op${result.operationSeq || result.operation_seq || index}`,
@@ -884,7 +861,6 @@ export default function SchedulerPage() {
       })
 
       if (!schedulingResponse.ok) {
-        console.warn('Failed to store scheduling results to dedicated table')
       }
 
       // Store to Supabase cloud via API with complete scheduling results
@@ -900,7 +876,6 @@ export default function SchedulerPage() {
       })
 
       if (response.ok) {
-        console.log('Chart data and scheduling results stored to Supabase cloud successfully')
         // Navigate to chart page
         router.push('/chart')
       } else {
@@ -908,7 +883,6 @@ export default function SchedulerPage() {
       }
 
     } catch (error) {
-      console.error('Error storing chart data to cloud:', error)
       alert('Failed to store chart data to cloud. Please try again.')
     }
   }

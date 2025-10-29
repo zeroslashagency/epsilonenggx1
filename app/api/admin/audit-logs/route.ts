@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    console.log('Fetching audit logs for user:', userId)
 
     // Get audit logs for the specific user
     const { data: auditLogs, error } = await supabase
@@ -29,7 +28,6 @@ export async function GET(request: NextRequest) {
       .limit(50)
 
     if (error) {
-      console.error('Error fetching audit logs:', error)
       return NextResponse.json({ error: 'Failed to fetch audit logs' }, { status: 500 })
     }
 
@@ -66,14 +64,12 @@ export async function GET(request: NextRequest) {
       }
     }) || []
 
-    console.log('Found audit logs:', transformedLogs.length)
 
     return NextResponse.json({
       auditLogs: transformedLogs
     })
 
   } catch (error) {
-    console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

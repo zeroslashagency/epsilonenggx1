@@ -50,7 +50,6 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error updating user profile:', error)
       return NextResponse.json({
         error: 'Failed to update user profile'
       }, { status: 500 })
@@ -63,7 +62,6 @@ export async function PATCH(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Update user profile error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     
-    console.log('🔍 Checking recent audit logs...')
 
     // Get the most recent logs
     const { data: recentLogs, error } = await supabase

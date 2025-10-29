@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log(`🔍 Fetching activity logs for user: ${userId}`)
 
     // Get audit logs where this user is the target (actions performed ON them)
     const { data: targetLogs, error: targetError } = await supabase
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
       .limit(50)
 
     if (targetError) {
-      console.error('Error fetching target logs:', targetError)
     }
 
     // Get audit logs where this user is the actor (actions performed BY them)
@@ -47,7 +45,6 @@ export async function GET(request: NextRequest) {
       .limit(50)
 
     if (actorError) {
-      console.error('Error fetching actor logs:', actorError)
     }
 
     // Combine and deduplicate logs
@@ -56,7 +53,6 @@ export async function GET(request: NextRequest) {
       new Map(allLogs.map(log => [log.id, log])).values()
     ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-    console.log(`✅ Found ${uniqueLogs.length} activity logs for user`)
 
     // Enhance logs with user information
     const enhancedLogs = await enhanceLogsWithUserInfo(supabase, uniqueLogs)
@@ -68,7 +64,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ User activity logs error:', error)
     return NextResponse.json({
       success: false,
       error: error?.message || 'Internal server error'

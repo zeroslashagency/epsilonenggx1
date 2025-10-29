@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (profileError) {
-      console.error('Profile fetch error:', profileError)
       return serverErrorResponse('Failed to fetch profile', profileError)
     }
 
@@ -72,7 +71,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Me endpoint error:', error)
     return serverErrorResponse('Failed to fetch user data', error)
   }
 }

@@ -69,14 +69,12 @@ export async function POST(request: NextRequest) {
 
     // SECURITY: Prevent self-modification
     if (user.id === userId) {
-      console.warn('🚨 Self-modification attempt blocked:', { currentUserId: user.id, targetUserId: userId })
       return NextResponse.json({
         error: 'Security violation: You cannot modify your own permissions. Please ask another administrator to make this change.'
       }, { status: 403 })
     }
 
     // User role is already validated by requireRole middleware (Super Admin only)
-    console.log('✅ Security checks passed - Super Admin access confirmed')
 
     // Step 1: Update user profile with role and standalone_attendance flag
     const { data: updateData, error: updateError } = await supabase
@@ -90,7 +88,6 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (updateError) {
-      console.error('❌ Error updating user profile:', updateError)
       return NextResponse.json({ 
         error: `Failed to update user profile: ${updateError.message}` 
       }, { status: 500 })
@@ -98,7 +95,6 @@ export async function POST(request: NextRequest) {
 
     // Check if user actually exists (update returns empty array if no match)
     if (!updateData || updateData.length === 0) {
-      console.error('❌ User not found:', userId)
       return NextResponse.json({ 
         error: 'User not found' 
       }, { status: 404 })
@@ -108,12 +104,8 @@ export async function POST(request: NextRequest) {
     // NOTE: user_permissions table cannot be used because it has FK to auth.users
     // Permissions are controlled by ROLE and standalone_attendance flag in profiles table
     if (permissions && Array.isArray(permissions)) {
-      console.log('📝 Permissions requested (controlled by role):', permissions)
-      console.log('ℹ️  Permissions are determined by user role, not individual grants')
-      console.log('ℹ️  Only standalone_attendance can be toggled independently')
     }
 
-    console.log('✅ User permissions updated successfully')
     
     // Log to audit_logs with proper fields
     const { error: auditError } = await supabase
@@ -134,9 +126,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (auditError) {
-      console.error('⚠️ Audit log error:', auditError)
     } else {
-      console.log('✅ Audit log created for role change')
     }
 
     return NextResponse.json({
@@ -146,7 +136,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Update permissions error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

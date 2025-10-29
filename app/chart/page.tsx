@@ -88,7 +88,6 @@ export default function ChartPage() {
         })
       }
     } catch (error) {
-      console.error('Error fetching metrics:', error)
       // Use mock data on error
       setMetrics({
         productionOutput: 1250,

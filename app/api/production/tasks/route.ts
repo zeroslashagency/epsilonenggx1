@@ -47,7 +47,6 @@ export async function GET(request: NextRequest) {
       data: tasks
     })
   } catch (error) {
-    console.error('Error fetching tasks:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch tasks'
@@ -114,7 +113,6 @@ export async function POST(request: NextRequest) {
       message: 'Task created successfully'
     })
   } catch (error) {
-    console.error('Error creating task:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create task'
@@ -171,7 +169,6 @@ export async function PATCH(request: NextRequest) {
       message: 'Task updated successfully'
     })
   } catch (error) {
-    console.error('Error updating task:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update task'

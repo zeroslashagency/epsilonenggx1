@@ -84,7 +84,6 @@ export default function UsersPageZoho() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching users:', error)
         }
       } finally {
         if (isMounted) {
@@ -101,7 +100,6 @@ export default function UsersPageZoho() {
   }, [page, pageSize])
 
   useEffect(() => {
-    console.log('🎨 Permissions state changed:', permissions)
   }, [permissions])
 
   // Auto-fetch activity logs when activity tab is opened
@@ -119,7 +117,6 @@ export default function UsersPageZoho() {
         setUserActivityLogs(data.logs || [])
       }
     } catch (error) {
-      console.error('Error fetching user activity logs:', error)
     } finally {
       setLoadingActivity(false)
     }
@@ -133,17 +130,14 @@ export default function UsersPageZoho() {
       if (data.success) {
         const usersData = data.data?.users || data.data || []
         setUsers(Array.isArray(usersData) ? usersData : [])
-        console.log(`✅ Loaded ${Array.isArray(usersData) ? usersData.length : 0} users from database`)
       }
     } catch (error) {
-      console.error('Failed to load users:', error)
     } finally {
       setLoading(false)
     }
   }
 
   const handleUserSelect = async (user: User) => {
-    console.log('👤 User selected:', user.full_name)
     setSelectedUser(user)
     
     try {
@@ -151,12 +145,10 @@ export default function UsersPageZoho() {
       const result = await apiGet(`/api/admin/get-user-permissions?userId=${user.id}`)
       
       if (result.success) {
-        console.log('✅ Loaded permissions:', result.permissions)
         setPermissions(result.permissions || [])
         setEditedRole(result.role || user.role)
       } else {
         // Fallback to default permissions if API fails
-        console.warn('⚠️ Failed to load user permissions, using defaults')
         const defaultPermissions = ['dashboard']
         if (user.standalone_attendance === 'YES') {
           defaultPermissions.push('standalone_attendance')
@@ -165,7 +157,6 @@ export default function UsersPageZoho() {
         setEditedRole(user.role)
       }
     } catch (error) {
-      console.error('❌ Error loading user permissions:', error)
       // Fallback to default permissions
       const defaultPermissions = ['dashboard']
       if (user.standalone_attendance === 'YES') {
@@ -264,7 +255,6 @@ export default function UsersPageZoho() {
         throw new Error(result.error || 'Failed to save changes')
       }
     } catch (error) {
-      console.error('❌ Save changes error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       alert(`❌ Failed to save changes:\n\n${errorMessage}`)
     }
@@ -296,7 +286,6 @@ export default function UsersPageZoho() {
           setPermissions(defaultPermissions)
         }
       } catch (error) {
-        console.error('❌ Error reloading permissions on cancel:', error)
         // Fallback to basic permissions
         const defaultPermissions = ['dashboard']
         if (selectedUser.standalone_attendance === 'YES') {
@@ -321,7 +310,6 @@ export default function UsersPageZoho() {
         alert(`❌ Error: ${result.error}`)
       }
     } catch (error: any) {
-      console.error('Password reset error:', error)
       alert(`❌ Failed to send password reset email: ${error.message}`)
     }
   }
@@ -356,7 +344,6 @@ export default function UsersPageZoho() {
         alert(`❌ Error: ${result.error}`)
       }
     } catch (error: any) {
-      console.error('Email change error:', error)
       alert(`❌ Failed to change email: ${error.message}`)
     }
   }
@@ -376,7 +363,6 @@ export default function UsersPageZoho() {
     if (!confirmDelete) return
 
     try {
-      console.log('🗑️ Deleting user:', selectedUser.id)
       
       const result = await apiPost('/api/admin/delete-user', {
         userId: selectedUser.id,
@@ -385,10 +371,8 @@ export default function UsersPageZoho() {
         actorId: 'current-user-id' // TODO: Get actual current user ID
       })
 
-      console.log('📊 Delete API response:', result)
 
       if (result.success) {
-        console.log('✅ User deleted successfully')
         alert('✅ User deleted successfully!')
       } else {
         throw new Error(result.error || 'Failed to delete user')
@@ -399,7 +383,6 @@ export default function UsersPageZoho() {
       setSelectedUser(null)
       await fetchUsers()
     } catch (error) {
-      console.error('❌ Delete user error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       alert(`❌ Failed to delete user:\n\n${errorMessage}\n\nCheck console for details.`)
     }
@@ -432,7 +415,6 @@ export default function UsersPageZoho() {
     }
 
     try {
-      console.log('🔑 Setting password for user:', selectedUser.id)
 
       const result = await apiPost('/api/admin/set-user-password', {
         userId: selectedUser.id,
@@ -448,7 +430,6 @@ export default function UsersPageZoho() {
         throw new Error(result.error || 'Failed to update password')
       }
     } catch (error) {
-      console.error('❌ Password update error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       alert(`❌ Failed to update password:\n\n${errorMessage}`)
     }
@@ -604,7 +585,6 @@ export default function UsersPageZoho() {
                     <div
                       key={user.id}
                       onClick={() => {
-                        console.log('🖱️ CLICK DETECTED on:', user.full_name)
                         handleUserSelect(user)
                       }}
                       className={`px-6 py-4 cursor-pointer transition-colors ${

@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
     const migrationPath = path.join(process.cwd(), 'supabase/migrations/20251025_production_monitoring_tables.sql')
     const sql = fs.readFileSync(migrationPath, 'utf8')
     
-    console.log('📄 Running migration...')
     
     // Execute the SQL
     // Note: This is a simplified version. In production, you'd want to:
@@ -34,14 +33,12 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.rpc('exec_sql', { sql_query: sql })
     
     if (error) {
-      console.error('Migration error:', error)
       return NextResponse.json({
         success: false,
         error: error.message
       }, { status: 500 })
     }
     
-    console.log('✅ Migration completed successfully!')
     
     return NextResponse.json({
       success: true,
@@ -49,7 +46,6 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error running migration:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to run migration'

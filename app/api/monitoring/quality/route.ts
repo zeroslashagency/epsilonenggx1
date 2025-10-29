@@ -40,7 +40,6 @@ export async function GET(request: NextRequest) {
       data: checks
     })
   } catch (error) {
-    console.error('Error fetching quality checks:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch quality checks'
@@ -105,7 +104,6 @@ export async function POST(request: NextRequest) {
       message: 'Quality check created successfully'
     })
   } catch (error) {
-    console.error('Error creating quality check:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create quality check'
@@ -162,7 +160,6 @@ export async function PATCH(request: NextRequest) {
       message: 'Quality check updated successfully'
     })
   } catch (error) {
-    console.error('Error updating quality check:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update quality check'

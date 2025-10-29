@@ -126,7 +126,6 @@ export default function DashboardPage() {
         setLastUpdate(new Date())
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
       setError('Failed to load dashboard data. Please try again.')
     } finally {
       setLoading(false)
@@ -162,7 +161,6 @@ export default function DashboardPage() {
       
       setAttendanceTrend(trends)
     } catch (error) {
-      console.error('Error fetching attendance trend:', error)
     }
   }
 
@@ -214,7 +212,6 @@ export default function DashboardPage() {
         }
       } catch (err) {
         if (isMounted) {
-          console.error('Error fetching dashboard data:', err)
           setError('Failed to load dashboard data')
         }
       } finally {

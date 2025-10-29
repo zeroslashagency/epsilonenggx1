@@ -50,12 +50,10 @@ export default function OrdersPage() {
             setTotalCount(data.pagination.totalCount || 0)
           }
         } else if (isMounted) {
-          console.error('Error fetching orders:', data.error)
           setOrders([])
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching orders:', error)
           setOrders([])
         }
       } finally {

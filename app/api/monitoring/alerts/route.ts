@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
       data: alerts
     })
   } catch (error) {
-    console.error('Error fetching alerts:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch alerts'
@@ -91,7 +90,6 @@ export async function POST(request: NextRequest) {
       message: 'Alert created successfully'
     })
   } catch (error) {
-    console.error('Error creating alert:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create alert'
@@ -151,7 +149,6 @@ export async function PATCH(request: NextRequest) {
       message: 'Alert acknowledged successfully'
     })
   } catch (error) {
-    console.error('Error acknowledging alert:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to acknowledge alert'

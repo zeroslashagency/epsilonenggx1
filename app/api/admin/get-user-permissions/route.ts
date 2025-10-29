@@ -86,7 +86,6 @@ export async function GET(request: NextRequest) {
         frontendPermissions.push('dashboard')
       }
       
-      console.log(`ℹ️ User ${userId} has no custom permissions (no auth entry), using defaults + profile flags`)
     }
 
     return NextResponse.json({
@@ -97,7 +96,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Get user permissions error:', error)
     return NextResponse.json({
       error: error?.message || 'Internal server error'
     }, { status: 500 })

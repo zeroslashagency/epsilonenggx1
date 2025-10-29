@@ -93,7 +93,6 @@ export default function ActivityLogsPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching activity logs:', error)
     } finally {
       setLoading(false)
     }

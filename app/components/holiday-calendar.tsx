@@ -83,7 +83,6 @@ export function HolidayCalendar({ holidays, onAddHoliday, onDeleteHoliday, disab
               placeholder="Pick start and end dates with times"
               onSelect={() => {
                 // Optional: You can add any logic here when user clicks Select
-                console.log('Holiday date/time selected:', { dateRange, startTime, endTime })
               }}
             />
             

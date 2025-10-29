@@ -56,7 +56,6 @@ export default function PersonnelPage() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching personnel:', error)
         }
       } finally {
         if (isMounted) {
@@ -146,11 +145,8 @@ export default function PersonnelPage() {
         })
         
         setEmployees(employeeData)
-        console.log(`✅ Loaded ${employeeData.length} employees from employee_master`)
-        console.log(`📧 ${employeeData.filter((e: any) => e.hasUserAccount).length} have user accounts with real emails`)
       }
     } catch (error) {
-      console.error('Failed to load employees:', error)
     } finally {
       setLoading(false)
     }
@@ -174,14 +170,12 @@ export default function PersonnelPage() {
 
   const fetchAttendanceStats = async (employeeCode: string) => {
     if (!employeeCode) {
-      console.log('⚠️ No employee code provided, skipping attendance fetch')
       setAttendanceStats({ presentDays: 0, absentDays: 0, lateArrivals: 0, totalPunches: 0 })
       return
     }
 
     try {
       setLoadingStats(true)
-      console.log(`📊 Fetching attendance for employee code: ${employeeCode}`)
 
       // Always use current month for display stats
       const now = new Date()
@@ -215,13 +209,10 @@ export default function PersonnelPage() {
           totalPunches
         })
 
-        console.log(`✅ Attendance stats loaded: ${presentDays} days, ${totalPunches} punches, ${lateArrivals} late`)
       } else {
-        console.log('⚠️ No attendance data found')
         setAttendanceStats({ presentDays: 0, absentDays: 0, lateArrivals: 0, totalPunches: 0 })
       }
     } catch (error) {
-      console.error('Failed to fetch attendance stats:', error)
       setAttendanceStats({ presentDays: 0, absentDays: 0, lateArrivals: 0, totalPunches: 0 })
     } finally {
       setLoadingStats(false)
@@ -380,14 +371,11 @@ export default function PersonnelPage() {
         const fileName = `${selectedEmployee.full_name.replace(/\s+/g, '_')}_Attendance_${getDateRangeLabel().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
         XLSX.writeFile(wb, fileName)
 
-        console.log(`✅ Downloaded ${logs.length} attendance records for ${selectedEmployee.full_name}`)
         alert(`Successfully exported ${logs.length} attendance records!`)
       } else {
-        console.warn('⚠️ No attendance data found')
         alert(`No attendance data found for ${selectedEmployee.full_name} in the selected period (${getDateRangeLabel()})`)
       }
     } catch (error) {
-      console.error('Failed to download attendance:', error)
       alert('Failed to download attendance data. Please try again.')
     }
   }

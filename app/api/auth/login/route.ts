@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('Login error:', error.message)
       return unauthorizedResponse('Invalid email or password')
     }
 
@@ -50,7 +49,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileError) {
-      console.error('Profile fetch error:', profileError)
     }
 
     // Update last login timestamp
@@ -92,7 +90,6 @@ export async function POST(request: NextRequest) {
     }, 'Login successful')
 
   } catch (error: any) {
-    console.error('Login error:', error)
     return serverErrorResponse('Login failed', error)
   }
 }

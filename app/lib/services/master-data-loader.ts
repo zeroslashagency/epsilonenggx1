@@ -27,17 +27,14 @@ export class MasterDataLoader {
       if (supabaseData && supabaseData.length > 0) {
         this.masterData = supabaseData
         this.initialized = true
-        console.log(`Loaded ${supabaseData.length} operations from Supabase`)
         return this.masterData
       }
     } catch (error) {
-      console.warn('Failed to load from Supabase, using fallback data:', error)
     }
 
     // Fallback to the complete master data (same as original master-data.js)
     this.masterData = this.getCompleteMasterData()
     this.initialized = true
-    console.log(`Loaded ${this.masterData.length} operations from fallback data`)
     return this.masterData
   }
 
