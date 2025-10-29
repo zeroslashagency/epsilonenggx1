@@ -144,9 +144,18 @@ export default function UsersPageZoho() {
       // Fetch user's actual permissions from database
       const result = await apiGet(`/api/admin/get-user-permissions?userId=${user.id}`)
       
+      console.log('📥 [USER-SELECT] API Response:', result)
+      
       if (result.success) {
+        // Use permissions from API response (already includes standalone_attendance if enabled)
         setPermissions(result.permissions || [])
         setEditedRole(result.role || user.role)
+        
+        console.log('✅ [USER-SELECT] Permissions loaded:', {
+          permissions: result.permissions,
+          standalone_attendance: result.standalone_attendance,
+          hasStandaloneInPermissions: result.permissions?.includes('standalone_attendance')
+        })
       } else {
         // Fallback to default permissions if API fails
         const defaultPermissions = ['dashboard']
@@ -157,6 +166,7 @@ export default function UsersPageZoho() {
         setEditedRole(user.role)
       }
     } catch (error) {
+      console.error('❌ [USER-SELECT] Error fetching permissions:', error)
       // Fallback to default permissions
       const defaultPermissions = ['dashboard']
       if (user.standalone_attendance === 'YES') {
@@ -197,6 +207,9 @@ export default function UsersPageZoho() {
   const handleSaveChanges = async () => {
     if (!selectedUser) return
 
+    console.log('💾 [SAVE] Starting save with permissions:', permissions)
+    console.log('💾 [SAVE] Standalone attendance enabled:', permissions.includes('standalone_attendance'))
+
     try {
       console.log('💾 Saving changes...', { 
         userId: selectedUser.id,
@@ -226,12 +239,18 @@ export default function UsersPageZoho() {
       // Check if standalone_attendance permission is enabled
       const hasStandaloneAttendance = permissions.includes('standalone_attendance')
 
-      const result = await apiPost('/api/admin/update-user-permissions', {
+      const payload = {
         userId: selectedUser.id,
         role: editedRole,
         permissions,
         standalone_attendance: hasStandaloneAttendance ? 'YES' : 'NO'
-      })
+      }
+
+      console.log('📤 [SAVE] Sending to API:', payload)
+
+      const result = await apiPost('/api/admin/update-user-permissions', payload)
+
+      console.log('📥 [SAVE] API Response:', result)
 
       if (result.success) {
         if (result.warning) {
