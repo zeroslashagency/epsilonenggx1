@@ -9,7 +9,6 @@ const settingsSections = [
     id: 'organization',
     title: 'ORGANIZATION SETTINGS',
     items: [
-      { id: 'org', label: 'Organization', href: '/settings/organization' },
       { id: 'user-management', label: 'User Management', href: '/users' },
       { id: 'add-users', label: 'Add Users', href: '/users?action=add' },
       { id: 'role-profiles', label: 'Role Profiles', href: '/settings/roles' },

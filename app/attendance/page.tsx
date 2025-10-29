@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { apiGet } from '@/app/lib/utils/api-client'
 import { ZohoLayout } from '../components/zoho-ui'
-import * as XLSX from 'xlsx'
+import * as XLSX from 'xlsx-js-style'
 import { calculateDateRange, getDateRangeLabel as getDateLabel } from '@/lib/utils/date-utils'
 import { AttendanceLog, TodayAttendanceData, AllTrackData } from '@/app/types'
 import { AttendancePermissions } from '@/app/lib/utils/permission-checker'
@@ -87,7 +87,12 @@ export default function AttendancePage() {
       
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
-        setTodayData(response.data)
+        // Ensure allLogs is populated for export functionality
+        const dataWithLogs = {
+          ...response.data,
+          allLogs: response.data.allLogs || response.data.recentLogs || []
+        }
+        setTodayData(dataWithLogs)
         setRecentLogs(response.data.recentLogs || [])
         setLastSyncTime(new Date())
       }
@@ -195,9 +200,41 @@ export default function AttendancePage() {
   }
 
   // Export to Excel
-  const exportToExcel = (source: 'today' | 'allTrack' = 'today') => {
-    // Choose correct data source based on which section triggered export
-    const dataSource = source === 'allTrack' ? allTrackData : todayData
+  const exportToExcel = async (source: 'today' | 'allTrack' = 'today') => {
+    // For top section export, fetch data based on current filters first
+    if (source === 'today') {
+      const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(dateRange, fromDate, toDate)
+      const params = new URLSearchParams()
+      params.append('fromDate', fromDateParam)
+      params.append('toDate', toDateParam)
+      
+      if (selectedEmployees.length > 0 && selectedEmployees.length < allEmployees.length) {
+        params.append('employeeCodes', selectedEmployees.join(','))
+      }
+      
+      const response = await apiGet(`/api/get-attendance?${params.toString()}`)
+      if (!response.success || !response.data?.allLogs || response.data.allLogs.length === 0) {
+        alert('No attendance data found for the selected date range and employees.')
+        return
+      }
+      
+      // Use freshly fetched data for export
+      const dataSource = {
+        ...response.data,
+        allLogs: response.data.allLogs || []
+      }
+      
+      const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRange, fromDate, toDate)
+      const startDate = new Date(fromDateStr)
+      const endDate = new Date(toDateStr)
+      
+      const filteredLogs = dataSource.allLogs
+      generateExcelFile(filteredLogs, startDate, endDate)
+      return
+    }
+    
+    // For bottom section, use existing allTrackData
+    const dataSource = allTrackData
     
     if (!dataSource?.allLogs) {
       alert('No data to export. Please load data first.')
@@ -209,10 +246,16 @@ export default function AttendancePage() {
     const startDate = new Date(fromDateStr)
     const endDate = new Date(toDateStr)
     
-    // Filter logs by selected employees
+    // Filter logs by selected employees (if all employees selected, show all)
     const filteredLogs = dataSource.allLogs.filter((log: any) =>
-      selectedEmployees.length === 0 || selectedEmployees.includes(log.employee_code)
+      selectedEmployees.length === 0 || selectedEmployees.length === allEmployees.length || selectedEmployees.includes(log.employee_code)
     )
+    
+    // Check if we have any logs after filtering
+    if (filteredLogs.length === 0) {
+      alert('No attendance data found for the selected date range and employees.')
+      return
+    }
     
     // Group logs by employee
     const employeeGroups: Record<string, any[]> = {}
@@ -347,16 +390,664 @@ export default function AttendancePage() {
     
     const fileName = `attendance_${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}.xlsx`
     XLSX.writeFile(wb, fileName)
+  }
+  
+  // Helper function to generate Excel file
+  const generateExcelFile = (filteredLogs: any[], startDate: Date, endDate: Date) => {
+    // Group logs by employee
+    const employeeGroups: Record<string, any[]> = {}
+    filteredLogs.forEach((log: any) => {
+      const empCode = log.employee_code
+      const employee = allEmployees.find(e => e.code === empCode)
+      const employeeName = employee?.name || `Employee ${empCode}`
+      
+      if (!employeeGroups[employeeName]) {
+        employeeGroups[employeeName] = []
+      }
+      employeeGroups[employeeName].push(log)
+    })
     
+    const wb = XLSX.utils.book_new()
+    
+    // Create a sheet for each employee
+    Object.entries(employeeGroups).forEach(([employeeName, logs]) => {
+      // Sort logs by date
+      const sortedLogs = logs.sort((a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime())
+      
+      // Create sheet data
+      const sheetData: any[] = []
+      
+      // Add employee name header
+      sheetData.push([employeeName.toUpperCase()])
+      sheetData.push([]) // Empty row
+      
+      // Generate ALL dates in the range
+      const allDates: Date[] = []
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        allDates.push(new Date(d))
+      }
+      
+      // Step 1: Find max punches for THIS employee only
+      let employeeMaxPunches = 0
+      allDates.forEach(date => {
+        const dateLogs = logs.filter(log => {
+          const logDate = new Date(log.log_date).toDateString()
+          return logDate === date.toDateString()
+        })
+        if (dateLogs.length > employeeMaxPunches) {
+          employeeMaxPunches = dateLogs.length
+        }
+      })
+      
+      // Step 2: Create header with punch columns based on THIS employee's max
+      const header = ['Date']
+      for (let i = 1; i <= employeeMaxPunches; i++) {
+        header.push(`Punch ${i}`)
+      }
+      header.push('Status')
+      sheetData.push(header)
+      
+      // Step 3: Add data for each date with punches in separate columns
+      allDates.forEach(date => {
+        const dateKey = date.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: '2-digit'
+        })
+        
+        // Find all logs for this date
+        const dateLogs = logs.filter(log => {
+          const logDate = new Date(log.log_date).toDateString()
+          return logDate === date.toDateString()
+        })
+        
+        // Sort logs by time for this date
+        const sortedDateLogs = dateLogs.sort((a, b) => 
+          new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
+        )
+        
+        // Create row starting with date
+        const row = [dateKey]
+        
+        // Add each punch in its own column
+        sortedDateLogs.forEach(log => {
+          const time = new Date(log.log_date).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+          const direction = log.punch_direction?.toLowerCase() === 'in' ? 'in' : 'out'
+          row.push(`${time}(${direction})`)
+        })
+        
+        // Fill remaining punch columns with empty strings (only up to employee's max)
+        while (row.length < employeeMaxPunches + 1) {
+          row.push('')
+        }
+        
+        // Add status
+        row.push(dateLogs.length > 0 ? 'Present' : 'Absent')
+        
+        sheetData.push(row)
+      })
+      
+      // Step 6: Calculate attendance analytics
+      const totalDays = allDates.length
+      const dataRows = sheetData.slice(3) // Skip employee name, empty row, header
+      const presentDays = dataRows.filter(row => row[row.length - 1] === 'Present').length
+      const absentDays = totalDays - presentDays
+      const attendancePercent = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(2) : '0.00'
+      
+      // Calculate punch metrics
+      let totalPunches = 0
+      let maxPunchesInDay = 0
+      let maxPunchesDate = ''
+      let minPunchesInDay = Infinity
+      let minPunchesDate = ''
+      let oddPunchDays = 0
+      
+      dataRows.forEach((row, index) => {
+        const status = row[row.length - 1]
+        if (status === 'Present') {
+          // Count non-empty punch columns
+          let dayPunches = 0
+          for (let i = 1; i < row.length - 1; i++) {
+            if (row[i] && row[i] !== '') {
+              dayPunches++
+            }
+          }
+          
+          totalPunches += dayPunches
+          
+          if (dayPunches > maxPunchesInDay) {
+            maxPunchesInDay = dayPunches
+            maxPunchesDate = row[0]
+          }
+          
+          if (dayPunches > 0 && dayPunches < minPunchesInDay) {
+            minPunchesInDay = dayPunches
+            minPunchesDate = row[0]
+          }
+          
+          // Check for odd punches (missing IN or OUT)
+          if (dayPunches % 2 !== 0) {
+            oddPunchDays++
+          }
+        }
+      })
+      
+      const avgPunches = presentDays > 0 ? (totalPunches / presentDays).toFixed(2) : '0.00'
+      const minPunchesDisplay = minPunchesInDay === Infinity ? 0 : minPunchesInDay
+      
+      // Step 7: Add summary section with calendar grid
+      const summaryStartRowIndex = sheetData.length
+      
+      // Build summary rows (will be placed in columns A-B)
+      const summaryRows = [
+        [], // Empty row
+        ['ATTENDANCE SUMMARY'], // Summary header
+        ['Total Days in Period', totalDays],
+        ['Present Days', presentDays],
+        ['Absent Days', absentDays],
+        ['Attendance %', `${attendancePercent}%`],
+        [], // Empty row
+        [], // Extra empty row for spacing
+        ['PUNCH ANALYSIS'], // Punch analysis header
+        ['Total Punches', totalPunches],
+        ['Average Punches/Day', avgPunches],
+        ['Highest Punches in a Day', `${maxPunchesInDay} (on ${maxPunchesDate})`],
+        ['Lowest Punches in a Day', `${minPunchesDisplay} (on ${minPunchesDate})`],
+        ['Days with Odd Punches', `${oddPunchDays} (missing IN/OUT)`]
+      ]
+      
+      // Step 8: Detect if multi-month range
+      const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 
+                          'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
+      const firstDate = new Date(startDate)
+      const lastDate = new Date(endDate)
+      
+      // Calculate number of months in range
+      const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + 
+                         (lastDate.getMonth() - firstDate.getMonth()) + 1
+      
+      const isMultiMonth = monthsDiff > 1
+      
+      let calendarRows: any[] = []
+      let weeksNeeded = 0
+      
+      if (!isMultiMonth) {
+        // Single month - show calendar grid
+        const monthName = monthNames[firstDate.getMonth()]
+        const year = firstDate.getFullYear()
+        
+        // Calculate calendar layout
+        const firstDayOfMonth = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1)
+        const lastDayOfMonth = new Date(firstDate.getFullYear(), firstDate.getMonth() + 1, 0)
+        const daysInMonth = lastDayOfMonth.getDate()
+        const startDayOfWeek = firstDayOfMonth.getDay() // 0=Sunday
+        
+        // Build calendar rows
+        calendarRows.push(['', '', `${monthName} ${year} CALENDAR`]) // Title
+        calendarRows.push(['', '', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) // Day headers
+        
+        // Build date grid
+        let dayCounter = 1
+        weeksNeeded = Math.ceil((startDayOfWeek + daysInMonth) / 7)
+        
+        for (let week = 0; week < weeksNeeded; week++) {
+          const weekRow = ['', ''] // Empty columns A & B for summary
+          
+          for (let day = 0; day < 7; day++) {
+            const cellIndex = week * 7 + day
+            
+            if (cellIndex < startDayOfWeek || dayCounter > daysInMonth) {
+              weekRow.push('') // Empty cell
+            } else {
+              weekRow.push(dayCounter.toString())
+              dayCounter++
+            }
+          }
+          
+          calendarRows.push(weekRow)
+        }
+      } else {
+        // Multi-month - skip calendar, will add monthly breakdown instead
+        calendarRows = []
+      }
+      
+      // Merge summary and calendar rows (only for single month)
+      if (!isMultiMonth) {
+        const maxRows = Math.max(summaryRows.length, calendarRows.length)
+        for (let i = 0; i < maxRows; i++) {
+          const summaryRow = summaryRows[i] || ['', '']
+          const calendarRow = calendarRows[i] || ['', '']
+          
+          // Merge: columns A-B from summary, empty column C for spacing, columns D-J from calendar
+          const mergedRow = [
+            summaryRow[0] || '',
+            summaryRow[1] || '',
+            '', // Empty column C for spacing between sections
+            calendarRow[2] || '',
+            calendarRow[3] || '',
+            calendarRow[4] || '',
+            calendarRow[5] || '',
+            calendarRow[6] || '',
+            calendarRow[7] || '',
+            calendarRow[8] || ''
+          ]
+          
+          sheetData.push(mergedRow)
+        }
+      } else {
+        // Multi-month - just add summary rows without calendar
+        summaryRows.forEach(row => {
+          sheetData.push(row)
+        })
+        
+        // Step 9: Add monthly breakdown for multi-month ranges
+        sheetData.push([]) // Empty row
+        sheetData.push([]) // Extra spacing
+        sheetData.push(['MONTHLY BREAKDOWN']) // Header
+        sheetData.push(['Month', 'Days', 'Present', 'Absent', 'Attendance %', 'Total Punches', 'Avg Punches/Day'])
+        
+        // Calculate stats for each month
+        let monthlyStats: Record<string, any> = {}
+        
+        allDates.forEach(date => {
+          const monthKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`
+          
+          if (!monthlyStats[monthKey]) {
+            monthlyStats[monthKey] = {
+              days: 0,
+              present: 0,
+              absent: 0,
+              punches: 0
+            }
+          }
+          
+          monthlyStats[monthKey].days++
+          
+          // Find logs for this date
+          const dateLogs = logs.filter(log => {
+            const logDate = new Date(log.log_date).toDateString()
+            return logDate === date.toDateString()
+          })
+          
+          if (dateLogs.length > 0) {
+            monthlyStats[monthKey].present++
+            monthlyStats[monthKey].punches += dateLogs.length
+          } else {
+            monthlyStats[monthKey].absent++
+          }
+        })
+        
+        // Add monthly rows
+        Object.entries(monthlyStats).forEach(([month, stats]: [string, any]) => {
+          const attendPercent = stats.days > 0 ? ((stats.present / stats.days) * 100).toFixed(2) : '0.00'
+          const avgPunchesPerDay = stats.present > 0 ? (stats.punches / stats.present).toFixed(2) : '0.00'
+          
+          sheetData.push([
+            month,
+            stats.days,
+            stats.present,
+            stats.absent,
+            `${attendPercent}%`,
+            stats.punches,
+            avgPunchesPerDay
+          ])
+        })
+      }
+      
+      // Store calendar info for styling
+      const calendarStartRow = summaryStartRowIndex + 1
+      const calendarTitleRow = calendarStartRow
+      const calendarHeaderRow = calendarStartRow + 1
+      const calendarDataStartRow = calendarStartRow + 2
+      
+      // Create worksheet with styling
+      const ws = XLSX.utils.aoa_to_sheet(sheetData)
+      
+      // Step 4: Set column widths based on THIS employee's max punches + calendar
+      const colWidths = [{ width: 15 }] // Date column
+      for (let i = 0; i < employeeMaxPunches; i++) {
+        colWidths.push({ width: 15 }) // Each punch column
+      }
+      colWidths.push({ width: 12 }) // Status column
+      
+      // Add column widths for summary and calendar (columns beyond punch columns)
+      colWidths.push({ width: 25 }) // Summary label column (A in summary section)
+      colWidths.push({ width: 15 }) // Summary value column (B in summary section)
+      colWidths.push({ width: 3 }) // Empty column C for spacing
+      // Calendar columns (D-J)
+      for (let i = 0; i < 7; i++) {
+        colWidths.push({ width: 8 }) // Calendar day columns (narrow)
+      }
+      
+      ws['!cols'] = colWidths
+      
+      // Step 5: Apply styling to make sheet pretty
+      const columnLetters: string[] = []
+      const totalCols = employeeMaxPunches + 2 // Date + Punches + Status
+      for (let i = 0; i < totalCols; i++) {
+        columnLetters.push(String.fromCharCode(65 + i)) // A, B, C, D, ...
+      }
+      
+      // Style 1: Employee name header (Row 1) - Dark blue background, white bold text
+      columnLetters.forEach((col) => {
+        const cellRef = `${col}1`
+        if (ws[cellRef]) {
+          ws[cellRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "1F4E78" } },
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 14 },
+            alignment: { horizontal: "center", vertical: "center" }
+          }
+        }
+      })
+      
+      // Style 2: Column headers (Row 3) - Light blue background, bold text
+      columnLetters.forEach((col) => {
+        const cellRef = `${col}3`
+        if (ws[cellRef]) {
+          ws[cellRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "4472C4" } },
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } }
+            }
+          }
+        }
+      })
+      
+      // Style 3: Date column (Column A) - Light gray background
+      allDates.forEach((date, index) => {
+        const rowNum = index + 4
+        const cellRef = `A${rowNum}`
+        if (ws[cellRef]) {
+          ws[cellRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "D9E1F2" } },
+            font: { bold: true, sz: 10 },
+            alignment: { horizontal: "center", vertical: "center" }
+          }
+        }
+      })
+      
+      // Style 4: Sunday rows - Yellow background (all columns)
+      allDates.forEach((date, index) => {
+        if (date.getDay() === 0) { // Sunday
+          const rowNum = index + 4
+          columnLetters.forEach((col) => {
+            const cellRef = `${col}${rowNum}`
+            if (ws[cellRef]) {
+              ws[cellRef].s = {
+                fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } },
+                font: { bold: col === 'A', sz: 10 },
+                alignment: { horizontal: "center", vertical: "center" }
+              }
+            }
+          })
+        }
+      })
+      
+      // Style 5: Summary section styling
+      const summaryStartRow = allDates.length + 5 // After all date rows + empty row
+      
+      // "ATTENDANCE SUMMARY" header - Green background
+      if (!isMultiMonth) {
+        // Single month - columns A-B only
+        const summaryHeaderCols: string[] = ['A', 'B']
+        summaryHeaderCols.forEach((col: string) => {
+          const cellRef = `${col}${summaryStartRow}`
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              fill: { patternType: "solid", fgColor: { rgb: "70AD47" } },
+              font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+              alignment: { horizontal: "center", vertical: "center" }
+            }
+          }
+        })
+      } else {
+        // Multi-month - full width
+        const cellRef = `A${summaryStartRow}`
+        if (ws[cellRef]) {
+          ws[cellRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "70AD47" } },
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+            alignment: { horizontal: "center", vertical: "center" }
+          }
+        }
+      }
+      
+      // Summary metric rows (6 rows: Total Days, Present, Absent, %, empty, PUNCH ANALYSIS header)
+      for (let i = 1; i <= 5; i++) {
+        const rowNum = summaryStartRow + i
+        // Label column (A) - Light gray
+        const labelRef = `A${rowNum}`
+        if (ws[labelRef]) {
+          ws[labelRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "E7E6E6" } },
+            font: { bold: true, sz: 10 },
+            alignment: { horizontal: "left", vertical: "center" }
+          }
+        }
+        // Value column (B) - White background
+        const valueRef = `B${rowNum}`
+        if (ws[valueRef]) {
+          ws[valueRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+            font: { sz: 10 },
+            alignment: { horizontal: "right", vertical: "center" }
+          }
+        }
+      }
+      
+      // "PUNCH ANALYSIS" header - Orange background
+      const punchHeaderRow = summaryStartRow + 7 // +1 for extra spacing row
+      if (!isMultiMonth) {
+        const punchHeaderCols: string[] = ['A', 'B']
+        punchHeaderCols.forEach((col: string) => {
+          const cellRef = `${col}${punchHeaderRow}`
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              fill: { patternType: "solid", fgColor: { rgb: "ED7D31" } },
+              font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+              alignment: { horizontal: "center", vertical: "center" }
+            }
+          }
+        })
+      } else {
+        const cellRef = `A${punchHeaderRow}`
+        if (ws[cellRef]) {
+          ws[cellRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "ED7D31" } },
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+            alignment: { horizontal: "center", vertical: "center" }
+          }
+        }
+      }
+      
+      // Style 6: Monthly Breakdown section (for multi-month only)
+      if (isMultiMonth) {
+        const monthlyBreakdownStartRow = punchHeaderRow + 7 // After punch analysis rows + spacing
+        
+        // Count months from sheetData
+        let monthCount = 0
+        for (let i = monthlyBreakdownStartRow + 2; i < sheetData.length; i++) {
+          if (sheetData[i] && sheetData[i][0]) {
+            monthCount++
+          }
+        }
+        
+        // "MONTHLY BREAKDOWN" header - Purple background
+        const monthlyHeaderRef = `A${monthlyBreakdownStartRow}`
+        if (ws[monthlyHeaderRef]) {
+          ws[monthlyHeaderRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "9B59B6" } },
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+            alignment: { horizontal: "center", vertical: "center" }
+          }
+        }
+        
+        // Column headers - Gray background
+        const monthlyColHeaderRow = monthlyBreakdownStartRow + 1
+        const monthlyColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+        monthlyColumns.forEach((col) => {
+          const cellRef = `${col}${monthlyColHeaderRow}`
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              fill: { patternType: "solid", fgColor: { rgb: "E7E6E6" } },
+              font: { bold: true, sz: 10 },
+              alignment: { horizontal: "center", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+              }
+            }
+          }
+        })
+        
+        // Data rows - Alternating colors
+        for (let i = 0; i < monthCount; i++) {
+          const rowNum = monthlyColHeaderRow + 1 + i
+          const isEvenRow = i % 2 === 0
+          const bgColor = isEvenRow ? "FFFFFF" : "F2F2F2"
+          
+          monthlyColumns.forEach((col) => {
+            const cellRef = `${col}${rowNum}`
+            if (ws[cellRef]) {
+              ws[cellRef].s = {
+                fill: { patternType: "solid", fgColor: { rgb: bgColor } },
+                font: { sz: 10 },
+                alignment: { horizontal: col === 'A' ? "left" : "center", vertical: "center" },
+                border: {
+                  top: { style: "thin", color: { rgb: "CCCCCC" } },
+                  bottom: { style: "thin", color: { rgb: "CCCCCC" } },
+                  left: { style: "thin", color: { rgb: "CCCCCC" } },
+                  right: { style: "thin", color: { rgb: "CCCCCC" } }
+                }
+              }
+            }
+          })
+        }
+      }
+      
+      // Style 7: Calendar section styling (only for single month)
+      if (!isMultiMonth) {
+        // Calendar title - Light blue background
+        for (let col = 3; col < 10; col++) { // Columns D-J (skipping C for spacing)
+          const cellRef = `${String.fromCharCode(65 + col)}${calendarTitleRow}`
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              fill: { patternType: "solid", fgColor: { rgb: "D9E1F2" } },
+              font: { bold: true, sz: 11 },
+              alignment: { horizontal: "center", vertical: "center" }
+            }
+          }
+        }
+        
+        // Calendar day headers - Gray background
+        for (let col = 3; col < 10; col++) { // Columns D-J (Sun-Sat)
+          const cellRef = `${String.fromCharCode(65 + col)}${calendarHeaderRow}`
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              fill: { patternType: "solid", fgColor: { rgb: "E7E6E6" } },
+              font: { bold: true, sz: 9 },
+              alignment: { horizontal: "center", vertical: "center" }
+            }
+          }
+        }
+      }
+      
+      // Calendar date cells - Green for present, white for absent
+      // Create a map of present dates
+      const presentDatesSet = new Set<number>()
+      dataRows.forEach((row) => {
+        if (row[row.length - 1] === 'Present') {
+          const dateStr = row[0] as string
+          const dayMatch = dateStr.match(/^(\d+)/)
+          if (dayMatch) {
+            presentDatesSet.add(parseInt(dayMatch[1]))
+          }
+        }
+      })
+      
+      // Apply styling to calendar date cells (only for single month)
+      if (!isMultiMonth) {
+        for (let week = 0; week < weeksNeeded; week++) {
+          const rowNum = calendarDataStartRow + week
+          
+          for (let col = 3; col < 10; col++) { // Columns D-J (skipping C for spacing)
+            const cellRef = `${String.fromCharCode(65 + col)}${rowNum}`
+            if (ws[cellRef] && ws[cellRef].v) {
+              const dateNum = parseInt(ws[cellRef].v as string)
+              
+              if (presentDatesSet.has(dateNum)) {
+                // Present day - Green background, white text
+                ws[cellRef].s = {
+                  fill: { patternType: "solid", fgColor: { rgb: "70AD47" } },
+                  font: { bold: true, color: { rgb: "FFFFFF" }, sz: 10 },
+                  alignment: { horizontal: "center", vertical: "center" }
+                }
+              } else {
+                // Absent day - White background, gray text
+                ws[cellRef].s = {
+                  fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+                  font: { color: { rgb: "999999" }, sz: 10 },
+                  alignment: { horizontal: "center", vertical: "center" }
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Punch analysis metric rows (5 rows)
+      for (let i = 1; i <= 5; i++) {
+        const rowNum = punchHeaderRow + i
+        // Label column (A) - Light gray
+        const labelRef = `A${rowNum}`
+        if (ws[labelRef]) {
+          ws[labelRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "E7E6E6" } },
+            font: { bold: true, sz: 10 },
+            alignment: { horizontal: "left", vertical: "center" }
+          }
+        }
+        // Value column (B) - White background
+        const valueRef = `B${rowNum}`
+        if (ws[valueRef]) {
+          ws[valueRef].s = {
+            fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+            font: { sz: 10 },
+            alignment: { horizontal: "right", vertical: "center" }
+          }
+        }
+      }
+      
+      // Add sheet to workbook (limit sheet name to 31 characters)
+      const sheetName = employeeName.substring(0, 31)
+      XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    })
+    
+    const fileName = `attendance_${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(wb, fileName)
   }
 
-  const stats = todayData?.summary || {
-    totalEmployees: 47,
-    present: 0,
-    absent: 47,
-    lateArrivals: 0,
-    earlyDepartures: 0
-  }
+  const stats = (typeof todayData?.summary === 'object' && !Array.isArray(todayData?.summary)) 
+    ? todayData.summary 
+    : {
+        totalEmployees: 47,
+        present: 0,
+        absent: 47,
+        lateArrivals: 0,
+        earlyDepartures: 0
+      }
 
   const activePunches = recentLogs.length
   const activeUsers = new Set(recentLogs.map(log => log.employee_code)).size
