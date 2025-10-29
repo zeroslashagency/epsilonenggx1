@@ -361,6 +361,23 @@ export default function AttendancePage() {
   const activePunches = recentLogs.length
   const activeUsers = new Set(recentLogs.map(log => log.employee_code)).size
 
+  // Show loading while checking authentication
+  if (auth.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated
+  if (!auth.isAuthenticated) {
+    return null
+  }
+
   return (
     <ZohoLayout breadcrumbs={[
       { label: 'Dashboard', href: '/' },
