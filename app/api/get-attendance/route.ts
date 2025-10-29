@@ -82,8 +82,8 @@ export async function GET(request: NextRequest) {
     
     // Optimize: For single-day queries (like today), use smaller batch size
     const isSingleDay = fromDate && toDate && fromDate === toDate
-    const batchSize = isSingleDay ? 500 : 1000 // Smaller batches for single day
-    const maxRecords = isSingleDay ? 2000 : 50000 // Limit for single day to avoid excessive fetching
+    const batchSize = 1000 // Use consistent batch size
+    const maxRecords = 50000 // No artificial limit - fetch all records
     
     
     // Supabase has a default limit of 1000 rows, so we need to fetch in batches

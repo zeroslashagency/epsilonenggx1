@@ -262,7 +262,7 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
       className={`
         fixed left-0 top-0 h-screen bg-white dark:bg-gray-900 
         border-r border-[#E3E6F0] dark:border-gray-800
-        transition-all duration-300 ease-in-out z-40
+        transition-all duration-300 ease-in-out z-40 flex flex-col
         ${collapsed ? 'w-16' : 'w-64'}
       `}
     >
@@ -297,13 +297,15 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
 
       {/* Navigation */}
       <nav 
-        className="flex-1 py-4" 
+        className="flex-1 py-4 overflow-y-auto" 
         style={{ 
-          overflowY: 'scroll',
           scrollbarWidth: 'thin', 
           scrollbarColor: '#cbd5e0 transparent',
           overscrollBehavior: 'contain',
           WebkitOverflowScrolling: 'touch'
+        }}
+        onWheel={(e) => {
+          e.stopPropagation()
         }}
       >
         <div className="px-3 space-y-1">
