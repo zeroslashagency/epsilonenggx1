@@ -569,9 +569,11 @@ export default function AttendancePage() {
       
       // Calculate number of months in range
       const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + 
-                         (lastDate.getMonth() - firstDate.getMonth()) + 1
+                         (lastDate.getMonth() - firstDate.getMonth())
       
-      const isMultiMonth = monthsDiff > 1
+      // Show calendar for up to 2 months (1 week, 2 weeks, 1 month, 2 months)
+      // Show monthly breakdown for 3+ months
+      const isMultiMonth = monthsDiff >= 2
       
       let calendarRows: any[] = []
       let weeksNeeded = 0
@@ -716,12 +718,15 @@ export default function AttendancePage() {
       colWidths.push({ width: 12 }) // Status column
       
       // Add column widths for summary and calendar (columns beyond punch columns)
-      colWidths.push({ width: 25 }) // Summary label column (A in summary section)
-      colWidths.push({ width: 15 }) // Summary value column (B in summary section)
-      colWidths.push({ width: 3 }) // Empty column C for spacing
-      // Calendar columns (D-J)
-      for (let i = 0; i < 7; i++) {
-        colWidths.push({ width: 8 }) // Calendar day columns (narrow)
+      // Only add these if we're in single-month mode with calendar
+      if (!isMultiMonth) {
+        colWidths.push({ width: 25 }) // Summary label column (A in summary section)
+        colWidths.push({ width: 15 }) // Summary value column (B in summary section)
+        colWidths.push({ width: 3 }) // Empty column C for spacing
+        // Calendar columns (D-J)
+        for (let i = 0; i < 7; i++) {
+          colWidths.push({ width: 8 }) // Calendar day columns (narrow)
+        }
       }
       
       ws['!cols'] = colWidths
