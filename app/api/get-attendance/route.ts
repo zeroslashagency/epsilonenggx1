@@ -26,21 +26,16 @@ export async function GET(request: NextRequest) {
     let endDate: Date
     
     if (fromDate && toDate) {
-      // Use provided date range - interpret as IST dates
-      // Convert YYYY-MM-DD to IST midnight
-      const fromParts = fromDate.split('-').map(Number)
-      const toParts = toDate.split('-').map(Number)
+      // Database stores timestamps WITHOUT timezone info (naive timestamps in IST)
+      // Query directly using date strings - no timezone conversion needed
+      startDate = new Date(`${fromDate}T00:00:00`)
+      endDate = new Date(`${toDate}T23:59:59.999`)
       
-      // Create dates in IST timezone
-      startDate = new Date(Date.UTC(fromParts[0], fromParts[1] - 1, fromParts[2], 0, 0, 0) - istOffset)
-      endDate = new Date(Date.UTC(toParts[0], toParts[1] - 1, toParts[2], 23, 59, 59, 999) - istOffset)
-      
-      console.log('📅 [GET-ATTENDANCE] Using provided date range (IST):', { 
+      console.log('📅 [GET-ATTENDANCE] Using provided date range (naive IST):', { 
         fromDate, 
         toDate, 
         startDate: startDate.toISOString(), 
-        endDate: endDate.toISOString(),
-        istOffset: istOffset / (60 * 60 * 1000) + ' hours'
+        endDate: endDate.toISOString()
       })
     } else {
       // Fallback to dateRange parameter
@@ -65,11 +60,12 @@ export async function GET(request: NextRequest) {
     }
     
     // First, get total count for pagination
+    // Use DATE cast to match database's native date format (no timezone)
     let countQuery = supabase
       .from('employee_raw_logs')
       .select('*', { count: 'exact', head: true })
-      .gte('log_date', startDate.toISOString())
-      .lte('log_date', endDate.toISOString())
+      .gte('log_date', fromDate && toDate ? `${fromDate} 00:00:00` : startDate.toISOString())
+      .lte('log_date', fromDate && toDate ? `${toDate} 23:59:59` : endDate.toISOString())
     
     if (employeeCode) {
       countQuery = countQuery.eq('employee_code', employeeCode)
@@ -99,8 +95,8 @@ export async function GET(request: NextRequest) {
       let query = supabase
         .from('employee_raw_logs')
         .select('*')
-        .gte('log_date', startDate.toISOString())
-        .lte('log_date', endDate.toISOString())
+        .gte('log_date', fromDate && toDate ? `${fromDate} 00:00:00` : startDate.toISOString())
+        .lte('log_date', fromDate && toDate ? `${toDate} 23:59:59` : endDate.toISOString())
         .order('log_date', { ascending: false })
         .range(currentOffset, currentOffset + batchSize - 1)
       
@@ -170,17 +166,12 @@ export async function GET(request: NextRequest) {
     const istDate = new Date(now.getTime() + istOffset)
     const today = istDate.toISOString().split('T')[0]
     
-    // Create IST-adjusted date range for today's query
-    const todayParts = today.split('-').map(Number)
-    const todayStartIST = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2], 0, 0, 0) - istOffset)
-    const todayEndIST = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2], 23, 59, 59, 999) - istOffset)
-    
-    // Get today's logs specifically from database
+    // Get today's logs using native date format (no timezone conversion)
     const { data: todayLogsFromDB, error: todayError } = await supabase
       .from('employee_raw_logs')
       .select('*')
-      .gte('log_date', todayStartIST.toISOString())
-      .lte('log_date', todayEndIST.toISOString())
+      .gte('log_date', `${today} 00:00:00`)
+      .lte('log_date', `${today} 23:59:59`)
     
     const todayLogs = todayError ? [] : (todayLogsFromDB || [])
     
