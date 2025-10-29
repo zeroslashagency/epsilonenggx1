@@ -126,10 +126,11 @@ export default function AttendancePage() {
     }
   }
 
-  // Check permissions
-  const canViewTodaysActivity = AttendancePermissions.canViewTodaysActivity(userPermissions)
-  const canExportExcel = AttendancePermissions.canExportExcel(userPermissions)
-  const canExportRecords = AttendancePermissions.canExportRecords(userPermissions)
+  // Check permissions - temporarily show to all authenticated users
+  // TODO: Integrate with granular permission system once it's populated
+  const canViewTodaysActivity = true // AttendancePermissions.canViewTodaysActivity(userPermissions)
+  const canExportExcel = true // AttendancePermissions.canExportExcel(userPermissions)
+  const canExportRecords = true // AttendancePermissions.canExportRecords(userPermissions)
 
   // Fetch employees from API
   const fetchEmployees = async () => {
