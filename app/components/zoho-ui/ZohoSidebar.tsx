@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -52,7 +52,36 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
   const pathname = usePathname()
   const { userPermissions, logout, hasPermission, refreshPermissions } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [expandedItems, setExpandedItems] = useState<string[]>(['settings'])
+  const [expandedItems, setExpandedItems] = useState<string[]>([])
+
+  // Auto-expand parent menu when on a child route
+  useEffect(() => {
+    const pathSegments = pathname.split('/')
+    const newExpanded: string[] = []
+    
+    // Check if we're on a production sub-route
+    if (pathname.startsWith('/production/') || pathname === '/personnel') {
+      newExpanded.push('production')
+    }
+    
+    // Check if we're on a monitoring sub-route
+    if (pathname.startsWith('/monitoring/') || pathname === '/alerts') {
+      newExpanded.push('monitoring')
+    }
+    
+    // Check if we're on a settings sub-route
+    if (pathname.startsWith('/settings/')) {
+      newExpanded.push('settings')
+    }
+    
+    // Only update if different from current state
+    if (newExpanded.length > 0) {
+      setExpandedItems(prev => {
+        const combined = [...new Set([...prev, ...newExpanded])]
+        return combined
+      })
+    }
+  }, [pathname])
 
   const menuItems: MenuItem[] = [
     // MAIN Section
@@ -267,7 +296,16 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4">
+      <nav 
+        className="flex-1 py-4" 
+        style={{ 
+          overflowY: 'scroll',
+          scrollbarWidth: 'thin', 
+          scrollbarColor: '#cbd5e0 transparent',
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
         <div className="px-3 space-y-1">
           {visibleMenuItems.map((item) => {
             // Section Headers
@@ -289,10 +327,13 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
               <div key={item.id}>
                 {hasChildren ? (
                   <button
-                    onClick={() => toggleExpanded(item.id)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      toggleExpanded(item.id)
+                    }}
                     className={`
                       w-full flex items-center justify-between px-3 py-2.5 rounded-[4px]
-                      transition-all duration-200 group
+                      transition-all duration-150 ease-out group
                       ${
                         isActive(item.href || '')
                           ? 'bg-[#2C7BE5] text-white'
@@ -310,7 +351,7 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
                     
                     {!collapsed && (
                       <ChevronRight 
-                        className={`w-4 h-4 transition-transform ${
+                        className={`w-4 h-4 transition-transform duration-150 ease-out ${
                           isExpanded ? 'rotate-90' : ''
                         }`} 
                       />
@@ -321,7 +362,7 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
                     href={item.href || '#'}
                     className={`
                       flex items-center justify-between px-3 py-2.5 rounded-[4px]
-                      transition-all duration-200 group
+                      transition-all duration-150 ease-out group
                       ${
                         isActive(item.href || '')
                           ? 'bg-[#2C7BE5] text-white'
@@ -354,7 +395,7 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
                         href={child.href || '#'}
                         className={`
                           flex items-center space-x-3 px-3 py-2 rounded-[4px] text-sm
-                          transition-colors duration-200
+                          transition-colors duration-150 ease-out
                           ${
                             isActive(child.href || '')
                               ? 'bg-[#2C7BE5] text-white'
