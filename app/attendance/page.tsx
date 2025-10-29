@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/app/lib/contexts/auth-context'
 import { Home, ChevronRight, Activity, Users, AlertCircle, UserX, UserCheck, Clock, Download, RefreshCw, Calendar, ChevronDown } from "lucide-react"
 import { StatsCard } from "@/components/StatsCard"
 import { StatusBadge } from "@/components/StatusBadge"
@@ -19,6 +21,9 @@ import { AttendancePermissions } from '@/app/lib/utils/permission-checker'
 import type { PermissionModule } from '@/app/lib/utils/permission-checker'
 
 export default function AttendancePage() {
+  const auth = useAuth()
+  const router = useRouter()
+  
   // Permission state
   const [userPermissions, setUserPermissions] = useState<Record<string, PermissionModule> | null>(null)
   
@@ -43,6 +48,13 @@ export default function AttendancePage() {
   const [todayError, setTodayError] = useState<string | null>(null)
   const [allTrackError, setAllTrackError] = useState<string | null>(null)
   const [employeeError, setEmployeeError] = useState<string | null>(null)
+
+  // Authentication guard
+  useEffect(() => {
+    if (!auth.isLoading && !auth.isAuthenticated) {
+      router.push('/auth')
+    }
+  }, [auth.isAuthenticated, auth.isLoading, router])
 
   // Error message helper
   const getErrorMessage = (error: any): string => {
