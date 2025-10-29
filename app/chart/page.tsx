@@ -618,7 +618,7 @@ export default function ChartPage() {
                   <span className="text-sm text-[#95AAC9]">Production Output</span>
                 </div>
                 <div className="text-2xl font-bold text-[#12263F] dark:text-white">
-                  {metrics.productionOutput.toLocaleString()}
+                  {metrics?.productionOutput?.toLocaleString() || '0'}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <TrendingUp className="w-3 h-3 text-[#28A745]" />
@@ -640,7 +640,7 @@ export default function ChartPage() {
                   <span className="text-sm text-[#95AAC9]">Efficiency Rate</span>
                 </div>
                 <div className="text-2xl font-bold text-[#12263F] dark:text-white">
-                  {metrics.efficiencyRate}%
+                  {metrics?.efficiencyRate || 0}%
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <TrendingUp className="w-3 h-3 text-[#28A745]" />
@@ -662,7 +662,7 @@ export default function ChartPage() {
                   <span className="text-sm text-[#95AAC9]">Quality Score</span>
                 </div>
                 <div className="text-2xl font-bold text-[#12263F] dark:text-white">
-                  {metrics.qualityScore}%
+                  {metrics?.qualityScore || 0}%
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <TrendingDown className="w-3 h-3 text-[#DC3545]" />
@@ -684,11 +684,11 @@ export default function ChartPage() {
                   <span className="text-sm text-[#95AAC9]">Downtime Hours</span>
                 </div>
                 <div className="text-2xl font-bold text-[#12263F] dark:text-white">
-                  {metrics.downtimeHours}
+                  {metrics?.downtimeHours || 0}h
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <TrendingDown className="w-3 h-3 text-[#28A745]" />
-                  <span className="text-xs text-[#28A745]">-15.3%</span>
+                  <TrendingDown className="w-3 h-3 text-[#DC3545]" />
+                  <span className="text-xs text-[#DC3545]">-0.5h</span>
                 </div>
               </div>
               <div className="w-8 h-8 bg-[#DC3545]/10 rounded flex items-center justify-center">
