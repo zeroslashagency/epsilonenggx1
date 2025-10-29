@@ -20,15 +20,28 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
     
     // Calculate date range - prioritize fromDate/toDate if provided
+    // CRITICAL: Use IST timezone for date calculations
+    const istOffset = 5.5 * 60 * 60 * 1000 // IST is UTC+5:30
     let startDate: Date
     let endDate: Date
     
     if (fromDate && toDate) {
-      // Use provided date range
-      startDate = new Date(fromDate)
-      endDate = new Date(toDate)
-      endDate.setHours(23, 59, 59, 999) // End of day
-      console.log('📅 [GET-ATTENDANCE] Using provided date range:', { fromDate, toDate, startDate: startDate.toISOString(), endDate: endDate.toISOString() })
+      // Use provided date range - interpret as IST dates
+      // Convert YYYY-MM-DD to IST midnight
+      const fromParts = fromDate.split('-').map(Number)
+      const toParts = toDate.split('-').map(Number)
+      
+      // Create dates in IST timezone
+      startDate = new Date(Date.UTC(fromParts[0], fromParts[1] - 1, fromParts[2], 0, 0, 0) - istOffset)
+      endDate = new Date(Date.UTC(toParts[0], toParts[1] - 1, toParts[2], 23, 59, 59, 999) - istOffset)
+      
+      console.log('📅 [GET-ATTENDANCE] Using provided date range (IST):', { 
+        fromDate, 
+        toDate, 
+        startDate: startDate.toISOString(), 
+        endDate: endDate.toISOString(),
+        istOffset: istOffset / (60 * 60 * 1000) + ' hours'
+      })
     } else {
       // Fallback to dateRange parameter
       endDate = new Date()
@@ -154,7 +167,6 @@ export async function GET(request: NextRequest) {
     // Calculate today's summary - get today's data specifically
     // Use UTC+5:30 (Indian Standard Time) for proper date calculation
     const now = new Date()
-    const istOffset = 5.5 * 60 * 60 * 1000 // IST is UTC+5:30
     const istDate = new Date(now.getTime() + istOffset)
     const today = istDate.toISOString().split('T')[0]
     
