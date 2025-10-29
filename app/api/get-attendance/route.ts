@@ -170,12 +170,17 @@ export async function GET(request: NextRequest) {
     const istDate = new Date(now.getTime() + istOffset)
     const today = istDate.toISOString().split('T')[0]
     
+    // Create IST-adjusted date range for today's query
+    const todayParts = today.split('-').map(Number)
+    const todayStartIST = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2], 0, 0, 0) - istOffset)
+    const todayEndIST = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2], 23, 59, 59, 999) - istOffset)
+    
     // Get today's logs specifically from database
     const { data: todayLogsFromDB, error: todayError } = await supabase
       .from('employee_raw_logs')
       .select('*')
-      .gte('log_date', `${today}T00:00:00`)
-      .lte('log_date', `${today}T23:59:59`)
+      .gte('log_date', todayStartIST.toISOString())
+      .lte('log_date', todayEndIST.toISOString())
     
     const todayLogs = todayError ? [] : (todayLogsFromDB || [])
     
