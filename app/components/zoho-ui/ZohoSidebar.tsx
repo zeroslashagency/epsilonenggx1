@@ -241,8 +241,12 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
       <div className="h-16 flex items-center justify-between px-4 border-b border-[#E3E6F0] dark:border-gray-800">
         {!collapsed && (
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#2C7BE5] to-blue-600 rounded-[4px] flex items-center justify-center">
-              <span className="text-white font-bold text-sm">E</span>
+            <div className="w-8 h-8 flex items-center justify-center">
+              <img 
+                src="/Epsilologo.svg" 
+                alt="Epsilon Logo" 
+                className="w-8 h-8 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-sm font-semibold text-[#12263F] dark:text-white">Epsilon</h1>
