@@ -79,8 +79,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // Check authentication (only Super Admin can update roles)
-  const authResult = await requireRole(request, ['Super Admin'])
+  // Check authentication - Allow Admin and Super Admin
+  const authResult = await requireRole(request, ['Admin', 'Super Admin'])
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -89,8 +89,9 @@ export async function PUT(
     const roleId = params.id
     const body = await request.json()
     
+    console.log('🔧 PUT /api/admin/roles/[id] - Request body:', JSON.stringify(body, null, 2))
+    
     const { name, description, is_manufacturing_role, permissions } = body
-
 
     // Prepare update data - only include fields that exist in the table
     const updateData: any = {
@@ -106,8 +107,10 @@ export async function PUT(
     
     if (permissions) {
       updateData.permissions_json = permissions
+      console.log('📝 Saving permissions_json:', JSON.stringify(permissions, null, 2).substring(0, 500))
     }
 
+    console.log('💾 Updating role with data:', updateData)
 
     // Update the role
     const { error: updateError } = await supabase
@@ -116,7 +119,61 @@ export async function PUT(
       .eq('id', roleId)
 
     if (updateError) {
+      console.error('❌ Update error:', updateError)
       throw updateError
+    }
+
+    console.log('✅ Role updated successfully')
+
+    // TASK 4: Sync role_permissions table with permissions_json
+    if (permissions) {
+      console.log('🔄 Syncing role_permissions table...')
+      
+      // First, delete existing role_permissions
+      await supabase
+        .from('role_permissions')
+        .delete()
+        .eq('role_id', roleId)
+      
+      // Extract permission codes from permissions_json
+      const permissionCodes: string[] = []
+      Object.values(permissions).forEach((module: any) => {
+        if (module.items && typeof module.items === 'object') {
+          Object.entries(module.items).forEach(([key, perm]: [string, any]) => {
+            // Check if any permission is granted (full, view, create, edit, delete)
+            if (perm.full || perm.view || perm.create || perm.edit || perm.delete) {
+              permissionCodes.push(key)
+            }
+          })
+        }
+      })
+      
+      console.log(`📋 Found ${permissionCodes.length} active permissions`)
+      
+      // Get permission IDs from codes
+      if (permissionCodes.length > 0) {
+        const { data: permissionData } = await supabase
+          .from('permissions')
+          .select('id, code')
+          .in('code', permissionCodes)
+        
+        if (permissionData && permissionData.length > 0) {
+          const rolePermissionInserts = permissionData.map(p => ({
+            role_id: roleId,
+            permission_id: p.id
+          }))
+          
+          const { error: rpError } = await supabase
+            .from('role_permissions')
+            .insert(rolePermissionInserts)
+          
+          if (rpError) {
+            console.error('⚠️ Error syncing role_permissions:', rpError)
+          } else {
+            console.log(`✅ Synced ${permissionData.length} permissions to role_permissions table`)
+          }
+        }
+      }
     }
 
     // Log audit trail
@@ -132,12 +189,11 @@ export async function PUT(
             name,
             description,
             is_manufacturing_role,
-            permissions
+            permissions: permissions ? 'updated' : 'not changed'
           },
           updated_by: user.email
         }
       })
-
 
     return NextResponse.json({
       success: true,
@@ -145,6 +201,7 @@ export async function PUT(
     })
 
   } catch (error: any) {
+    console.error('❌ PUT /api/admin/roles/[id] error:', error)
     
     // Return detailed error information
     return NextResponse.json({

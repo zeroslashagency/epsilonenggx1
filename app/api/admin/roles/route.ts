@@ -95,8 +95,8 @@ export async function GET(request: NextRequest) {
  * @security Requires Super Admin role
  */
 export async function POST(request: NextRequest) {
-  // ✅ PERMISSION CHECK: Require assign_roles permission
-  const authResult = await requirePermission(request, 'assign_roles')
+  // ✅ PERMISSION CHECK: Require Admin or Super Admin role
+  const authResult = await requireRole(request, ['Admin', 'Super Admin'])
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 

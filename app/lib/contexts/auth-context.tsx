@@ -6,12 +6,18 @@ import { getSupabaseClient } from '../services/supabase-client'
 
 const supabase = getSupabaseClient()
 
+interface PermissionModule {
+  name: string
+  items: Record<string, any>
+  specialPermissions?: string[]
+}
+
 interface AuthContextType {
   isAuthenticated: boolean
   userEmail: string | null
   userRole: string | null
-  userPermissions: string[]
-  hasPermission: (permission: string) => boolean
+  userPermissions: Record<string, PermissionModule>
+  hasPermission: (moduleKey: string, itemKey: string, action?: string) => boolean
   refreshPermissions: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
   logout: () => void
@@ -25,53 +31,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
-  const [userPermissions, setUserPermissions] = useState<string[]>([])
+  const [userPermissions, setUserPermissions] = useState<Record<string, PermissionModule>>({})
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  // Function to fetch user profile and calculate permissions
+  // Function to fetch user profile and permissions from database
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase
+      console.log('🔍 Fetching user profile and permissions...')
+      
+      // Get user's role
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role, standalone_attendance')
         .eq('id', userId)
         .single()
       
-      if (error || !profile) {
+      if (profileError || !profile) {
+        console.error('❌ Error fetching profile:', profileError)
         return
       }
       
       setUserRole(profile.role)
+      console.log('👤 User role:', profile.role)
       
-      // Calculate permissions based on role
-      const permissions: string[] = ['dashboard'] // All users get dashboard
-      
-      if (profile.role === 'Admin') {
-        permissions.push('schedule_generator', 'schedule_generator_dashboard', 'chart', 'analytics', 'attendance', 'manage_users')
-      } else if (profile.role === 'Operator') {
-        permissions.push('schedule_generator', 'attendance')
-      } else if (profile.role === 'Test User') {
-        permissions.push('chart', 'analytics', 'attendance')
+      // Super Admin gets all permissions
+      if (profile.role === 'Super Admin' || profile.role === 'super_admin') {
+        console.log('⭐ Super Admin detected - granting all permissions')
+        setUserPermissions({}) // Empty object = all permissions for Super Admin
+        return
       }
       
-      // Add standalone attendance if enabled
-      if (profile.standalone_attendance === 'YES') {
-        permissions.push('standalone_attendance')
+      // Fetch role's permissions_json from roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('permissions_json')
+        .eq('name', profile.role)
+        .single()
+      
+      if (roleError) {
+        console.error('❌ Error fetching role permissions:', roleError)
+        setUserPermissions({})
+        return
       }
       
-      setUserPermissions(permissions)
+      if (roleData?.permissions_json) {
+        console.log('✅ Loaded permissions from database:', Object.keys(roleData.permissions_json).length, 'modules')
+        setUserPermissions(roleData.permissions_json)
+      } else {
+        console.warn('⚠️ No permissions_json found for role:', profile.role)
+        setUserPermissions({})
+      }
+      
     } catch (error) {
+      console.error('❌ Error in fetchUserProfile:', error)
+      setUserPermissions({})
     }
   }
   
   // Helper function to check if user has a permission
-  const hasPermission = (permission: string): boolean => {
+  const hasPermission = (moduleKey: string, itemKey: string, action: string = 'view'): boolean => {
     // Super Admin has ALL permissions
     if (userRole === 'Super Admin' || userRole === 'super_admin') {
       return true
     }
-    return userPermissions.includes(permission)
+    
+    // Check if module exists
+    if (!userPermissions || !userPermissions[moduleKey]) {
+      return false
+    }
+    
+    const module = userPermissions[moduleKey]
+    const item = module.items?.[itemKey]
+    
+    if (!item) {
+      return false
+    }
+    
+    // Full permission grants all actions
+    if (item.full === true) {
+      return true
+    }
+    
+    // Check specific action
+    return item[action] === true
   }
 
   // Function to refresh user permissions (for real-time updates)
@@ -182,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(false)
       setUserEmail(null)
       setUserRole(null)
-      setUserPermissions([])
+      setUserPermissions({})
       
       // Force redirect to auth page
       router.push('/auth')
@@ -194,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(false)
       setUserEmail(null)
       setUserRole(null)
-      setUserPermissions([])
+      setUserPermissions({})
       router.push('/auth')
     }
   }

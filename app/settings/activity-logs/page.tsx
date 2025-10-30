@@ -331,47 +331,33 @@ export default function ActivityLogsPage() {
             </div>
           </div>
 
-          <div className="divide-y divide-[#E3E6F0] dark:divide-gray-700">
+          <div className="p-6">
             {loading ? (
-              <div className="p-8 text-center text-[#95AAC9]">
-                Loading activity logs...
+              <div className="text-center py-8">
+                <p className="text-[#95AAC9]">Loading activity logs...</p>
               </div>
             ) : filteredLogs.length === 0 ? (
-              <div className="p-8 text-center text-[#95AAC9]">
-                No activity logs found
+              <div className="text-center py-8">
+                <p className="text-[#95AAC9]">No activity logs found</p>
               </div>
             ) : (
-              filteredLogs.map((log) => (
-                <div key={log.id} className="p-6 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <h3 className="text-sm font-medium text-[#12263F] dark:text-white">
-                          {log.description}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs text-[#95AAC9] ml-5">
-                        <span className="flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          {log.actor?.full_name || log.actor?.email || 'System'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Activity className="w-3 h-3" />
+              <div className="space-y-3">
+                {filteredLogs.map((log) => (
+                  <div key={log.id} className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-[#12263F] dark:text-white font-medium">{log.description}</p>
+                        <p className="text-xs text-[#95AAC9] mt-1">
                           {new Date(log.timestamp).toLocaleString()}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Activity className="w-3 h-3" />
-                          {log.ip || 'N/A'}
-                        </span>
+                        </p>
                       </div>
-                    </div>
-                    <div>
-                      {getActionBadge(log.action)}
+                      <span className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-[#2C7BE5] rounded">
+                        {log.action.replace(/_/g, ' ')}
+                      </span>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
           

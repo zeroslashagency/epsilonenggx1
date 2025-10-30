@@ -83,10 +83,13 @@ export default function EditRolePage() {
 
   const fetchRole = async () => {
     try {
+      console.log('🔍 Fetching role:', roleId)
       
-      // Try to fetch role from Supabase API
-      const response = await fetch(`/api/admin/roles/${roleId}`)
-      const data = await response.json()
+      // Use apiGet helper which includes auth token
+      const { apiGet } = await import('@/app/lib/utils/api-client')
+      const data = await apiGet(`/api/admin/roles/${roleId}`)
+      
+      console.log('📊 Role data received:', data)
       
       if (data.success && data.data) {
         const role = data.data
@@ -95,27 +98,83 @@ export default function EditRolePage() {
         setDescription(role.description || '')
         setIsManufacturingRole(role.is_manufacturing_role || false)
         
-        // Load permissions from database if available
-        if (role.permissions_json && typeof role.permissions_json === 'object') {
+        console.log('📋 Role permissions_json:', role.permissions_json)
+        
+        // CRITICAL FIX: Start with a CLEAN slate - all permissions FALSE
+        // Create a deep copy of initialPermissionModules with ALL permissions set to FALSE
+        const cleanPermissions: Record<string, PermissionModule> = {}
+        
+        Object.keys(initialPermissionModules).forEach(moduleKey => {
+          cleanPermissions[moduleKey] = {
+            name: initialPermissionModules[moduleKey].name,
+            specialPermissions: initialPermissionModules[moduleKey].specialPermissions,
+            items: {}
+          }
           
-          // Merge saved permissions with initial structure to ensure all new items exist
-          const mergedPermissions = { ...initialPermissionModules }
+          // Copy all items but set all permissions to FALSE
+          Object.keys(initialPermissionModules[moduleKey].items).forEach(itemKey => {
+            const originalItem = initialPermissionModules[moduleKey].items[itemKey]
+            cleanPermissions[moduleKey].items[itemKey] = {
+              full: false,
+              view: false,
+              create: false,
+              edit: false,
+              delete: false,
+              ...(originalItem.approve !== undefined && { approve: false }),
+              ...(originalItem.export !== undefined && { export: false }),
+              ...(originalItem.isSubItem !== undefined && { isSubItem: originalItem.isSubItem }),
+              ...(originalItem.parent !== undefined && { parent: originalItem.parent }),
+              ...(originalItem.isCollapsible !== undefined && { isCollapsible: originalItem.isCollapsible })
+            }
+          })
+        })
+        
+        console.log('✅ Clean permissions created (all FALSE)')
+        
+        // NOW apply ONLY the permissions from database
+        if (role.permissions_json && typeof role.permissions_json === 'object') {
+          console.log('🔄 Applying database permissions...')
           
           Object.keys(role.permissions_json).forEach(moduleKey => {
-            if (mergedPermissions[moduleKey]) {
-              // Merge items, preserving new items from initial structure
-              mergedPermissions[moduleKey] = {
-                ...mergedPermissions[moduleKey],
-                items: {
-                  ...mergedPermissions[moduleKey].items,
-                  ...role.permissions_json[moduleKey].items
-                }
+            if (cleanPermissions[moduleKey]) {
+              const dbModule = role.permissions_json[moduleKey]
+              
+              // Apply items from database
+              if (dbModule.items && typeof dbModule.items === 'object') {
+                Object.keys(dbModule.items).forEach(itemKey => {
+                  if (cleanPermissions[moduleKey].items[itemKey]) {
+                    const dbItem = dbModule.items[itemKey]
+                    
+                    // Only copy permission flags, preserve structure flags
+                    cleanPermissions[moduleKey].items[itemKey] = {
+                      ...cleanPermissions[moduleKey].items[itemKey],
+                      full: dbItem.full || false,
+                      view: dbItem.view || false,
+                      create: dbItem.create || false,
+                      edit: dbItem.edit || false,
+                      delete: dbItem.delete || false,
+                      ...(dbItem.approve !== undefined && { approve: dbItem.approve }),
+                      ...(dbItem.export !== undefined && { export: dbItem.export })
+                    }
+                    
+                    console.log(`  ✓ ${moduleKey}.${itemKey}:`, {
+                      full: dbItem.full,
+                      view: dbItem.view,
+                      create: dbItem.create,
+                      edit: dbItem.edit,
+                      delete: dbItem.delete
+                    })
+                  }
+                })
               }
             }
           })
           
-          setPermissionModules(mergedPermissions)
+          console.log('✅ Database permissions applied')
+          setPermissionModules(cleanPermissions)
         } else {
+          console.log('⚠️ No permissions_json in database, using clean slate')
+          setPermissionModules(cleanPermissions)
         }
         
         return
@@ -390,13 +449,8 @@ export default function EditRolePage() {
       
       // Try to save to Supabase
       try {
-        const response = await fetch(`/api/admin/roles/${roleId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(roleData)
-        })
-
-        const data = await response.json()
+        const { apiPut } = await import('@/app/lib/utils/api-client')
+        const data = await apiPut(`/api/admin/roles/${roleId}`, roleData)
         
         if (data.success) {
           alert(`✅ Role "${roleName}" updated successfully!\n\nChanges saved:\n- Name: ${roleName}\n- Description: ${description}\n- Manufacturing Role: ${isManufacturingRole ? 'Yes' : 'No'}\n- Permissions: Updated`)

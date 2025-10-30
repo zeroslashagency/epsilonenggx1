@@ -22,6 +22,9 @@ export default function AddUsersPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [showEmployeeForm, setShowEmployeeForm] = useState(false)
   
+  // Available roles from database
+  const [availableRoles, setAvailableRoles] = useState<string[]>(['Operator'])
+  
   // Manual entry form state
   const [formData, setFormData] = useState({
     fullName: '',
@@ -45,10 +48,52 @@ export default function AddUsersPage() {
   })
 
   useEffect(() => {
+    console.log('🚀 Component mounted, calling fetchRoles...')
+    fetchRoles()
     if (activeMethod === 'employees') {
       fetchEmployees()
     }
   }, [activeMethod])
+
+  const fetchRoles = async () => {
+    try {
+      console.log('🔍 Fetching roles from API...')
+      
+      // Add delay to ensure auth is ready
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      const data = await apiGet('/api/admin/roles')
+      console.log('📦 Raw API response:', data)
+      
+      if (data.success && data.data) {
+        let roles = []
+        
+        // Handle different response formats
+        if (Array.isArray(data.data.roles)) {
+          roles = data.data.roles
+        } else if (Array.isArray(data.data)) {
+          roles = data.data
+        } else {
+          console.error('❌ Unexpected data format:', data.data)
+          return
+        }
+        
+        const roleNames = roles.map((r: any) => r.name)
+        console.log('✅ Extracted role names:', roleNames)
+        setAvailableRoles(roleNames)
+      } else {
+        console.error('❌ API call failed:', data)
+        // Retry once if failed
+        console.log('🔄 Retrying in 1 second...')
+        setTimeout(() => fetchRoles(), 1000)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching roles:', error)
+      // Retry once if failed
+      console.log('🔄 Retrying in 1 second...')
+      setTimeout(() => fetchRoles(), 1000)
+    }
+  }
 
   const fetchEmployees = async () => {
     setLoading(true)
@@ -328,9 +373,9 @@ export default function AddUsersPage() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
                   >
-                    <option value="Admin">Admin</option>
-                    <option value="Operator">Operator</option>
-                    <option value="Test User">Test User</option>
+                    {availableRoles.map(role => (
+                      <option key={role} value={role}>{role}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -560,9 +605,9 @@ export default function AddUsersPage() {
                       onChange={(e) => setEmployeeFormData({ ...employeeFormData, role: e.target.value })}
                       className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
                     >
-                      <option value="Admin">Admin</option>
-                      <option value="Operator">Operator</option>
-                      <option value="Test User">Test User</option>
+                      {availableRoles.map(role => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
                     </select>
                   </div>
 

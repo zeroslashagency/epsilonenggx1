@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Save, X } from 'lucide-react'
+import { apiGet } from '@/app/lib/utils/api-client'
 
 interface EditableRoleSectionProps {
   isEditing: boolean
@@ -22,6 +23,24 @@ export function EditableRoleSection({
   onCancel,
   onSave
 }: EditableRoleSectionProps) {
+  const [availableRoles, setAvailableRoles] = useState<string[]>(['Operator'])
+
+  useEffect(() => {
+    fetchRoles()
+  }, [])
+
+  const fetchRoles = async () => {
+    try {
+      const data = await apiGet('/api/admin/roles')
+      if (data.success && data.data) {
+        const roles = Array.isArray(data.data.roles) ? data.data.roles : data.data
+        const roleNames = roles.map((r: any) => r.name)
+        setAvailableRoles(roleNames)
+      }
+    } catch (error) {
+      console.error('Error fetching roles:', error)
+    }
+  }
   return (
     <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
@@ -76,11 +95,9 @@ export function EditableRoleSection({
             }`}
           >
             <option value="">Select role</option>
-            <option value="Super Admin">Super Admin</option>
-            <option value="Admin">Admin</option>
-            <option value="Operator">Operator</option>
-            <option value="Monitor">Monitor</option>
-            <option value="Attendance">Attendance</option>
+            {availableRoles.map(role => (
+              <option key={role} value={role}>{role}</option>
+            ))}
             <option value="Test User">Test User</option>
           </select>
           <p className="text-xs text-[#95AAC9] mt-2">

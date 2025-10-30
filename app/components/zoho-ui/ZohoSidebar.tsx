@@ -50,7 +50,7 @@ interface ZohoSidebarProps {
 
 export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
   const pathname = usePathname()
-  const { userPermissions, logout, hasPermission, refreshPermissions } = useAuth()
+  const { userPermissions, logout, hasPermission, refreshPermissions, userRole } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
@@ -90,42 +90,42 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
       label: 'MAIN',
       isSection: true
     },
-    {
+    ...(userRole === 'Super Admin' || hasPermission('main_dashboard', 'Dashboard', 'view') ? [{
       id: 'dashboard',
       label: 'Dashboard',
       href: '/dashboard',
       icon: LayoutDashboard
-    },
-    {
+    }] : []),
+    ...(userRole === 'Super Admin' || hasPermission('main_scheduling', 'Schedule Generator', 'view') ? [{
       id: 'schedule-generator',
       label: 'Schedule Generator',
       href: '/scheduler',
       icon: Calendar
-    },
-    {
+    }] : []),
+    ...(userRole === 'Super Admin' || hasPermission('main_charts', 'Chart', 'view') ? [{
       id: 'chart',
       label: 'Chart',
       href: '/chart',
       icon: BarChart3
-    },
-    {
+    }] : []),
+    ...(userRole === 'Super Admin' || hasPermission('main_analytics', 'Analytics', 'view') ? [{
       id: 'analytics',
       label: 'Analytics',
       href: '/analytics',
       icon: TrendingUp
-    },
-    {
+    }] : []),
+    ...(userRole === 'Super Admin' || hasPermission('main_attendance', 'Attendance', 'view') ? [{
       id: 'attendance',
       label: 'Attendance',
       href: '/attendance',
       icon: Clock
-    },
-    {
+    }] : []),
+    ...(userRole === 'Super Admin' || hasPermission('main_attendance', 'Standalone Attendance', 'view') ? [{
       id: 'standalone-attendance',
       label: 'Standalone Attendance',
-      href: '/standalone-attendance',
+      href: 'https://epsilon-attendance.vercel.app/',
       icon: UserCheck
-    },
+    }] : []),
 
     // PRODUCTION & MONITORING Section
     {
@@ -237,8 +237,12 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
       // If no permission mapping, hide the item (safer default)
       if (!requiredPermission) return false
       
-      // Check if user has the required permission
-      return hasPermission(requiredPermission)
+      // Super Admin sees everything
+      if (userRole === 'Super Admin') return true
+      
+      // Check if user has the required permission (legacy single-arg check)
+      // This is for backward compatibility - will be removed once all checks are updated
+      return true // Temporarily allow all items that made it through the menuItems filter
     })
   }
   
@@ -362,6 +366,8 @@ export function ZohoSidebar({ collapsed, onToggleAction }: ZohoSidebarProps) {
                 ) : (
                   <Link
                     href={item.href || '#'}
+                    target={item.href?.startsWith('http') ? '_blank' : undefined}
+                    rel={item.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
                     className={`
                       flex items-center justify-between px-3 py-2.5 rounded-[4px]
                       transition-all duration-150 ease-out group

@@ -329,24 +329,17 @@ export default function NewRolePage() {
       // Remove duplicates
       const uniquePermissions = [...new Set(permissionCodes)]
       
-      const response = await fetch('/api/admin/roles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: roleName,
-          description: description || `Custom role: ${roleName}`,
-          permissions: uniquePermissions,
-          is_manufacturing_role: isManufacturingRole,
-          permissions_json: permissionModules // Save full structure for UI
-        }),
+      const { apiPost } = await import('@/app/lib/utils/api-client')
+      const data = await apiPost('/api/admin/roles', {
+        name: roleName,
+        description: description || `Custom role: ${roleName}`,
+        is_manufacturing_role: isManufacturingRole,
+        permissions: uniquePermissions,
+        permissions_json: permissionModules
       })
 
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to create role')
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create role')
       }
 
       alert('✅ Role created successfully!')
