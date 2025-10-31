@@ -72,7 +72,8 @@
     "vaul": "^0.9.9",
     "xlsx": "^0.18.5",
     "xlsx-js-style": "^1.2.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
@@ -80,6 +81,7 @@
     "@types/node": "^22",
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
+    "@types/zxcvbn": "^4.4.5",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",

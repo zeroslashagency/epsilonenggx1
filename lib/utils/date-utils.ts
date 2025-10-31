@@ -75,43 +75,63 @@ export function calculateDateRange(
       break
       
     case 'month':
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-      fromDateParam = monthStart.toISOString().split('T')[0]
-      toDateParam = monthEnd.toISOString().split('T')[0]
+      // Extract year and month from IST date string to avoid timezone conversion
+      const istDateStr = istDate.toISOString().split('T')[0] // "2025-10-31"
+      const [year, month] = istDateStr.split('-').map(Number)
+      const monthStartDate = new Date(Date.UTC(year, month - 1, 1))
+      const monthEndDate = new Date(Date.UTC(year, month, 0))
+      fromDateParam = monthStartDate.toISOString().split('T')[0]
+      toDateParam = monthEndDate.toISOString().split('T')[0]
       break
       
     case 'prev-month':
-      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
-      fromDateParam = prevMonthStart.toISOString().split('T')[0]
-      toDateParam = prevMonthEnd.toISOString().split('T')[0]
+      // Extract year and month from IST date string to avoid timezone conversion
+      const istDateStrPrev = istDate.toISOString().split('T')[0]
+      const [yearPrev, monthPrev] = istDateStrPrev.split('-').map(Number)
+      const prevMonthStartDate = new Date(Date.UTC(yearPrev, monthPrev - 2, 1))
+      const prevMonthEndDate = new Date(Date.UTC(yearPrev, monthPrev - 1, 0))
+      fromDateParam = prevMonthStartDate.toISOString().split('T')[0]
+      toDateParam = prevMonthEndDate.toISOString().split('T')[0]
       break
       
     case 'quarter':
-      const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
-      fromDateParam = quarterStart.toISOString().split('T')[0]
-      toDateParam = now.toISOString().split('T')[0]
+      // Extract year and month from IST date string
+      const istDateStrQ = istDate.toISOString().split('T')[0]
+      const [yearQ, monthQ] = istDateStrQ.split('-').map(Number)
+      const quarterStartMonth = Math.floor((monthQ - 1) / 3) * 3
+      const quarterStartDate = new Date(Date.UTC(yearQ, quarterStartMonth, 1))
+      fromDateParam = quarterStartDate.toISOString().split('T')[0]
+      toDateParam = istDateStrQ
       break
       
     case 'prev-quarter':
-      const prevQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1)
-      const prevQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0)
-      fromDateParam = prevQuarterStart.toISOString().split('T')[0]
-      toDateParam = prevQuarterEnd.toISOString().split('T')[0]
+      // Extract year and month from IST date string
+      const istDateStrPQ = istDate.toISOString().split('T')[0]
+      const [yearPQ, monthPQ] = istDateStrPQ.split('-').map(Number)
+      const prevQuarterStartMonth = Math.floor((monthPQ - 1) / 3) * 3 - 3
+      const prevQuarterStartDate = new Date(Date.UTC(yearPQ, prevQuarterStartMonth, 1))
+      const prevQuarterEndDate = new Date(Date.UTC(yearPQ, prevQuarterStartMonth + 3, 0))
+      fromDateParam = prevQuarterStartDate.toISOString().split('T')[0]
+      toDateParam = prevQuarterEndDate.toISOString().split('T')[0]
       break
       
     case 'year':
-      const yearStart = new Date(now.getFullYear(), 0, 1)
-      fromDateParam = yearStart.toISOString().split('T')[0]
-      toDateParam = now.toISOString().split('T')[0]
+      // Extract year from IST date string
+      const istDateStrY = istDate.toISOString().split('T')[0]
+      const [yearY] = istDateStrY.split('-').map(Number)
+      const yearStartDate = new Date(Date.UTC(yearY, 0, 1))
+      fromDateParam = yearStartDate.toISOString().split('T')[0]
+      toDateParam = istDateStrY
       break
       
     case 'prev-year':
-      const prevYearStart = new Date(now.getFullYear() - 1, 0, 1)
-      const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31)
-      fromDateParam = prevYearStart.toISOString().split('T')[0]
-      toDateParam = prevYearEnd.toISOString().split('T')[0]
+      // Extract year from IST date string
+      const istDateStrPY = istDate.toISOString().split('T')[0]
+      const [yearPY] = istDateStrPY.split('-').map(Number)
+      const prevYearStartDate = new Date(Date.UTC(yearPY - 1, 0, 1))
+      const prevYearEndDate = new Date(Date.UTC(yearPY - 1, 11, 31))
+      fromDateParam = prevYearStartDate.toISOString().split('T')[0]
+      toDateParam = prevYearEndDate.toISOString().split('T')[0]
       break
       
     case 'custom':

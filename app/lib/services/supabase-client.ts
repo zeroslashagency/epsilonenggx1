@@ -34,29 +34,29 @@ declare global {
  * const { data } = await supabase.from('roles').select()
  */
 export function getSupabaseClient(): SupabaseClient {
-  if (!globalThis.__supabaseInstance) {
-    // Validate at runtime when client is actually needed
-    if (!supabaseUrl) {
-      throw new Error(
-        '❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.'
-      )
-    }
-    if (!supabaseAnonKey) {
-      throw new Error(
-        '❌ NEXT_PUBLIC_SUPABASE_ANON_KEY is required. Please check your .env.local file.'
-      )
-    }
-    
-    globalThis.__supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-        storageKey: 'epsilon-auth'
-      }
-    })
+  // CRITICAL FIX: Always create fresh client to avoid caching issues
+  // The singleton pattern was causing stale connections that returned 0 results
+  // Validate at runtime when client is actually needed
+  if (!supabaseUrl) {
+    throw new Error(
+      '❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.'
+    )
   }
-  return globalThis.__supabaseInstance
+  if (!supabaseAnonKey) {
+    throw new Error(
+      '❌ NEXT_PUBLIC_SUPABASE_ANON_KEY is required. Please check your .env.local file.'
+    )
+  }
+  
+  // Create fresh client each time to ensure latest data
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+      storageKey: 'epsilon-auth'
+    }
+  })
 }
 
 /**

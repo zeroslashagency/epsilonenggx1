@@ -60,12 +60,31 @@ export async function GET(request: NextRequest) {
     }
     
     // First, get total count for pagination
-    // Use DATE cast to match database's native date format (no timezone)
+    // CRITICAL: Always use naive timestamp format (no 'T' separator) to prevent timezone conversion
+    // Database stores timestamps in IST without timezone info, so we must query the same way
+    const gteValue = fromDate && toDate 
+      ? `${fromDate} 00:00:00` 
+      : startDate.toISOString().replace('T', ' ').substring(0, 19)
+    
+    const lteValue = fromDate && toDate 
+      ? `${toDate} 23:59:59` 
+      : endDate.toISOString().replace('T', ' ').substring(0, 19)
+    
+    console.log('🔍 DEBUG Query values:', { 
+      fromDate, 
+      toDate, 
+      gteValue, 
+      lteValue,
+      hasFromDate: !!fromDate,
+      hasToDate: !!toDate
+    })
+    
     let countQuery = supabase
       .from('employee_raw_logs')
-      .select('*', { count: 'exact', head: true })
-      .gte('log_date', fromDate && toDate ? `${fromDate} 00:00:00` : startDate.toISOString())
-      .lte('log_date', fromDate && toDate ? `${toDate} 23:59:59` : endDate.toISOString())
+      .select('id', { count: 'exact', head: true })
+      .gte('log_date', gteValue)
+      .lte('log_date', lteValue)
+      .limit(100000) // Ensure count query has no artificial limit
     
     if (employeeCode) {
       countQuery = countQuery.eq('employee_code', employeeCode)
@@ -95,9 +114,10 @@ export async function GET(request: NextRequest) {
       let query = supabase
         .from('employee_raw_logs')
         .select('*')
-        .gte('log_date', fromDate && toDate ? `${fromDate} 00:00:00` : startDate.toISOString())
-        .lte('log_date', fromDate && toDate ? `${toDate} 23:59:59` : endDate.toISOString())
+        .gte('log_date', gteValue)
+        .lte('log_date', lteValue)
         .order('log_date', { ascending: false })
+        .limit(batchSize)
         .range(currentOffset, currentOffset + batchSize - 1)
       
       // Add employee filter if specified
@@ -116,6 +136,7 @@ export async function GET(request: NextRequest) {
       
       if (batchLogs && batchLogs.length > 0) {
         allLogs = allLogs.concat(batchLogs)
+        console.log(`📦 [BATCH] Fetched ${batchLogs.length} records (offset: ${currentOffset}, total so far: ${allLogs.length})`)
         currentOffset += batchSize
         hasMore = batchLogs.length === batchSize // Continue if we got a full batch
       } else {
@@ -127,7 +148,8 @@ export async function GET(request: NextRequest) {
     
     console.log('📊 [GET-ATTENDANCE] Query results:', { 
       recordsFound: attendanceLogs?.length || 0, 
-      totalCount, 
+      totalCount,
+      batchesFetched: Math.ceil((attendanceLogs?.length || 0) / batchSize),
       dateRange: { start: startDate.toISOString(), end: endDate.toISOString() },
       sampleRecord: attendanceLogs?.[0] 
     })
