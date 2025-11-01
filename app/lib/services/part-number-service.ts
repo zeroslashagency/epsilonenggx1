@@ -1,6 +1,6 @@
-import { getSupabaseClient } from './supabase-client'
+import { getSupabaseBrowserClient } from './supabase-client'
 
-const supabase = getSupabaseClient()
+const supabase = typeof window !== 'undefined' ? getSupabaseBrowserClient() : null as any
 
 export interface PartNumber {
   partnumber: string

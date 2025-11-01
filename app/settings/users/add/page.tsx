@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, Mail, Shield, ArrowLeft, Plus, UserPlus, Users, ChevronRight, Zap, Edit, RefreshCw } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { User, Mail, Shield, ChevronLeft, Save, Loader2, UserPlus, Zap, Edit, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ZohoLayout } from '../../../components/zoho-ui'
 import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 interface Employee {
   id: string
@@ -15,7 +16,7 @@ interface Employee {
   role: string
 }
 
-export default function AddUsersPage() {
+function AddUsersPage() {
   const router = useRouter()
   const [activeMethod, setActiveMethod] = useState<'manual' | 'employees'>('employees')
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -678,3 +679,14 @@ export default function AddUsersPage() {
     </ZohoLayout>
   )
 }
+
+// Wrap with ProtectedRoute to require authentication
+function ProtectedAddUsersPage() {
+  return (
+    <ProtectedRoute requireRole={['Super Admin', 'Admin']}>
+      <AddUsersPage />
+    </ProtectedRoute>
+  )
+}
+
+export default ProtectedAddUsersPage

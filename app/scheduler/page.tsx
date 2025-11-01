@@ -149,13 +149,8 @@ export default function SchedulerPage() {
 
 
   // Redirect if not authenticated
-  useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated')
-    if (!isAuthenticated || isAuthenticated !== 'true') {
-      router.push('/auth')
-      return
-    }
-  }, [router])
+  // Authentication guard - REMOVED to prevent redirect loop
+  // Auth protection handled by auth context
 
   // Load saved advanced settings on mount
   useEffect(() => {

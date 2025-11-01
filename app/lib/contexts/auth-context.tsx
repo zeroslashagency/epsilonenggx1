@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSupabaseClient } from '../services/supabase-client'
+import { getSupabaseBrowserClient } from '../services/supabase-client'
 
-const supabase = getSupabaseClient()
+const supabase = getSupabaseBrowserClient()
 
 interface PermissionModule {
   name: string
@@ -49,6 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (profileError || !profile) {
         console.error('❌ Error fetching profile:', profileError)
+        // Don't block - set defaults and continue
+        setUserRole('User')
+        setUserPermissions({})
         return
       }
       
@@ -71,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (roleError) {
         console.error('❌ Error fetching role permissions:', roleError)
+        // Don't block - set empty permissions and continue
         setUserPermissions({})
         return
       }
@@ -127,6 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchUserProfile(session.user.id)
       }
     } catch (error) {
+      console.error('❌ Error in fetchUserProfile:', error)
+      // Don't block - set defaults
+      setUserRole('User')
+      setUserPermissions({})
     }
   }
 
@@ -142,8 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('isAuthenticated', 'true')
           localStorage.setItem('userEmail', session.user.email || "")
           
-          // Fetch user profile and permissions
-          await fetchUserProfile(session.user.id)
+          // Fetch user profile and permissions (don't await - load in background)
+          fetchUserProfile(session.user.id).catch(err => {
+            console.error('Background profile fetch failed:', err)
+          })
         } else {
           // Clear any stale local storage if no valid session
           localStorage.removeItem('isAuthenticated')
@@ -165,10 +175,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       if (event === 'SIGNED_OUT' || !session) {
         setIsAuthenticated(false)
         setUserEmail(null)
+        setUserRole(null)
+        setUserPermissions({})
         localStorage.removeItem('isAuthenticated')
         localStorage.removeItem('userEmail')
         localStorage.removeItem('sb-sxnaopzgaddvziplrlbe-auth-token')
@@ -177,6 +189,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserEmail(session.user?.email || null)
         localStorage.setItem('isAuthenticated', 'true')
         localStorage.setItem('userEmail', session.user?.email || '')
+        // Fetch user profile and permissions on sign in (don't await)
+        fetchUserProfile(session.user.id).catch(err => {
+          console.error('Background profile fetch failed:', err)
+        })
       }
     })
 
@@ -200,8 +216,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('isAuthenticated', 'true')
         localStorage.setItem('userEmail', data.user.email || email)
         
-        // Fetch user profile and permissions
-        await fetchUserProfile(data.user.id)
+        // Fetch user profile and permissions (don't await - load in background)
+        fetchUserProfile(data.user.id).catch(err => {
+          console.error('Background profile fetch failed:', err)
+        })
       }
     } catch (error: any) {
       throw error

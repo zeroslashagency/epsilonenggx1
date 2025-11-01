@@ -44,6 +44,12 @@ export default function EpsilonLogoParticles() {
 
     function createTextImage() {
       if (!ctx || !canvas || !img.complete) return 0
+      
+      // Ensure canvas has valid dimensions
+      if (canvas.width === 0 || canvas.height === 0) {
+        console.warn('Canvas has zero dimensions, skipping particle initialization')
+        return 0
+      }
 
       ctx.fillStyle = 'white'
       ctx.save()

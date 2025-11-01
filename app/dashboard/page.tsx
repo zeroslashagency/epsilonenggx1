@@ -166,13 +166,9 @@ export default function DashboardPage() {
     }
   }
 
-  // Authentication guard
-  useEffect(() => {
-    if (!auth.isLoading && !auth.isAuthenticated) {
-      router.push('/auth')
-    }
-  }, [auth.isAuthenticated, auth.isLoading, router])
-
+  // Authentication guard - REMOVED to prevent redirect loop
+  // Auth protection handled by auth-context
+  
   useEffect(() => {
     let isMounted = true
     
@@ -255,20 +251,23 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Show loading while checking authentication
+  // Show loading while checking auth (single check, not duplicate)
   if (auth.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <RefreshCw className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Checking authentication...</p>
         </div>
       </div>
     )
   }
-
-  // Don't render if not authenticated
+  
+  // Redirect to auth if not authenticated (without causing loop)
   if (!auth.isAuthenticated) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth'
+    }
     return null
   }
 

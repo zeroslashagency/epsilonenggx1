@@ -3,14 +3,14 @@
  * Handles authenticated API requests with automatic token management
  */
 
-import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
 
 /**
  * Make an authenticated API request
  * Automatically includes JWT token from Supabase session
  */
 export async function apiClient(url: string, options: RequestInit = {}) {
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseBrowserClient()
   const { data: { session } } = await supabase.auth.getSession()
   
   const headers: Record<string, string> = {
@@ -32,10 +32,10 @@ export async function apiClient(url: string, options: RequestInit = {}) {
     headers
   })
   
-  // Handle 401 Unauthorized - redirect to login
+  // Handle 401 Unauthorized - redirect to auth
   if (!response.ok && response.status === 401) {
     if (typeof window !== 'undefined') {
-      window.location.href = '/login'
+      window.location.href = '/auth'
     }
     throw new Error('Unauthorized - please login')
   }

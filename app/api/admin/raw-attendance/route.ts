@@ -2,8 +2,14 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
+  // ✅ SECURITY FIX: Require authentication and permission
+  const authResult = await requirePermission(request, 'view_attendance')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseClient()
     const searchParams = request.nextUrl.searchParams
@@ -117,6 +123,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // ✅ SECURITY FIX: Require authentication and permission
+  const authResult = await requirePermission(request, 'edit_attendance')
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const supabase = getSupabaseClient()
     const { action, employeeCode, date, calculationMethod } = await request.json()

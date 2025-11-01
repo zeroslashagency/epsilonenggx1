@@ -12,6 +12,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+// Singleton instances to prevent multiple GoTrueClient warnings
+let clientInstance: SupabaseClient | null = null
+let browserClientInstance: SupabaseClient | null = null
+let adminClientInstance: SupabaseClient | null = null
+
 // Note: Validation is deferred until client creation to support build-time imports
 // Environment variables may not be available during Next.js build process
 
@@ -25,17 +30,18 @@ declare global {
 }
 
 /**
- * Get client-side Supabase instance (anon key)
- * Safe for use in browser/client components
+ * Get server-side Supabase instance (anon key)
+ * For use in API routes and server components
+ * Does NOT persist sessions
  * 
  * @returns {SupabaseClient} Singleton Supabase client instance
- * @example
- * const supabase = getSupabaseClient()
- * const { data } = await supabase.from('roles').select()
  */
 export function getSupabaseClient(): SupabaseClient {
-  // CRITICAL FIX: Always create fresh client to avoid caching issues
-  // The singleton pattern was causing stale connections that returned 0 results
+  // Return existing instance if available
+  if (clientInstance) {
+    return clientInstance
+  }
+  
   // Validate at runtime when client is actually needed
   if (!supabaseUrl) {
     throw new Error(
@@ -48,15 +54,52 @@ export function getSupabaseClient(): SupabaseClient {
     )
   }
   
-  // Create fresh client each time to ensure latest data
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  // Create and cache instance (server-side config)
+  clientInstance = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-      storageKey: 'epsilon-auth'
-    }
+      persistSession: false, // Disable session persistence for server-side
+      autoRefreshToken: false,
+    },
   })
+  
+  return clientInstance
+}
+
+/**
+ * Get browser-side Supabase instance (anon key)
+ * For use in client components and auth context
+ * PERSISTS sessions to localStorage
+ * 
+ * @returns {SupabaseClient} Singleton browser Supabase client
+ */
+export function getSupabaseBrowserClient(): SupabaseClient {
+  // Return existing instance if available
+  if (browserClientInstance) {
+    return browserClientInstance
+  }
+  
+  // Validate at runtime
+  if (!supabaseUrl) {
+    throw new Error(
+      '❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.'
+    )
+  }
+  if (!supabaseAnonKey) {
+    throw new Error(
+      '❌ NEXT_PUBLIC_SUPABASE_ANON_KEY is required. Please check your .env.local file.'
+    )
+  }
+  
+  // Create and cache instance (browser-side config)
+  browserClientInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true, // ✅ Persist sessions to localStorage
+      autoRefreshToken: true, // ✅ Auto-refresh tokens
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    },
+  })
+  
+  return browserClientInstance
 }
 
 /**
@@ -97,13 +140,16 @@ export function getSupabaseAdminClient(): SupabaseClient {
 /**
  * Default client export for backward compatibility
  * Note: This creates the client lazily on first access to avoid build-time errors
- * @deprecated Use getSupabaseClient() instead for better control
+ * @deprecated Use getSupabaseBrowserClient() for client-side or getSupabaseClient() for server-side
  */
 let _supabaseInstance: SupabaseClient | null = null
 export const supabase = new Proxy({} as SupabaseClient, {
   get(target, prop) {
     if (!_supabaseInstance) {
-      _supabaseInstance = getSupabaseClient()
+      // Use browser client if in browser context, otherwise server client
+      _supabaseInstance = typeof window !== 'undefined' 
+        ? getSupabaseBrowserClient() 
+        : getSupabaseClient()
     }
     return (_supabaseInstance as any)[prop]
   }

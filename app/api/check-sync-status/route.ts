@@ -2,8 +2,14 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireAuth } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
+  // ✅ SECURITY FIX: Require authentication
+  const authResult = await requireAuth(request)
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+
   try {
     const requestId = request.nextUrl.searchParams.get('requestId')
     

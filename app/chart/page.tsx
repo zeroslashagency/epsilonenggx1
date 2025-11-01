@@ -64,12 +64,8 @@ export default function ChartPage() {
   const [timelineView, setTimelineView] = useState<'hour' | 'day' | 'week' | 'month'>('day')
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
-  // Authentication guard
-  useEffect(() => {
-    if (!auth.isLoading && !auth.isAuthenticated) {
-      router.push('/auth')
-    }
-  }, [auth.isAuthenticated, auth.isLoading, router])
+  // Authentication guard - REMOVED to prevent redirect loop
+  // Auth protection handled by checking isLoading and isAuthenticated below
 
   useEffect(() => {
     fetchMetrics()
@@ -171,8 +167,23 @@ export default function ChartPage() {
     )
   }
 
-  // Don't render if not authenticated
+  // Show loading while checking auth
+  if (auth.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // Redirect to auth if not authenticated (without causing loop)
   if (!auth.isAuthenticated) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth'
+    }
     return null
   }
 

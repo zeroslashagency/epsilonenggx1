@@ -27,16 +27,23 @@ export default function AuthPage() {
 
   // Redirect if already authenticated and check for reset parameters
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/")
-    }
-    
-    // Check URL parameters for password reset
+    // Check URL parameters for password reset first
     const urlParams = new URLSearchParams(window.location.search)
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
     
     if (urlParams.get('reset') === 'true' || hashParams.has('access_token')) {
       setCurrentView('reset')
+      return
+    }
+    
+    // Only redirect if authenticated and not on reset flow
+    if (isAuthenticated) {
+      const redirectTo = urlParams.get('redirectTo')
+      if (redirectTo && redirectTo !== '/' && redirectTo !== '/auth') {
+        router.replace(redirectTo)
+      } else {
+        router.replace('/dashboard')
+      }
     }
   }, [isAuthenticated, router])
 
@@ -98,39 +105,35 @@ export default function AuthPage() {
   }
 
   if (isAuthenticated) {
-    return null // Will redirect via useEffect
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-green-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" style={{
-      backgroundImage: `
-        radial-gradient(circle at 1px 1px, rgba(0,0,0,0.1) 1px, transparent 0)
-      `,
-      backgroundSize: '20px 20px'
-    }}>
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       {/* Main Login Card */}
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex min-h-[600px]" style={{
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+      <div className="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]" style={{
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
       }}>
-        {/* Left Panel - Interactive Logo Particles */}
-        <div className="w-2/5 bg-black relative">
+        {/* Left Panel - Interactive Logo Particles (Hidden on mobile) */}
+        <div className="hidden md:block md:w-2/5 bg-black relative">
           <EpsilonLogoParticles />
         </div>
 
         {/* Right Panel - Login Form */}
-        <div className="w-3/5 bg-gray-800 p-12 flex flex-col justify-center relative">
-          {/* Sign In Button (Top Right) */}
-          <Button
-            variant="outline"
-            className="absolute top-6 right-6 bg-green-400 hover:bg-green-500 text-gray-800 border-green-400 rounded-full px-6 py-2 text-sm font-medium"
-          >
-            Sign In
-          </Button>
+        <div className="w-full md:w-3/5 bg-gray-800 p-6 sm:p-8 md:p-12 flex flex-col justify-center relative">
+          {/* Sign In Button (Top Right) - Removed duplicate, keeping only footer button */}
 
           {/* Main Content */}
-          <div className="max-w-md relative z-10">
+          <div className="w-full max-w-md mx-auto relative z-10">
             {/* Title */}
-            <h1 className="text-4xl font-bold text-white mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6 sm:mb-8">
               {currentView === 'login' && 'Sign In'}
               {currentView === 'forgot' && 'Reset Password'}
               {currentView === 'reset' && 'Set New Password'}
@@ -138,24 +141,24 @@ export default function AuthPage() {
 
             {/* Messages */}
             {error && (
-              <Alert className="border-red-400 bg-red-900/20 rounded-lg mb-6 shadow-lg" style={{
+              <Alert className="border-red-400 bg-red-900/20 rounded-lg mb-4 sm:mb-6 shadow-lg" style={{
                 boxShadow: '0 10px 25px -5px rgba(239, 68, 68, 0.1), 0 0 0 1px rgba(239, 68, 68, 0.05)'
               }}>
-                <AlertDescription className="text-red-300 text-sm">{error}</AlertDescription>
+                <AlertDescription className="text-red-300 text-xs sm:text-sm">{error}</AlertDescription>
               </Alert>
             )}
             
             {success && (
-              <Alert className="border-green-400 bg-green-900/20 rounded-lg mb-6 shadow-lg" style={{
+              <Alert className="border-green-400 bg-green-900/20 rounded-lg mb-4 sm:mb-6 shadow-lg" style={{
                 boxShadow: '0 10px 25px -5px rgba(34, 197, 94, 0.1), 0 0 0 1px rgba(34, 197, 94, 0.05)'
               }}>
-                <AlertDescription className="text-green-300 text-sm">{success}</AlertDescription>
+                <AlertDescription className="text-green-300 text-xs sm:text-sm">{success}</AlertDescription>
               </Alert>
             )}
 
             {/* Login Form */}
             {currentView === 'login' && (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {/* Email Field */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-300 uppercase tracking-wider">
@@ -167,7 +170,7 @@ export default function AuthPage() {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     placeholder="Enter your email address"
                     required
-                    className="h-12 bg-transparent border-0 border-b border-gray-600 rounded-none px-0 text-gray-200 placeholder:text-gray-500 focus:border-green-400 focus:ring-0 focus:outline-none"
+                    className="h-12 sm:h-14 bg-gray-700/30 border-2 border-gray-600/50 rounded-full px-4 sm:px-6 text-sm sm:text-base text-gray-100 placeholder:text-gray-400 focus:border-green-400 focus:bg-gray-700/40 focus:ring-0 focus:outline-none transition-all duration-300"
                     disabled={loading}
                   />
                 </div>
@@ -184,14 +187,14 @@ export default function AuthPage() {
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                       placeholder="Enter your password"
                       required
-                      className="h-12 bg-transparent border-0 border-b border-gray-600 rounded-none px-0 pr-12 text-gray-200 placeholder:text-gray-500 focus:border-green-400 focus:ring-0 focus:outline-none"
+                      className="h-12 sm:h-14 bg-gray-700/30 border-2 border-gray-600/50 rounded-full px-4 sm:px-6 pr-12 sm:pr-14 text-sm sm:text-base text-gray-100 placeholder:text-gray-400 focus:border-green-400 focus:bg-gray-700/40 focus:ring-0 focus:outline-none transition-all duration-300"
                       disabled={loading}
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 p-0 text-gray-400 hover:text-gray-200"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 p-0 text-gray-400 hover:text-gray-200 rounded-full"
                       onClick={() => setShowPassword(!showPassword)}
                       disabled={loading}
                     >
@@ -217,20 +220,21 @@ export default function AuthPage() {
                 </div>
 
                 {/* Sign In Button */}
-                <Button
+                <button
                   type="submit"
-                  className="w-full h-12 bg-green-400 hover:bg-green-500 text-gray-800 font-bold rounded-full transition-all duration-200 hover:shadow-lg mt-8"
+                  className="w-full h-12 sm:h-14 bg-green-400 hover:bg-green-500 font-bold rounded-full transition-all duration-200 hover:shadow-xl shadow-lg mt-6 sm:mt-8 disabled:opacity-50 text-sm sm:text-base"
+                  style={{ color: '#000000 !important' }}
                   disabled={loading}
                 >
                   {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
+                    <span style={{ color: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" style={{ color: '#000000' }} />
+                      <span style={{ color: '#000000' }}>Signing in...</span>
+                    </span>
                   ) : (
-                    "SIGN IN"
+                    <span style={{ color: '#000000' }}>SIGN IN</span>
                   )}
-                </Button>
+                </button>
               </form>
             )}
 
@@ -248,26 +252,27 @@ export default function AuthPage() {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     placeholder="Enter your email address"
                     required
-                    className="h-12 bg-transparent border-0 border-b border-gray-600 rounded-none px-0 text-gray-200 placeholder:text-gray-500 focus:border-green-400 focus:ring-0 focus:outline-none"
+                    className="h-14 bg-gray-700/30 border-2 border-gray-600/50 rounded-full px-6 text-gray-100 placeholder:text-gray-400 focus:border-green-400 focus:bg-gray-700/40 focus:ring-0 focus:outline-none transition-all duration-300"
                     disabled={resetLoading}
                   />
                 </div>
 
                 {/* Send Reset Email Button */}
-                <Button
+                <button
                   type="submit"
-                  className="w-full h-12 bg-green-400 hover:bg-green-500 text-gray-800 font-bold rounded-full transition-all duration-200 hover:shadow-lg mt-8"
+                  className="w-full h-12 bg-green-400 hover:bg-green-500 font-bold rounded-full transition-all duration-200 hover:shadow-xl shadow-lg mt-8 disabled:opacity-50"
+                  style={{ color: '#000000' }}
                   disabled={resetLoading}
                 >
                   {resetLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending...
-                    </>
+                    <span style={{ color: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" style={{ color: '#000000' }} />
+                      <span style={{ color: '#000000' }}>Sending...</span>
+                    </span>
                   ) : (
-                    "SEND RESET EMAIL"
+                    <span style={{ color: '#000000' }}>SEND RESET EMAIL</span>
                   )}
-                </Button>
+                </button>
 
                 {/* Back to Login */}
                 <div className="text-center">
@@ -297,7 +302,7 @@ export default function AuthPage() {
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
                       placeholder="Enter your new password"
                       required
-                      className="h-12 bg-transparent border-0 border-b border-gray-600 rounded-none px-0 pr-12 text-gray-200 placeholder:text-gray-500 focus:border-green-400 focus:ring-0 focus:outline-none"
+                      className="h-14 bg-gray-700/30 border-2 border-gray-600/50 rounded-full px-6 pr-14 text-gray-100 placeholder:text-gray-400 focus:border-green-400 focus:bg-gray-700/40 focus:ring-0 focus:outline-none transition-all duration-300"
                       disabled={resetLoading}
                     />
                     <Button
@@ -329,7 +334,7 @@ export default function AuthPage() {
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm your new password"
                       required
-                      className="h-12 bg-transparent border-0 border-b border-gray-600 rounded-none px-0 pr-12 text-gray-200 placeholder:text-gray-500 focus:border-green-400 focus:ring-0 focus:outline-none"
+                      className="h-14 bg-gray-700/30 border-2 border-gray-600/50 rounded-full px-6 pr-14 text-gray-100 placeholder:text-gray-400 focus:border-green-400 focus:bg-gray-700/40 focus:ring-0 focus:outline-none transition-all duration-300"
                       disabled={resetLoading}
                     />
                     <Button
@@ -350,20 +355,21 @@ export default function AuthPage() {
                 </div>
 
                 {/* Set Password Button */}
-                <Button
+                <button
                   type="submit"
-                  className="w-full h-12 bg-green-400 hover:bg-green-500 text-gray-800 font-bold rounded-full transition-all duration-200 hover:shadow-lg mt-8"
+                  className="w-full h-12 bg-green-400 hover:bg-green-500 font-bold rounded-full transition-all duration-200 hover:shadow-xl shadow-lg mt-8 disabled:opacity-50"
+                  style={{ color: '#000000' }}
                   disabled={resetLoading}
                 >
                   {resetLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Setting...
-                    </>
+                    <span style={{ color: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" style={{ color: '#000000' }} />
+                      <span style={{ color: '#000000' }}>Setting...</span>
+                    </span>
                   ) : (
-                    "SET NEW PASSWORD"
+                    <span style={{ color: '#000000' }}>SET NEW PASSWORD</span>
                   )}
-                </Button>
+                </button>
 
                 {/* Back to Login */}
                 <div className="text-center">
@@ -379,14 +385,14 @@ export default function AuthPage() {
             )}
 
             {/* Footer */}
-            <div className="mt-8 flex justify-between items-center">
-              <span className="text-sm text-gray-400">I'm already a member</span>
-              <Button
-                variant="outline"
-                className="bg-green-400 hover:bg-green-500 text-gray-800 border-green-400 rounded-full px-6 py-2 text-sm font-bold"
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
+              <span className="text-xs sm:text-sm text-white font-medium">I'm already a member</span>
+              <button
+                className="bg-green-400 hover:bg-green-500 border-green-400 rounded-full px-6 py-2 text-xs sm:text-sm font-bold shadow-lg hover:shadow-xl transition-all border w-full sm:w-auto"
+                style={{ color: '#000000' }}
               >
-                SIGN IN
-              </Button>
+                <span style={{ color: '#000000' }}>SIGN IN</span>
+              </button>
             </div>
           </div>
         </div>

@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     const istOffset = 5.5 * 60 * 60 * 1000 // IST is UTC+5:30
     let startDate: Date
     let endDate: Date
+    let calculatedFromDate: string | undefined
+    let calculatedToDate: string | undefined
     
     if (fromDate && toDate) {
       // Database stores timestamps WITHOUT timezone info (naive timestamps in IST)
@@ -38,37 +40,44 @@ export async function GET(request: NextRequest) {
         endDate: endDate.toISOString()
       })
     } else {
-      // Fallback to dateRange parameter
-      endDate = new Date()
-      endDate.setHours(23, 59, 59, 999) // End of today
-      startDate = new Date()
+      // Fallback to dateRange parameter - calculate IST date string directly
+      const now = new Date()
+      const istDate = new Date(now.getTime() + istOffset)
+      const todayIST = istDate.toISOString().split('T')[0]
       
+      // Work with date strings directly for consistent IST handling
       if (dateRange === 'all') {
-        startDate.setFullYear(2020, 0, 1) // Start from 2020 to show all historical data
+        calculatedFromDate = '2020-01-01'
+        calculatedToDate = todayIST
       } else if (dateRange === 'today') {
-        startDate.setHours(0, 0, 0, 0) // Start of today
+        calculatedFromDate = todayIST
+        calculatedToDate = todayIST
       } else {
         // Parse numeric dateRange (e.g., '7' for last 7 days)
         const daysBack = parseInt(dateRange)
         if (!isNaN(daysBack)) {
-          startDate.setDate(startDate.getDate() - daysBack)
+          const pastDate = new Date(istDate)
+          pastDate.setDate(pastDate.getDate() - daysBack)
+          calculatedFromDate = pastDate.toISOString().split('T')[0]
+          calculatedToDate = todayIST
         } else {
-          startDate.setHours(0, 0, 0, 0) // Default to start of today
+          // Default to today
+          calculatedFromDate = todayIST
+          calculatedToDate = todayIST
         }
       }
-      startDate.setHours(0, 0, 0, 0) // Start of day
+      
+      // Create Date objects only for response metadata (not used in query)
+      startDate = new Date(`${calculatedFromDate}T00:00:00`)
+      endDate = new Date(`${calculatedToDate}T23:59:59.999`)
     }
     
     // First, get total count for pagination
     // CRITICAL: Always use naive timestamp format (no 'T' separator) to prevent timezone conversion
     // Database stores timestamps in IST without timezone info, so we must query the same way
-    const gteValue = fromDate && toDate 
-      ? `${fromDate} 00:00:00` 
-      : startDate.toISOString().replace('T', ' ').substring(0, 19)
-    
-    const lteValue = fromDate && toDate 
-      ? `${toDate} 23:59:59` 
-      : endDate.toISOString().replace('T', ' ').substring(0, 19)
+    // Use provided fromDate/toDate if available, otherwise use calculated IST date strings directly
+    const gteValue = fromDate ? `${fromDate} 00:00:00` : `${calculatedFromDate} 00:00:00`
+    const lteValue = toDate ? `${toDate} 23:59:59` : `${calculatedToDate} 23:59:59`
     
     console.log('🔍 DEBUG Query values:', { 
       fromDate, 

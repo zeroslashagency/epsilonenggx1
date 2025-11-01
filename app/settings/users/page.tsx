@@ -9,6 +9,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from '@/app/lib/utils/api-client'
 import { TableLoading, LoadingSpinner } from '@/components/ui/loading-spinner'
 import { EditableRoleSection } from './[id]/components/EditableRoleSection'
 import { PermissionsDisplay } from './[id]/components/PermissionsDisplay'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 interface User {
   id: string
@@ -38,7 +39,7 @@ const SYSTEM_FUNCTIONS = [
   { id: 'manage_users', label: 'Manage Users & Security', description: 'Create users, assign roles, view audit logs, and impersonate accounts.' }
 ]
 
-export default function UsersPageZoho() {
+function UsersPageZoho() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -1009,3 +1010,14 @@ export default function UsersPageZoho() {
     </ZohoLayout>
   )
 }
+
+// Wrap with ProtectedRoute to require authentication
+function ProtectedUsersPage() {
+  return (
+    <ProtectedRoute requireRole={['Super Admin', 'Admin']}>
+      <UsersPageZoho />
+    </ProtectedRoute>
+  )
+}
+
+export { ProtectedUsersPage as default }

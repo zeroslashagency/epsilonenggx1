@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Shield, User, UserPlus, ArrowUpDown, Zap, Plus, Check } from 'lucide-react'
+import { Shield, Plus, Edit, Trash2, Copy, Search, ChevronLeft, ChevronRight, X, User, UserPlus, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ZohoLayout } from '../../components/zoho-ui'
-import { apiGet } from '@/app/lib/utils/api-client'
+import { apiGet, apiPost, apiDelete } from '@/app/lib/utils/api-client'
 import { TableLoading } from '@/components/ui/loading-spinner'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 interface Role {
   id: string
@@ -48,7 +49,7 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   'manage_users': 'Create users, assign roles, view audit logs, and impersonate accounts.'
 }
 
-export default function RolesPage() {
+function RolesPage() {
   const router = useRouter()
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
@@ -424,3 +425,14 @@ export default function RolesPage() {
     </ZohoLayout>
   )
 }
+
+// Wrap with ProtectedRoute to require authentication
+function ProtectedRolesPage() {
+  return (
+    <ProtectedRoute requireRole={['Super Admin', 'Admin']}>
+      <RolesPage />
+    </ProtectedRoute>
+  )
+}
+
+export default ProtectedRolesPage

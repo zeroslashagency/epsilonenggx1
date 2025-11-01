@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Activity, Calendar, User, Filter, Download, ChevronLeft, ChevronRight, UserPlus, Shield, Zap, RefreshCw, Users, Trash2 } from 'lucide-react'
-import Link from 'next/link'
+import { Activity, Search, Filter, Download, Calendar, User, Shield, Clock, ChevronLeft, ChevronRight, UserPlus, Zap, RefreshCw, Users, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { ZohoLayout } from '../../components/zoho-ui'
 import { apiGet } from '@/app/lib/utils/api-client'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { TableLoading, LoadingSpinner } from '@/components/ui/loading-spinner'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 interface ActivityLog {
   id: string
@@ -37,7 +38,7 @@ interface ActivityStats {
   recentActivities: number
 }
 
-export default function ActivityLogsPage() {
+function ActivityLogsPage() {
   const router = useRouter()
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [stats, setStats] = useState<ActivityStats>({
@@ -418,3 +419,14 @@ export default function ActivityLogsPage() {
     </ZohoLayout>
   )
 }
+
+// Wrap with ProtectedRoute to require authentication
+function ProtectedActivityLogsPage() {
+  return (
+    <ProtectedRoute requireRole={['Super Admin', 'Admin']}>
+      <ActivityLogsPage />
+    </ProtectedRoute>
+  )
+}
+
+export default ProtectedActivityLogsPage

@@ -1,22 +1,24 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ZohoLayout } from '../components/zoho-ui'
 import { User, Key, Mail, Shield, Activity } from 'lucide-react'
 import { useAuth } from '@/app/lib/contexts/auth-context'
-import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
 import { UserData } from '@/app/types'
 import { apiPost } from '@/app/lib/utils/api-client'
 
 export default function AccountPage() {
-  const { userPermissions } = useAuth()
+  const auth = useAuth()
+  const router = useRouter()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
   const [isEditingEmail, setIsEditingEmail] = useState(false)
   const [newEmail, setNewEmail] = useState('')
   const [confirmEmail, setConfirmEmail] = useState('')
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseBrowserClient()
 
   useEffect(() => {
     // Fetch current user data from Supabase
