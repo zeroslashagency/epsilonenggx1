@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Activity, RefreshCw, Download, Users, UserPlus, Shield, ArrowUpDown, Zap, Trash2, User } from 'lucide-react'
-import { apiGet } from '@/app/lib/utils/api-client'
+import { Activity, Calendar, User, Filter, Download, ChevronLeft, ChevronRight, UserPlus, Shield, Zap, RefreshCw, Users, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ZohoLayout } from '../../components/zoho-ui'
+import { apiGet } from '@/app/lib/utils/api-client'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface ActivityLog {
   id: string
@@ -333,9 +334,7 @@ export default function ActivityLogsPage() {
 
           <div className="p-6">
             {loading ? (
-              <div className="text-center py-8">
-                <p className="text-[#95AAC9]">Loading activity logs...</p>
-              </div>
+              <LoadingSpinner text="Loading activity logs" />
             ) : filteredLogs.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-[#95AAC9]">No activity logs found</p>

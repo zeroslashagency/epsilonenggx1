@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, UserPlus, Shield, ArrowUpDown, Zap, RefreshCw, Edit } from 'lucide-react'
-import Link from 'next/link'
+import { User, Mail, Shield, ArrowLeft, Plus, UserPlus, Users, ChevronRight, Zap, Edit, RefreshCw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { ZohoLayout } from '@/app/components/zoho-ui'
+import Link from 'next/link'
+import { ZohoLayout } from '../../../components/zoho-ui'
 import { apiGet, apiPost } from '@/app/lib/utils/api-client'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface Employee {
   id: string
@@ -457,8 +458,8 @@ export default function AddUsersPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {loading ? (
-                <div className="col-span-3 text-center py-8 text-[#95AAC9]">
-                  Loading employees...
+                <div className="col-span-3">
+                  <LoadingSpinner text="Loading employees" />
                 </div>
               ) : employees.length === 0 ? (
                 <div className="col-span-3 text-center py-8 text-[#95AAC9]">

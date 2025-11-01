@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, UserPlus, Shield, ArrowUpDown, Zap, ArrowLeft, Save, X, RefreshCw, Key, Mail, Activity } from 'lucide-react'
-import Link from 'next/link'
+import { User, Mail, Shield, ArrowLeft, Edit, Save, X, Eye, EyeOff, Phone, Calendar, Activity, RefreshCw, Lock, UserPlus, Zap } from 'lucide-react'
 import { useRouter, useParams } from 'next/navigation'
-import { ZohoLayout, ZohoBadge, ZohoButton } from '@/app/components/zoho-ui'
-import { apiGet, apiPost } from '@/app/lib/utils/api-client'
+import Link from 'next/link'
+import { ZohoLayout } from '../../../components/zoho-ui'
+import { apiGet, apiPut, apiPost } from '@/app/lib/utils/api-client'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { EditableRoleSection } from './components/EditableRoleSection'
 import { PermissionsDisplay } from './components/PermissionsDisplay'
 
@@ -239,9 +240,7 @@ export default function UserDetailPage() {
   if (loading) {
     return (
       <ZohoLayout breadcrumbs={[]}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-[#95AAC9]">Loading user...</p>
-        </div>
+        <LoadingSpinner text="Loading user" fullScreen />
       </ZohoLayout>
     )
   }
@@ -532,10 +531,7 @@ export default function UserDetailPage() {
                 </button>
               </div>
               {loadingActivity ? (
-                <div className="text-center py-8">
-                  <RefreshCw className="w-6 h-6 text-[#95AAC9] animate-spin mx-auto mb-2" />
-                  <p className="text-[#95AAC9]">Loading activity logs...</p>
-                </div>
+                <LoadingSpinner text="Loading activity logs" />
               ) : activityLogs.length > 0 ? (
                 <div className="space-y-3">
                   {activityLogs.map((log: any) => (

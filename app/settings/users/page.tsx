@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, UserPlus, Shield, ArrowUpDown, Zap, Edit, Trash2, Download, Plus, Save, X, RefreshCw, Key, Mail, Settings } from 'lucide-react'
+import { User, Mail, Shield, Search, ChevronLeft, ChevronRight, Plus, Edit, Trash2, Eye, EyeOff, RefreshCw, X, Check, Phone, Calendar, Activity, UserPlus, Zap, Settings, Save, Key } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ZohoLayout } from '../../components/zoho-ui'
-import { apiGet, apiPost, apiDelete } from '@/app/lib/utils/api-client'
+import { apiGet, apiPost, apiPut, apiDelete } from '@/app/lib/utils/api-client'
+import { TableLoading, LoadingSpinner } from '@/components/ui/loading-spinner'
 import { EditableRoleSection } from './[id]/components/EditableRoleSection'
 import { PermissionsDisplay } from './[id]/components/PermissionsDisplay'
 
@@ -539,9 +541,7 @@ export default function UsersPageZoho() {
               </thead>
               <tbody className="divide-y divide-[#E3E6F0] dark:divide-gray-700">
                 {loading ? (
-                  <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-[#95AAC9]">Loading...</td>
-                  </tr>
+                  <TableLoading colSpan={3} text="Loading users" />
                 ) : users.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="px-6 py-8 text-center text-[#95AAC9]">No users found</td>
@@ -596,7 +596,7 @@ export default function UsersPageZoho() {
               
               <div className="divide-y divide-[#E3E6F0] dark:divide-gray-700 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
                 {loading ? (
-                  <div className="p-8 text-center text-[#95AAC9]">Loading...</div>
+                  <LoadingSpinner text="Loading users" />
                 ) : users.length === 0 ? (
                   <div className="p-8 text-center text-[#95AAC9]">No users found</div>
                 ) : (
@@ -879,10 +879,7 @@ export default function UsersPageZoho() {
                       </div>
                       
                       {loadingActivity ? (
-                        <div className="text-center py-8">
-                          <RefreshCw className="w-8 h-8 animate-spin text-[#2C7BE5] mx-auto mb-2" />
-                          <p className="text-[#95AAC9]">Loading activity logs...</p>
-                        </div>
+                        <LoadingSpinner text="Loading activity logs" />
                       ) : userActivityLogs.length > 0 ? (
                         <div className="space-y-3">
                           {userActivityLogs.map((log) => (

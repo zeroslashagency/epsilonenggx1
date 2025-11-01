@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ZohoLayout } from '../../components/zoho-ui'
 import { apiGet } from '@/app/lib/utils/api-client'
+import { TableLoading } from '@/components/ui/loading-spinner'
 
 interface Role {
   id: string
@@ -52,10 +53,14 @@ export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState<1 | 2>(1)
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [affectedUsers, setAffectedUsers] = useState<any[]>([])
   const [deleting, setDeleting] = useState(false)
+  const [cloneConfirmOpen, setCloneConfirmOpen] = useState(false)
+  const [roleToClone, setRoleToClone] = useState<Role | null>(null)
+  const [cloning, setCloning] = useState(false)
 
   useEffect(() => {
     fetchRoles()
@@ -92,7 +97,12 @@ export default function RolesPage() {
     setRoleToDelete(role)
     setDeleteError(null)
     setAffectedUsers([])
+    setDeleteConfirmStep(1)
     setDeleteConfirmOpen(true)
+  }
+
+  const handleFirstConfirm = () => {
+    setDeleteConfirmStep(2)
   }
 
   const handleDeleteConfirm = async () => {
@@ -114,6 +124,7 @@ export default function RolesPage() {
       // Success - refresh roles list
       alert(`✅ Role "${roleToDelete.name}" deleted successfully!`)
       setDeleteConfirmOpen(false)
+      setDeleteConfirmStep(1)
       setRoleToDelete(null)
       setDeleting(false)
       fetchRoles()
@@ -124,19 +135,31 @@ export default function RolesPage() {
     }
   }
 
-  const handleCloneRole = async (role: Role) => {
+  const handleCloneClick = (role: Role) => {
+    setRoleToClone(role)
+    setCloneConfirmOpen(true)
+  }
+
+  const handleCloneConfirm = async () => {
+    if (!roleToClone) return
+    
+    setCloning(true)
     try {
       const { apiPost } = await import('@/app/lib/utils/api-client')
-      const data = await apiPost(`/api/admin/roles/${role.id}/clone`, {})
+      const data = await apiPost(`/api/admin/roles/${roleToClone.id}/clone`, {})
       
       if (data.success) {
         alert(`✅ Role cloned successfully as "${data.data.name}"`)
+        setCloneConfirmOpen(false)
+        setRoleToClone(null)
         fetchRoles()
       } else {
         alert(`❌ Failed to clone role: ${data.error}`)
       }
     } catch (error) {
       alert('❌ Failed to clone role. Please try again.')
+    } finally {
+      setCloning(false)
     }
   }
 
@@ -202,11 +225,7 @@ export default function RolesPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={3} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      Loading roles...
-                    </td>
-                  </tr>
+                  <TableLoading colSpan={3} text="Loading roles" />
                 ) : roles.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -230,7 +249,7 @@ export default function RolesPage() {
                             </button>
                           </Link>
                           <button 
-                            onClick={() => handleCloneRole(role)}
+                            onClick={() => handleCloneClick(role)}
                             className="px-3 py-1 text-xs text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                           >
                             Clone
@@ -250,6 +269,46 @@ export default function RolesPage() {
             </table>
           </div>
         </div>
+
+        {/* Clone Confirmation Dialog */}
+        {cloneConfirmOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-[#12263F] dark:text-white mb-4">
+                Clone Role: {roleToClone?.name}
+              </h3>
+              
+              <div className="space-y-4">
+                <p className="text-sm text-[#95AAC9]">
+                  Are you sure you want to clone the role <strong className="text-[#12263F] dark:text-white">"{roleToClone?.name}"</strong>?
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded border border-blue-200 dark:border-blue-800">
+                  ℹ️ A new role will be created with the same permissions as "{roleToClone?.name}" with "(Copy)" appended to the name.
+                </p>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setCloneConfirmOpen(false)
+                      setRoleToClone(null)
+                    }}
+                    disabled={cloning}
+                    className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-[#12263F] dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCloneConfirm}
+                    disabled={cloning}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {cloning ? 'Cloning...' : 'Yes, Clone Role'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Dialog */}
         {deleteConfirmOpen && (
@@ -286,6 +345,7 @@ export default function RolesPage() {
                   <button
                     onClick={() => {
                       setDeleteConfirmOpen(false)
+                      setDeleteConfirmStep(1)
                       setRoleToDelete(null)
                       setDeleteError(null)
                       setAffectedUsers([])
@@ -295,29 +355,64 @@ export default function RolesPage() {
                     Close
                   </button>
                 </div>
-              ) : (
+              ) : deleteConfirmStep === 1 ? (
                 <div className="space-y-4">
                   <p className="text-sm text-[#95AAC9]">
-                    Are you sure you want to delete this role? This action cannot be undone.
+                    Are you sure you want to delete the role <strong className="text-[#12263F] dark:text-white">"{roleToDelete?.name}"</strong>?
+                  </p>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-800">
+                    ⚠️ Warning: This action cannot be undone.
                   </p>
                   
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
                         setDeleteConfirmOpen(false)
+                        setDeleteConfirmStep(1)
                         setRoleToDelete(null)
                       }}
-                      disabled={deleting}
-                      className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-[#12263F] dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                      className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-[#12263F] dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
                     >
                       Cancel
                     </button>
                     <button
+                      onClick={handleFirstConfirm}
+                      className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-red-600 dark:text-red-400 font-semibold">
+                    ⚠️ FINAL CONFIRMATION
+                  </p>
+                  <p className="text-sm text-[#95AAC9]">
+                    You are about to permanently delete the role <strong className="text-[#12263F] dark:text-white">"{roleToDelete?.name}"</strong>. This action is irreversible.
+                  </p>
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                    <p className="text-xs text-red-800 dark:text-red-200">
+                      Please confirm that you understand this role will be permanently deleted.
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setDeleteConfirmStep(1)
+                      }}
+                      disabled={deleting}
+                      className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-[#12263F] dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                    >
+                      Go Back
+                    </button>
+                    <button
                       onClick={handleDeleteConfirm}
                       disabled={deleting}
-                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 font-semibold"
                     >
-                      {deleting ? 'Deleting...' : 'Delete'}
+                      {deleting ? 'Deleting...' : 'Yes, Delete Permanently'}
                     </button>
                   </div>
                 </div>
