@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   title: "Epsilon Scheduling - Premium Manufacturing Dashboard",
   description: "Advanced scheduling and operations management for manufacturing",
   generator: "v0.app",
+  icons: {
+    icon: '/Epsilologo.svg',
+    shortcut: '/Epsilologo.svg',
+    apple: '/Epsilologo.svg',
+  },
 }
 
 export default function RootLayout({
