@@ -117,7 +117,7 @@ export function DayDetailsModal({
             {logs.length === 0 ? (
               <div className="text-gray-600 dark:text-gray-400 text-sm">No punch events recorded</div>
             ) : (
-              logs.map((log, idx) => (
+              [...logs].reverse().map((log, idx) => (
                 <div 
                   key={idx}
                   className="bg-gray-100 dark:bg-gray-800 rounded p-3 flex items-center justify-between"

@@ -1306,32 +1306,39 @@ export default function AttendancePage() {
               <ChevronDown className="h-4 w-4" />
             </button>
             {showEmployeeDropdown && (
-              <div className="absolute top-full mt-2 left-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
-                <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-3">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={selectedEmployees.length === allEmployees.length}
-                      onCheckedChange={toggleAllEmployees}
-                    />
-                    <span className="font-medium text-sm">Select All ({allEmployees.length})</span>
+              <>
+                {/* Backdrop to close dropdown when clicking outside */}
+                <div 
+                  className="fixed inset-0 z-[5]" 
+                  onClick={() => setShowEmployeeDropdown(false)}
+                />
+                <div className="absolute top-full mt-2 left-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
+                  <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedEmployees.length === allEmployees.length}
+                        onCheckedChange={toggleAllEmployees}
+                      />
+                      <span className="font-medium text-sm">Select All ({allEmployees.length})</span>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    {allEmployees.map((employee) => (
+                      <div
+                        key={employee.code}
+                        className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                      >
+                        <Checkbox
+                          checked={selectedEmployees.includes(employee.code)}
+                          onCheckedChange={() => toggleEmployee(employee.code)}
+                        />
+                        <span className="text-sm font-medium">{employee.name}</span>
+                        <span className="text-xs text-gray-500">({employee.code})</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="p-2">
-                  {allEmployees.map((employee) => (
-                    <div
-                      key={employee.code}
-                      className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
-                    >
-                      <Checkbox
-                        checked={selectedEmployees.includes(employee.code)}
-                        onCheckedChange={() => toggleEmployee(employee.code)}
-                      />
-                      <span className="text-sm font-medium">{employee.name}</span>
-                      <span className="text-xs text-gray-500">({employee.code})</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -1547,7 +1554,7 @@ export default function AttendancePage() {
                           <StatusBadge status={log.punch_direction as any} />
                         </TableCell>
                         <TableCell className="text-muted-foreground font-mono text-sm">
-                          {logTime.toLocaleTimeString()}
+                          {logTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm font-medium">
                           {timeAgo}
@@ -1640,32 +1647,39 @@ export default function AttendancePage() {
                     <ChevronDown className="h-4 w-4" />
                   </button>
                   {showEmployeeDropdown && (
-                    <div className="absolute top-full mt-2 left-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
-                      <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-3">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={selectedEmployees.length === allEmployees.length}
-                            onCheckedChange={toggleAllEmployees}
-                          />
-                          <span className="font-medium text-sm">Select All ({allEmployees.length})</span>
+                    <>
+                      {/* Backdrop to close dropdown when clicking outside */}
+                      <div 
+                        className="fixed inset-0 z-[5]" 
+                        onClick={() => setShowEmployeeDropdown(false)}
+                      />
+                      <div className="absolute top-full mt-2 left-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
+                        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-3">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedEmployees.length === allEmployees.length}
+                              onCheckedChange={toggleAllEmployees}
+                            />
+                            <span className="font-medium text-sm">Select All ({allEmployees.length})</span>
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          {allEmployees.map((employee) => (
+                            <div
+                              key={employee.code}
+                              className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                            >
+                              <Checkbox
+                                checked={selectedEmployees.includes(employee.code)}
+                                onCheckedChange={() => toggleEmployee(employee.code)}
+                              />
+                              <span className="text-sm font-medium">{employee.name}</span>
+                              <span className="text-xs text-gray-500">({employee.code})</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <div className="p-2">
-                        {allEmployees.map((employee) => (
-                          <div
-                            key={employee.code}
-                            className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
-                          >
-                            <Checkbox
-                              checked={selectedEmployees.includes(employee.code)}
-                              onCheckedChange={() => toggleEmployee(employee.code)}
-                            />
-                            <span className="text-sm font-medium">{employee.name}</span>
-                            <span className="text-xs text-gray-500">({employee.code})</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -1782,7 +1796,7 @@ export default function AttendancePage() {
                         {new Date(record.log_date).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-muted-foreground font-mono text-sm">
-                        {new Date(record.log_date).toLocaleTimeString()}
+                        {new Date(record.log_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                       </TableCell>
                     </TableRow>
                     ))
