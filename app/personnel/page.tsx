@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx'
 import { apiGet } from '@/app/lib/utils/api-client'
 import { ZohoLayout } from '../components/zoho-ui'
 import { calculateDateRange } from '@/lib/utils/date-utils'
+import { RecentAttendanceRecords } from '@/components/RecentAttendanceRecords'
 
 interface Employee {
   id: string
@@ -686,6 +687,16 @@ export default function PersonnelPage() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Recent Attendance Records */}
+              <div className="mt-6">
+                <RecentAttendanceRecords 
+                  employeeCode={selectedEmployee.employee_code || ''}
+                  employeeName={selectedEmployee.full_name}
+                  dateRange={exportDateRange}
+                  loading={loadingStats}
+                />
               </div>
             </div>
           </div>

@@ -44,10 +44,22 @@ export async function apiClient(url: string, options: RequestInit = {}) {
 }
 
 /**
- * GET request helper
+ * GET request helper with cache-busting
  */
 export async function apiGet(url: string) {
-  const response = await apiClient(url, { method: 'GET' })
+  // Add cache-busting timestamp to prevent browser/CDN caching
+  const separator = url.includes('?') ? '&' : '?'
+  const cacheBuster = `${separator}_t=${Date.now()}`
+  const finalUrl = `${url}${cacheBuster}`
+  
+  const response = await apiClient(finalUrl, { 
+    method: 'GET',
+    cache: 'no-store', // Force no cache
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    }
+  })
   return response.json()
 }
 

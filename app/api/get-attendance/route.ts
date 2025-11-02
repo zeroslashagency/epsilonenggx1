@@ -1,4 +1,6 @@
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
@@ -197,12 +199,23 @@ export async function GET(request: NextRequest) {
     const istDate = new Date(now.getTime() + istOffset)
     const today = istDate.toISOString().split('T')[0]
     
-    // Get today's logs using native date format (no timezone conversion)
+    // Get today's logs - database stores IST timestamps directly
+    // Query for today's date in IST (no timezone conversion needed)
+    const todayStartStr = `${today} 00:00:00`
+    const todayEndStr = `${today} 23:59:59`
+    
+    console.log('🕐 [TODAY] Querying for IST date:', {
+      istDate: today,
+      startTime: todayStartStr,
+      endTime: todayEndStr
+    })
+    
     const { data: todayLogsFromDB, error: todayError } = await supabase
       .from('employee_raw_logs')
       .select('*')
-      .gte('log_date', `${today} 00:00:00`)
-      .lte('log_date', `${today} 23:59:59`)
+      .gte('log_date', todayStartStr)
+      .lte('log_date', todayEndStr)
+      .order('log_date', { ascending: false })
     
     const todayLogs = todayError ? [] : (todayLogsFromDB || [])
     
@@ -276,8 +289,8 @@ export async function GET(request: NextRequest) {
       return punchHour < 18 // Before 6:00 PM
     }).length
     
-    // Get recent logs (all logs) with proper employee names and field mapping
-    const recentLogs = (attendanceLogs || []).map(log => {
+    // Get recent logs from TODAY's data (not filtered attendanceLogs)
+    const recentLogs = (todayLogs || []).map(log => {
       const employeeInfo = employeeMap.get(log.employee_code)
       return {
         ...log,

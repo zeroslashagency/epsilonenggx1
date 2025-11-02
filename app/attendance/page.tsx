@@ -19,6 +19,7 @@ import { calculateDateRange, getDateRangeLabel as getDateLabel } from '@/lib/uti
 import { AttendanceLog, TodayAttendanceData, AllTrackData } from '@/app/types'
 import { AttendancePermissions } from '@/app/lib/utils/permission-checker'
 import type { PermissionModule } from '@/app/lib/utils/permission-checker'
+import { AttendanceTodayChart } from '@/components/AttendanceTodayChart'
 
 export default function AttendancePage() {
   const auth = useAuth()
@@ -41,6 +42,8 @@ export default function AttendancePage() {
   const [allTrackData, setAllTrackData] = useState<AllTrackData | null>(null)
   const [allTrackLoading, setAllTrackLoading] = useState(false)
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
+  const [manualSyncing, setManualSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
   const [showDateDropdown, setShowDateDropdown] = useState(false)
   const [allEmployees, setAllEmployees] = useState<Array<{code: string, name: string}>>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
@@ -67,6 +70,60 @@ export default function AttendancePage() {
       return 'Request timed out. Try selecting a smaller date range.'
     }
     return error.message || 'Something went wrong. Please try again.'
+  }
+
+  // Manual sync - trigger office computer to sync from SmartOffice
+  const triggerManualSync = async () => {
+    setManualSyncing(true)
+    setSyncMessage(null)
+    
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured')
+      }
+      
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/trigger-sync`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            syncType: 'manual',
+            requestedBy: 'dashboard-manual-sync',
+            action: 'immediate_refresh'
+          })
+        }
+      )
+      
+      if (!response.ok) {
+        throw new Error(`Sync failed: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      setSyncMessage({
+        type: 'success',
+        text: `Sync triggered successfully! ${result.message || 'Office computer will sync within 5 seconds.'}`
+      })
+      
+      // Wait 6 seconds then refresh data
+      setTimeout(() => {
+        fetchTodayData()
+      }, 6000)
+      
+    } catch (error) {
+      console.error('Manual sync error:', error)
+      setSyncMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to trigger sync'
+      })
+    } finally {
+      setManualSyncing(false)
+    }
   }
 
   // Fetch TODAY's data only (independent from filters)
@@ -1167,9 +1224,21 @@ export default function AttendancePage() {
             <p className="text-muted-foreground text-lg">Real-time attendance data synced from office computer</p>
           </div>
           <div className="flex flex-col items-end gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Activity className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-foreground">Auto-Sync Status</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Activity className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-foreground">Auto-Sync Status</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={triggerManualSync}
+                disabled={manualSyncing}
+                className="gap-2 font-semibold bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200 hover:from-orange-100 hover:to-orange-200 shadow-md"
+              >
+                <RefreshCw className={`h-4 w-4 ${manualSyncing ? 'animate-spin' : ''}`} />
+                {manualSyncing ? 'Syncing...' : 'Force Sync'}
+              </Button>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
@@ -1183,6 +1252,15 @@ export default function AttendancePage() {
                 <span>Cloud Synced</span>
               </div>
             </div>
+            {syncMessage && (
+              <div className={`text-sm font-medium px-3 py-1.5 rounded-md ${
+                syncMessage.type === 'success' 
+                  ? 'bg-green-50 text-green-700 border border-green-200' 
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {syncMessage.text}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1349,6 +1427,14 @@ export default function AttendancePage() {
             variant="indigo"
           />
         </div>
+
+        {/* Today's Activity Chart */}
+        {canViewTodaysActivity && (
+          <AttendanceTodayChart 
+            data={recentLogs}
+            loading={todayLoading}
+          />
+        )}
 
         {/* Today's Recent Activity */}
         {canViewTodaysActivity && (

@@ -31,9 +31,9 @@ export default function AccountPage() {
         }
 
         if (currentUser) {
-          // Fetch additional user profile data from users table
+          // Fetch additional user profile data from profiles table
           const { data: profileData, error: profileError } = await supabase
-            .from('users')
+            .from('profiles')
             .select('*')
             .eq('id', currentUser.id)
             .single()
@@ -237,9 +237,11 @@ export default function AccountPage() {
             <Shield className="w-5 h-5" />
             Your Permissions
           </h2>
-          {userPermissions && userPermissions.length > 0 ? (
+          {auth.userPermissions && Object.keys(auth.userPermissions).length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {userPermissions.map((permission: string) => (
+              {Object.entries(auth.userPermissions).flatMap(([module, data]: [string, any]) => 
+                data.specialPermissions || []
+              ).map((permission: string) => (
                 <div
                   key={permission}
                   className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-sm text-blue-700 dark:text-blue-300"
