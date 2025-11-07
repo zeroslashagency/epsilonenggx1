@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const validation = validateQueryParams(request, auditLogQuerySchema)
   if (!validation.success) return validation.response
   
-  const { page, limit, action, userId, startDate, endDate } = validation.data
+  const { page = 1, limit = 50, action, userId, startDate, endDate } = validation.data
 
   try {
     const supabase = getSupabaseAdminClient()
