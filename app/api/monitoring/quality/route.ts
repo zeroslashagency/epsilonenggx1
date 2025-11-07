@@ -2,14 +2,15 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireAuth, requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
 
 /**
  * GET /api/monitoring/quality
  * Retrieve all quality checks
  */
 export async function GET(request: NextRequest) {
-  const authResult = await requirePermission(request, 'view_reports')
+  // ✅ Check: monitoring.Quality Control.view permission
+  const authResult = await requireGranularPermission(request, 'monitoring', 'Quality Control', 'view')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -52,7 +53,8 @@ export async function GET(request: NextRequest) {
  * Create a new quality check
  */
 export async function POST(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: monitoring.Quality Control.create permission
+  const authResult = await requireGranularPermission(request, 'monitoring', 'Quality Control', 'create')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -116,7 +118,8 @@ export async function POST(request: NextRequest) {
  * Update a quality check
  */
 export async function PATCH(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: monitoring.Quality Control.edit permission
+  const authResult = await requireGranularPermission(request, 'monitoring', 'Quality Control', 'edit')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 

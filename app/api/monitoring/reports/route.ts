@@ -2,14 +2,15 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
 
 /**
  * GET /api/monitoring/reports
  * Retrieve aggregated monitoring reports
  */
 export async function GET(request: NextRequest) {
-  const authResult = await requirePermission(request, 'view_reports')
+  // ✅ Check: monitoring.Reports.view permission
+  const authResult = await requireGranularPermission(request, 'monitoring', 'Reports', 'view')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 

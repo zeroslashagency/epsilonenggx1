@@ -8,10 +8,11 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 interface ProtectedRouteProps {
   children: React.ReactNode
   requireRole?: string[]
+  requirePermission?: string  // Backend permission code like 'schedule.view'
 }
 
-export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, userRole } = useAuth()
+export function ProtectedRoute({ children, requireRole, requirePermission }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, userRole, hasPermissionCode } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -31,7 +32,13 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
         return
       }
     }
-  }, [isAuthenticated, isLoading, userRole, requireRole, router])
+
+    // Check permission requirement if specified
+    if (requirePermission && !hasPermissionCode(requirePermission)) {
+      router.replace('/dashboard')
+      return
+    }
+  }, [isAuthenticated, isLoading, userRole, requireRole, requirePermission, hasPermissionCode, router])
 
   // CRITICAL: Always show loading first to prevent content flash
   // This ensures no page content renders before auth check completes
@@ -70,6 +77,18 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
         </div>
       )
     }
+  }
+
+  // Check permission requirement
+  if (requirePermission && !hasPermissionCode(requirePermission)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">Access denied. Redirecting...</p>
+        </div>
+      </div>
+    )
   }
 
   // Render protected content only after all checks pass

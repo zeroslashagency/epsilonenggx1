@@ -3,12 +3,43 @@ export const revalidate = 0
 export const fetchCache = 'force-no-store'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseClient, getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { requireAuth } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
+  // ✅ SECURITY FIX: Check if user has dashboard OR attendance permission
+  // 🔧 Check if user has dashboard OR attendance permission
+  const supabase = getSupabaseAdminClient()
+  
+  const authResult = await requireAuth(request)
+  if (authResult instanceof NextResponse) return authResult
+  const user = authResult
+  
+  // Super Admin bypass
+  if (user.role === 'Super Admin' || user.role === 'super_admin') {
+    // Continue to data fetching
+  } else {
+    // Check if user has dashboard OR attendance permission
+    const { data: roleData } = await supabase
+      .from('roles')
+      .select('permissions_json')
+      .eq('name', user.role)
+      .single()
+    
+    const permissions = roleData?.permissions_json
+    const hasDashboardPermission = permissions?.main_dashboard?.items?.Dashboard?.view === true
+    const hasAttendancePermission = permissions?.main_attendance?.items?.Attendance?.view === true
+    
+    if (!hasDashboardPermission && !hasAttendancePermission) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden', message: 'Access denied. Required: dashboard.Dashboard.view OR attendance.Attendance.view' },
+        { status: 403 }
+      )
+    }
+  }
+
   try {
-    console.log('🔍 [GET-ATTENDANCE] Request received at:', new Date().toISOString())
+    console.log(' [GET-ATTENDANCE] Request received at:', new Date().toISOString())
     const supabase = getSupabaseClient()
     const searchParams = request.nextUrl.searchParams
     

@@ -17,6 +17,7 @@ import { DateTimePicker } from "@/app/components/date-time-picker"
 import { format } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { cn } from "@/app/lib/utils/utils"
+import { getSupabaseBrowserClient } from "@/app/lib/services/supabase-client"
 import {
   Settings,
   Calendar as CalendarIcon,
@@ -42,6 +43,7 @@ import {
   Lock,
   Unlock,
 } from "lucide-react"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 
 interface Order {
   id: string
@@ -56,6 +58,14 @@ interface Order {
   startDateTime?: string
   holiday?: string
   setupWindow?: string
+}
+
+export default function SchedulerPage() {
+  return (
+    <ProtectedRoute requirePermission="schedule.view">
+      <SchedulerPageContent />
+    </ProtectedRoute>
+  )
 }
 
 interface Holiday {
@@ -73,7 +83,7 @@ interface Breakdown {
   reason: string
 }
 
-export default function SchedulerPage() {
+function SchedulerPageContent() {
   const [activeTab, setActiveTab] = useState("orders")
   const [orders, setOrders] = useState<Order[]>([])
   const [holidays, setHolidays] = useState<Holiday[]>([])
@@ -144,13 +154,15 @@ export default function SchedulerPage() {
   const [settingsLocked, setSettingsLocked] = useState(false)
   const [lockLoading, setLockLoading] = useState(false)
 
-  const { userEmail, logout } = useAuth()
+  const { userEmail, logout, hasPermissionCode } = useAuth()
   const router = useRouter()
 
-
-  // Redirect if not authenticated
-  // Authentication guard - REMOVED to prevent redirect loop
-  // Auth protection handled by auth context
+  // Permission checks using backend codes
+  const canView = hasPermissionCode('schedule.view')
+  const canCreate = hasPermissionCode('schedule.create')
+  const canEdit = hasPermissionCode('schedule.edit')
+  const canDelete = hasPermissionCode('schedule.delete')
+  const canApprove = hasPermissionCode('schedule.approve')
 
   // Load saved advanced settings on mount
   useEffect(() => {
@@ -763,6 +775,53 @@ export default function SchedulerPage() {
     }
   }
 
+  const handlePublishSchedule = async () => {
+    if (!showResults || results.length === 0) {
+      alert('Please run the schedule first before publishing.')
+      return
+    }
+
+    if (!confirm('Are you sure you want to publish this schedule? This will make it available to all users.')) {
+      return
+    }
+
+    try {
+      // Get auth token from Supabase session
+      const supabase = getSupabaseBrowserClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        alert('❌ Not authenticated. Please login again.')
+        router.push('/auth')
+        return
+      }
+
+      const response = await fetch('/api/schedule/publish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          scheduleId: `schedule_${Date.now()}`,
+          scheduleName: `Schedule ${new Date().toLocaleDateString()}`,
+          publishDate: new Date().toISOString(),
+          schedulingResults: results
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        alert('✅ Schedule published successfully!')
+      } else {
+        alert(`❌ Failed to publish schedule: ${data.error || 'Unknown error'}`)
+      }
+    } catch (error: any) {
+      alert(`❌ Error publishing schedule: ${error.message}`)
+    }
+  }
+
   const handleShowChart = async () => {
     if (!showResults || results.length === 0) {
       alert('Please run the schedule first to see the chart.')
@@ -909,24 +968,6 @@ export default function SchedulerPage() {
       setOperationSearch("")
       setAvailableOperations([])
       setFilteredOperations([])
-      
-      // Only clear advanced settings if they are NOT locked
-      if (!settingsLocked) {
-        setHolidays([])
-        setBreakdowns([])
-        setAdvancedSettings({
-          globalStartDateTime: "",
-          globalSetupWindow: "",
-          shift1: "",
-          shift2: "",
-          shift3: "",
-          productionWindowShift1: "",
-          productionWindowShift2: "",
-          productionWindowShift3: ""
-        })
-      } else {
-        alert('Advanced settings are locked and will be preserved. Unlock them first if you want to clear all data.')
-      }
     }
   }
 
@@ -1309,30 +1350,34 @@ export default function SchedulerPage() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-3">
-                  <Button onClick={handleAddOrder} className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    ➕ Add Order
-                  </Button>
+                  {canCreate && (
+                    <Button onClick={handleAddOrder} className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      ➕ Add Order
+                    </Button>
+                  )}
                   <Button onClick={handleClearForm} variant="outline">
                     🗑️ Clear Form
                   </Button>
-                  <Button 
-                    onClick={handleRunSchedule} 
-                    disabled={orders.length === 0 || loading}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <PlayCircle className="w-4 h-4 mr-2" />
-                        Run Schedule
-                      </>
-                    )}
-                  </Button>
+                  {canEdit && (
+                    <Button 
+                      onClick={handleRunSchedule} 
+                      disabled={orders.length === 0 || loading}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          Run Schedule
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1345,9 +1390,11 @@ export default function SchedulerPage() {
                     <CardTitle className="text-xl text-gray-900">📋 Saved Orders</CardTitle>
                     <CardDescription>Manage your production orders</CardDescription>
                   </div>
-                  <Button onClick={handleClearAllOrders} variant="outline" size="sm">
-                    All Clear ❌
-                  </Button>
+                  {canDelete && (
+                    <Button onClick={handleClearAllOrders} variant="outline" size="sm">
+                      All Clear ❌
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -1396,14 +1443,16 @@ export default function SchedulerPage() {
                             <td className="py-3 px-4 text-gray-600">{order.holiday || "N/A"}</td>
                             <td className="py-3 px-4 text-gray-600">{order.setupWindow || "N/A"}</td>
                             <td className="py-3 px-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteOrder(order.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              {canDelete && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteOrder(order.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1486,14 +1535,20 @@ export default function SchedulerPage() {
                   </div>
                   
                   <div className="mt-6 flex gap-3">
-                    <Button className="bg-green-600 hover:bg-green-700">
+                    <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700">
                       <Download className="w-4 h-4 mr-2" />
                       Export Excel
                     </Button>
-                    <Button variant="outline">
+                    <Button onClick={handleShowChart} variant="outline">
                       <BarChart3 className="w-4 h-4 mr-2" />
                       View Chart
                     </Button>
+                    {canApprove && (
+                      <Button onClick={handlePublishSchedule} className="bg-blue-600 hover:bg-blue-700">
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Publish Schedule
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1916,3 +1971,5 @@ export default function SchedulerPage() {
     </div>
   )
 }
+
+export { SchedulerPageContent }

@@ -93,14 +93,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log the action
+    // ✅ Log the action with complete audit trail
     await supabase
       .from('audit_logs')
       .insert({
-        action: 'create_user',
+        actor_id: user.id,
+        target_id: authUser.user.id,
+        action: 'user_created',
         meta_json: {
-          created_user_email: email,
-          role_id: roleId,
+          created_user: {
+            email: email,
+            full_name: validation.data.full_name || email.split('@')[0],
+            role_id: roleId
+          },
+          created_by: user.email,
+          created_at: new Date().toISOString(),
+          creation_method: 'manual_entry',
           custom_permissions: customPermissions || []
         }
       })

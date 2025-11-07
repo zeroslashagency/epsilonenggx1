@@ -1,8 +1,24 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { ZohoLayout } from '@/app/components/zoho-ui'
-import { FileText, Download, Calendar, TrendingUp, Package, Users, RefreshCw } from 'lucide-react'
+import { 
+  ZohoLayout, 
+  ZohoCard, 
+  ZohoButton,
+  ZohoBadge 
+} from '../../components/zoho-ui'
+import { 
+  FileText,
+  Download,
+  Calendar,
+  TrendingUp,
+  Users,
+  Clock,
+  Filter,
+  RefreshCw,
+  Package
+} from 'lucide-react'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 import { apiGet } from '@/app/lib/utils/api-client'
 
 interface Report {
@@ -14,7 +30,7 @@ interface Report {
   lastGenerated: string
 }
 
-export default function ReportsPage() {
+function ReportsPageContent() {
   const [selectedPeriod, setSelectedPeriod] = useState('today')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -248,5 +264,13 @@ export default function ReportsPage() {
         )}
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function ReportsPage() {
+  return (
+    <ProtectedPage module="monitoring" item="Reports" permission="view">
+      <ReportsPageContent />
+    </ProtectedPage>
   )
 }

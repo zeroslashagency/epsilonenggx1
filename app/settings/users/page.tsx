@@ -390,7 +390,7 @@ function UsersPageZoho() {
         userId: selectedUser.id,
         userEmail: selectedUser.email,
         userName: selectedUser.full_name,
-        actorId: 'current-user-id' // TODO: Get actual current user ID
+        actorId: user?.id || 'system' // Use authenticated user ID
       })
 
 

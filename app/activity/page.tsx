@@ -20,6 +20,7 @@ import {
   XCircle,
   AlertCircle
 } from 'lucide-react'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
 interface ActivityLog {
   id: string
@@ -30,7 +31,7 @@ interface ActivityLog {
   type: 'success' | 'warning' | 'error' | 'info'
 }
 
-export default function ActivityPage() {
+function ActivityPageContent() {
   const [activities] = useState<ActivityLog[]>([
     {
       id: '1',
@@ -264,5 +265,13 @@ export default function ActivityPage() {
         </ZohoCard>
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function ActivityPage() {
+  return (
+    <ProtectedPage module="system_administration" item="Activity Logging" permission="view">
+      <ActivityPageContent />
+    </ProtectedPage>
   )
 }

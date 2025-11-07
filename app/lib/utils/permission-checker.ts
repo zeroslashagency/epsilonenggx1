@@ -236,11 +236,19 @@ export function checkMultiplePermissions(
 }
 
 /**
+ * Check if user has Super Admin role (fallback when permissions_json is missing)
+ */
+export function isSuperAdmin(userRole: string | null | undefined): boolean {
+  if (!userRole) return false
+  return userRole === 'Super Admin' || userRole === 'super_admin'
+}
+
+/**
  * Attendance-specific permission checks
  */
 export const AttendancePermissions = {
-  canViewTodaysActivity: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_attendance', "Today's Recent Activity"),
+  canViewTodaysActivity: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_attendance', "Today's Recent Activity"),
   
   canViewAllRecords: (permissions: Record<string, PermissionModule> | null | undefined) =>
     canView(permissions, 'main_attendance', 'All Track Records'),
@@ -259,35 +267,188 @@ export const AttendancePermissions = {
  * Chart-specific permission checks
  */
 export const ChartPermissions = {
-  canViewCharts: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_charts', 'Chart'),
+  canViewCharts: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_charts', 'Chart'),
   
-  canViewTimeline: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_charts', 'Timeline View'),
+  canViewTimeline: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_charts', 'Timeline View'),
   
-  canViewGantt: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_charts', 'Gantt Chart'),
+  canViewGantt: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_charts', 'Gantt Chart'),
   
-  canViewKPI: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_charts', 'KPI Charts'),
+  canViewKPI: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_charts', 'KPI Charts'),
   
-  canExportCharts: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canExport(permissions, 'main_charts', 'Chart')
+  canExportCharts: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canExport(permissions, 'main_charts', 'Chart')
 }
 
 /**
  * Analytics-specific permission checks
  */
 export const AnalyticsPermissions = {
-  canViewAnalytics: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_analytics', 'Analytics'),
+  canViewAnalytics: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Analytics'),
   
-  canViewProduction: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_analytics', 'Production Efficiency'),
+  canViewProduction: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Production Analytics'),
   
-  canViewQuality: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_analytics', 'Quality Analytics'),
+  canViewEfficiency: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Efficiency Analytics'),
   
-  canViewMachine: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_analytics', 'Machine Analytics')
+  canViewQuality: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Quality Analytics'),
+  
+  canViewMachine: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Machine Analytics')
+}
+
+/**
+ * Scheduling-specific permission checks
+ */
+export const SchedulingPermissions = {
+  canViewScheduleGenerator: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'main_scheduling', 'Schedule Generator'),
+  
+  canViewScheduleDashboard: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'main_scheduling', 'Schedule Generator Dashboard'),
+  
+  canCreateSchedule: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'main_scheduling', 'Create Schedule', 'create'),
+  
+  canEditSchedule: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'main_scheduling', 'Edit Schedule', 'edit'),
+  
+  canPublishSchedule: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'main_scheduling', 'Publish Schedule', 'approve'),
+  
+  canViewScheduleHistory: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'main_scheduling', 'Schedule History'),
+  
+  canViewTimeline: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'main_scheduling', 'Timeline View'),
+  
+  canViewCalendar: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'main_scheduling', 'Calendar View'),
+  
+  canViewListView: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'main_scheduling', 'List View'),
+  
+  canViewFilterOptions: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'main_scheduling', 'Filter Options')
+}
+
+/**
+ * Production-specific permission checks
+ */
+export const ProductionPermissions = {
+  canViewOrders: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Orders'),
+  
+  canViewMachines: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Machines'),
+  
+  canViewPersonnel: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Personnel'),
+  
+  canViewTasks: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Tasks'),
+  
+  canCreateOrder: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'production', 'Create Order', 'create'),
+  
+  canEditOrder: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'production', 'Edit Order', 'edit'),
+  
+  canApproveOrder: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'production', 'Order Approval', 'approve'),
+  
+  canViewOrderStatus: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Order Status'),
+  
+  canViewMachineList: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Machine List'),
+  
+  canViewMachineStatus: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Machine Status'),
+  
+  canViewMachineConfiguration: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Machine Configuration'),
+  
+  canViewPersonnelList: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Personnel List'),
+  
+  canViewShiftAssignment: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Shift Assignment'),
+  
+  canViewSkillManagement: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Skill Management'),
+  
+  canCreateTask: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'production', 'Create Task', 'create'),
+  
+  canAssignTask: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'production', 'Task Assignment', 'edit'),
+  
+  canCompleteTask: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'production', 'Task Completion', 'approve'),
+  
+  canViewTaskProgress: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'production', 'Task Progress')
+}
+
+/**
+ * Monitoring-specific permission checks
+ */
+export const MonitoringPermissions = {
+  canViewAlerts: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Alerts'),
+  
+  canViewReports: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Reports'),
+  
+  canViewQualityControl: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Quality Control'),
+  
+  canViewMaintenance: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Maintenance'),
+  
+  canCreateAlertRules: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'monitoring', 'Create Alert Rules', 'create'),
+  
+  canViewAlertsDashboard: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'View Alerts'),
+  
+  canViewAlertHistory: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Alert History'),
+  
+  canGenerateReports: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'monitoring', 'Generate Reports', 'create'),
+  
+  canViewScheduledReports: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Scheduled Reports'),
+  
+  canViewReportTemplates: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Report Templates'),
+  
+  canCreateQualityInspections: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'monitoring', 'Quality Inspections', 'create'),
+  
+  canApproveQuality: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'monitoring', 'Quality Approvals', 'approve'),
+  
+  canViewQualityMetrics: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Quality Metrics'),
+  
+  canCreateMaintenanceRequests: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'monitoring', 'Maintenance Requests', 'create'),
+  
+  canApproveMaintenance: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    hasPermission(permissions, 'monitoring', 'Maintenance Approval', 'approve'),
+  
+  canViewMaintenanceSchedule: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Maintenance Schedule'),
+  
+  canViewMaintenanceHistory: (permissions: Record<string, PermissionModule> | null | undefined) =>
+    canView(permissions, 'monitoring', 'Maintenance History')
 }

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 import { 
   ZohoLayout, 
@@ -28,6 +29,8 @@ import {
   Upload
 } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
+import { ChartPermissions } from '@/app/lib/utils/permission-checker'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
 interface ChartData {
   label: string
@@ -46,7 +49,7 @@ interface ProductionMetrics {
   machineUtilization: number
 }
 
-export default function ChartPage() {
+function ChartPageContent() {
   const auth = useAuth()
   const router = useRouter()
   const [metrics, setMetrics] = useState<ProductionMetrics>({
@@ -64,8 +67,17 @@ export default function ChartPage() {
   const [timelineView, setTimelineView] = useState<'hour' | 'day' | 'week' | 'month'>('day')
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
-  // Authentication guard - REMOVED to prevent redirect loop
-  // Auth protection handled by checking isLoading and isAuthenticated below
+  // Permission checks
+  const { userPermissions, user } = auth
+  const userRole = user?.role
+  const canViewCharts = ChartPermissions.canViewCharts(userPermissions, userRole)
+  const canViewTimeline = ChartPermissions.canViewTimeline(userPermissions, userRole)
+  const canViewGantt = ChartPermissions.canViewGantt(userPermissions, userRole)
+  const canViewKPI = ChartPermissions.canViewKPI(userPermissions, userRole)
+  const canExportCharts = ChartPermissions.canExportCharts(userPermissions, userRole)
+  
+  // Check if user has any chart permissions
+  const hasAnyChartPermission = canViewTimeline || canViewGantt || canViewKPI
 
   useEffect(() => {
     fetchMetrics()
@@ -193,8 +205,8 @@ export default function ChartPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white">Analytics & Charts</h1>
-            <p className="text-[#95AAC9] mt-1">Production metrics and performance analytics</p>
+            <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white">Charts</h1>
+            <p className="text-[#95AAC9] mt-1">Production timeline and performance charts</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-xs text-[#95AAC9]">
@@ -218,62 +230,89 @@ export default function ChartPage() {
             >
               {loading ? 'Refreshing...' : 'Refresh'}
             </ZohoButton>
-            <ZohoButton
-              variant="primary"
-              icon={<Download className="w-4 h-4" />}
-            >
-              Export
-            </ZohoButton>
+            {canExportCharts && (
+              <ZohoButton
+                variant="primary"
+                icon={<Download className="w-4 h-4" />}
+              >
+                Export
+              </ZohoButton>
+            )}
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-[#E3E6F0] dark:border-gray-700">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('timeline')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'timeline'
-                  ? 'border-[#2C7BE5] text-[#2C7BE5]'
-                  : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4" />
-                Timeline View
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('gantt')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'gantt'
-                  ? 'border-[#2C7BE5] text-[#2C7BE5]'
-                  : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Grid3X3 className="w-4 h-4" />
-                Gantt Chart
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'analytics'
-                  ? 'border-[#2C7BE5] text-[#2C7BE5]'
-                  : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <PieChart className="w-4 h-4" />
-                Analytics
-              </div>
-            </button>
-          </nav>
-        </div>
+        {/* Fallback UI - No Chart Permissions */}
+        {!hasAnyChartPermission ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No Chart Permissions
+              </h3>
+              <p className="text-sm text-gray-500">
+                You don't have permission to view any charts.
+                <br />
+                Contact your administrator to request access.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Tab Navigation */}
+            <div className="border-b border-[#E3E6F0] dark:border-gray-700">
+              <nav className="flex space-x-8">
+                {canViewTimeline && (
+                  <button
+                    onClick={() => setActiveTab('timeline')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'timeline'
+                        ? 'border-[#2C7BE5] text-[#2C7BE5]'
+                        : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4" />
+                      Timeline View
+                    </div>
+                  </button>
+                )}
+                {canViewGantt && (
+                  <button
+                    onClick={() => setActiveTab('gantt')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'gantt'
+                        ? 'border-[#2C7BE5] text-[#2C7BE5]'
+                        : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Grid3X3 className="w-4 h-4" />
+                      Gantt Chart
+                    </div>
+                  </button>
+                )}
+                {canViewKPI && (
+                  <button
+                    onClick={() => setActiveTab('analytics')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'analytics'
+                        ? 'border-[#2C7BE5] text-[#2C7BE5]'
+                        : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <PieChart className="w-4 h-4" />
+                      Analytics
+                    </div>
+                  </button>
+                )}
+              </nav>
+            </div>
+          </>
+        )}
 
         {/* Tab Content */}
-        {activeTab === 'timeline' && (
+        {canViewTimeline && activeTab === 'timeline' && (
           <div className="space-y-6">
             {/* Timeline Controls */}
             <ZohoCard>
@@ -601,7 +640,7 @@ export default function ChartPage() {
           </div>
         )}
 
-        {activeTab === 'gantt' && (
+        {canViewGantt && activeTab === 'gantt' && (
           <div className="space-y-6">
             <ZohoCard>
               <div className="text-center py-16">
@@ -616,7 +655,7 @@ export default function ChartPage() {
           </div>
         )}
 
-        {activeTab === 'analytics' && (
+        {canViewKPI && activeTab === 'analytics' && (
           <div className="space-y-6">
             {/* Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -796,5 +835,13 @@ export default function ChartPage() {
         )}
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function ChartPage() {
+  return (
+    <ProtectedPage module="main_charts" item="Chart" permission="view">
+      <ChartPageContent />
+    </ProtectedPage>
   )
 }

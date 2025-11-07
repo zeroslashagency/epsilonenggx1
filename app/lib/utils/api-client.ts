@@ -47,31 +47,89 @@ export async function apiClient(url: string, options: RequestInit = {}) {
  * GET request helper with cache-busting
  */
 export async function apiGet(url: string) {
-  // Add cache-busting timestamp to prevent browser/CDN caching
-  const separator = url.includes('?') ? '&' : '?'
-  const cacheBuster = `${separator}_t=${Date.now()}`
-  const finalUrl = `${url}${cacheBuster}`
-  
-  const response = await apiClient(finalUrl, { 
-    method: 'GET',
-    cache: 'no-store', // Force no cache
-    headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
+  try {
+    // Add cache-busting timestamp to prevent browser/CDN caching
+    const separator = url.includes('?') ? '&' : '?'
+    const cacheBuster = `${separator}_t=${Date.now()}`
+    const finalUrl = `${url}${cacheBuster}`
+    
+    const response = await apiClient(finalUrl, { 
+      method: 'GET',
+      cache: 'no-store', // Force no cache
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      }
+    })
+    
+    // Check if response is OK before parsing JSON
+    if (!response.ok) {
+      // Try to parse error message from response
+      let errorMessage = `Server error: ${response.status}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.error || errorData.message || errorMessage
+      } catch {
+        // If JSON parsing fails, use status text
+        errorMessage = response.statusText || errorMessage
+      }
+      
+      return {
+        success: false,
+        error: errorMessage,
+        data: null
+      }
     }
-  })
-  return response.json()
+    
+    return response.json()
+  } catch (error) {
+    console.error('❌ Network Error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error occurred',
+      data: null
+    }
+  }
 }
 
 /**
  * POST request helper
  */
 export async function apiPost(url: string, data: any) {
-  const response = await apiClient(url, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  })
-  return response.json()
+  try {
+    const response = await apiClient(url, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+    
+    // Check if response is OK before parsing JSON
+    if (!response.ok) {
+      // Try to parse error message from response
+      let errorMessage = `Server error: ${response.status}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.error || errorData.message || errorMessage
+      } catch {
+        // If JSON parsing fails, use status text
+        errorMessage = response.statusText || errorMessage
+      }
+      
+      console.error('❌ API Error:', errorMessage)
+      
+      return {
+        success: false,
+        error: errorMessage
+      }
+    }
+    
+    return response.json()
+  } catch (error) {
+    console.error('❌ Network Error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error occurred'
+    }
+  }
 }
 
 /**

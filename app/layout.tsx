@@ -6,6 +6,7 @@ import { Suspense } from "react"
 import { AuthProvider } from "./lib/contexts/auth-context"
 import { ThemeProvider } from "./lib/contexts/theme-context"
 import { ToastProvider } from "./lib/contexts/toast-context"
+import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
 const inter = Inter({
@@ -37,6 +38,7 @@ export default function RootLayout({
           <ToastProvider>
             <AuthProvider>
               <Suspense fallback={null}>{children}</Suspense>
+              <Toaster />
               <Analytics />
             </AuthProvider>
           </ToastProvider>

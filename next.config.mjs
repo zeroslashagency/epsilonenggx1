@@ -1,10 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false, // ✅ SECURITY: Enable ESLint checks
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false, // ✅ SECURITY: Enable TypeScript checks
   },
   images: {
     unoptimized: true,
@@ -15,11 +15,11 @@ const nextConfig = {
     isrMemoryCacheSize: 0, // Disable ISR cache
   },
   
-  // Force no-cache headers globally
+  // Force no-cache headers globally + Security headers
   async headers() {
     return [
       {
-        // All API routes - no caching
+        // All API routes - no caching + security
         source: '/api/:path*',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' },
@@ -27,6 +27,25 @@ const nextConfig = {
           { key: 'Vercel-CDN-Cache-Control', value: 'no-store' },
           { key: 'Pragma', value: 'no-cache' },
           { key: 'Expires', value: '0' },
+          // 🔐 SECURITY HEADERS
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+      {
+        // All pages - security headers
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { 
+            key: 'Content-Security-Policy', 
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co;" 
+          },
         ],
       },
       {

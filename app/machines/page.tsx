@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Wrench
 } from 'lucide-react'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
 interface Machine {
   id: string
@@ -28,7 +29,7 @@ interface Machine {
   uptime: string
 }
 
-export default function MachinesPage() {
+function MachinesPageContent() {
   const [machines] = useState<Machine[]>([
     { id: '1', name: 'VMC 1', status: 'active', utilization: 95, currentTask: 'Part PN-001', uptime: '8h 45m' },
     { id: '2', name: 'VMC 2', status: 'active', utilization: 87, currentTask: 'Part PN-002', uptime: '8h 30m' },
@@ -202,5 +203,13 @@ export default function MachinesPage() {
         </div>
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function MachinesPage() {
+  return (
+    <ProtectedPage module="production" item="Machines" permission="view">
+      <MachinesPageContent />
+    </ProtectedPage>
   )
 }

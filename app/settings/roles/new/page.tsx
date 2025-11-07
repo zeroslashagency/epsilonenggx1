@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, ChevronDown, Save, X, Info, User, UserPlus, Shield, ArrowUpDown, Zap } from 'lucide-react'
-import { ZohoLayout } from '../../../components/zoho-ui'
+import { ZohoLayout } from '@/app/components/zoho-ui'
 import Link from 'next/link'
 import { initialPermissionModules, type ModulePermission, type PermissionModule } from './permissionData'
 
@@ -160,7 +160,7 @@ export default function NewRolePage() {
       })
       
       // Remove duplicates
-      const uniquePermissions = [...new Set(permissionCodes)]
+      const uniquePermissions = Array.from(new Set(permissionCodes))
       
       const { apiPost } = await import('@/app/lib/utils/api-client')
       const data = await apiPost('/api/admin/roles', {

@@ -2,11 +2,11 @@
 // Generated from ROLE_PROFILE_DUAL_MODE_IMPLEMENTATION.md
 
 export interface ModulePermission {
-  full: boolean
-  view: boolean
-  create: boolean
-  edit: boolean
-  delete: boolean
+  full?: boolean
+  view?: boolean
+  create?: boolean
+  edit?: boolean
+  delete?: boolean
   approve?: boolean
   export?: boolean
   isSubItem?: boolean
@@ -21,42 +21,48 @@ export interface PermissionModule {
 }
 
 export const initialPermissionModules: Record<string, PermissionModule> = {
-  // 1. MAIN - Dashboard (1 parent + 3 sub-items = 4)
+  // 1. MAIN - Dashboard (1 parent + 5 sub-items = 6)
   main_dashboard: {
     name: 'MAIN - Dashboard',
     items: {
       'Dashboard': {
         full: false,
         view: true,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isCollapsible: true
       },
       'Overview Widget': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Dashboard'
       },
       'Production Metrics': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Dashboard'
       },
       'Recent Activity': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
+        isSubItem: true,
+        parent: 'Dashboard'
+      },
+      'Machine Status Table': {
+        full: false,
+        view: false,
+        export: false,
+        isSubItem: true,
+        parent: 'Dashboard'
+      },
+      'Alerts Panel': {
+        full: false,
+        view: false,
+        export: false,
         isSubItem: true,
         parent: 'Dashboard'
       }
@@ -78,39 +84,22 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
         isCollapsible: true
       },
       'Create Schedule': {
-        full: false,
-        view: false,
         create: false,
-        edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Schedule Generator'
       },
       'Edit Schedule': {
-        full: false,
-        view: false,
-        create: false,
         edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Schedule Generator'
       },
       'Publish Schedule': {
-        full: false,
-        view: false,
-        create: false,
-        edit: false,
-        delete: false,
         approve: false,
         isSubItem: true,
         parent: 'Schedule Generator'
       },
       'Schedule History': {
-        full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Schedule Generator'
       },
@@ -125,27 +114,21 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
       'Timeline View': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Schedule Generator Dashboard'
       },
       'Calendar View': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Schedule Generator Dashboard'
       },
       'Statistics': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Schedule Generator Dashboard'
       }
@@ -160,35 +143,27 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
       'Chart': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isCollapsible: true
       },
       'Timeline View': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Chart'
       },
       'Gantt Chart': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Chart'
       },
       'KPI Charts': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Chart'
       }
@@ -196,42 +171,41 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
     specialPermissions: ['Allow users to export chart data', 'Allow users to create custom reports']
   },
 
-  // 4. MAIN - Analytics (1 parent + 3 sub-items = 4)
+  // 4. MAIN - Analytics (1 parent + 4 sub-items = 5)
   main_analytics: {
     name: 'MAIN - Analytics',
     items: {
       'Analytics': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isCollapsible: true
       },
-      'Production Efficiency': {
+      'Production Analytics': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
+        isSubItem: true,
+        parent: 'Analytics'
+      },
+      'Efficiency Analytics': {
+        full: false,
+        view: false,
+        export: false,
         isSubItem: true,
         parent: 'Analytics'
       },
       'Quality Analytics': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Analytics'
       },
       'Machine Analytics': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Analytics'
       }
@@ -333,38 +307,23 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
         isCollapsible: true
       },
       'Create Order': {
-        full: false,
-        view: false,
         create: false,
-        edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Orders'
       },
       'Edit Order': {
-        full: false,
-        view: false,
-        create: false,
         edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Orders'
       },
       'Order Status': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Orders'
       },
       'Order Approval': {
-        full: false,
-        view: false,
-        create: false,
-        edit: false,
-        delete: false,
         approve: false,
         isSubItem: true,
         parent: 'Orders'
@@ -380,27 +339,21 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
       'Machine List': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Machines'
       },
       'Machine Status': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Machines'
       },
       'Machine Configuration': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Machines'
       },
@@ -415,27 +368,21 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
       'Personnel List': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Personnel'
       },
       'Shift Assignment': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Personnel'
       },
       'Skill Management': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Personnel'
       },
@@ -449,38 +396,23 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
         isCollapsible: true
       },
       'Create Task': {
-        full: false,
-        view: false,
         create: false,
-        edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Tasks'
       },
       'Task Assignment': {
-        full: false,
-        view: false,
-        create: false,
         edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Tasks'
       },
       'Task Progress': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Tasks'
       },
       'Task Completion': {
-        full: false,
-        view: false,
-        create: false,
-        edit: false,
-        delete: false,
         approve: false,
         isSubItem: true,
         parent: 'Tasks'
@@ -504,27 +436,19 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
       'View Alerts': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Alerts'
       },
       'Create Alert Rules': {
-        full: false,
-        view: false,
         create: false,
-        edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Alerts'
       },
       'Alert History': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Alerts'
       },
@@ -537,29 +461,21 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
         isCollapsible: true
       },
       'Generate Reports': {
-        full: false,
-        view: false,
         create: false,
-        edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Reports'
       },
       'Scheduled Reports': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Reports'
       },
       'Report Templates': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Reports'
       },
@@ -573,29 +489,18 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
         isCollapsible: true
       },
       'Quality Inspections': {
-        full: false,
-        view: false,
         create: false,
-        edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Quality Control'
       },
       'Quality Metrics': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Quality Control'
       },
       'Quality Approvals': {
-        full: false,
-        view: false,
-        create: false,
-        edit: false,
-        delete: false,
         approve: false,
         isSubItem: true,
         parent: 'Quality Control'
@@ -612,36 +517,23 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
       'Maintenance Schedule': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Maintenance'
       },
       'Maintenance Requests': {
-        full: false,
-        view: false,
         create: false,
-        edit: false,
-        delete: false,
         isSubItem: true,
         parent: 'Maintenance'
       },
       'Maintenance History': {
         full: false,
         view: false,
-        create: false,
-        edit: false,
-        delete: false,
+        export: false,
         isSubItem: true,
         parent: 'Maintenance'
       },
       'Maintenance Approval': {
-        full: false,
-        view: false,
-        create: false,
-        edit: false,
-        delete: false,
         approve: false,
         isSubItem: true,
         parent: 'Maintenance'

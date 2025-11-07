@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
 import { ListTodo, Clock, CheckCircle2, AlertCircle, CheckCircle, CheckSquare, Plus } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
 interface Task {
   id: string
@@ -18,7 +19,7 @@ interface Task {
   progress: number
 }
 
-export default function TasksPage() {
+function TasksPageContent() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -279,5 +280,13 @@ export default function TasksPage() {
         </div>
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function TasksPage() {
+  return (
+    <ProtectedPage module="production" item="Tasks" permission="view">
+      <TasksPageContent />
+    </ProtectedPage>
   )
 }

@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 // Simple interfaces for dashboard data
 interface KPI {
@@ -47,6 +48,14 @@ interface KPI {
   trend?: 'up' | 'down' | 'neutral'
   icon: any
   color: string
+}
+
+export default function ScheduleDashboardSimple() {
+  return (
+    <ProtectedRoute requirePermission="schedule.view">
+      <ScheduleDashboardContent />
+    </ProtectedRoute>
+  )
 }
 
 interface Schedule {
@@ -59,12 +68,16 @@ interface Schedule {
   priority: 'high' | 'medium' | 'low'
 }
 
-export default function ScheduleDashboardSimple() {
+function ScheduleDashboardContent() {
   const [activeSection, setActiveSection] = useState("kpis")
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
-  const { userEmail, logout } = useAuth()
+  const { userEmail, logout, hasPermissionCode } = useAuth()
+
+  // Permission checks using backend codes
+  const canView = hasPermissionCode('schedule.view')
+  const canEdit = hasPermissionCode('schedule.edit')
 
   // Load dashboard data from Supabase
   useEffect(() => {

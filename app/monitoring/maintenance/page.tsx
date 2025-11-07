@@ -1,8 +1,23 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { ZohoLayout } from '@/app/components/zoho-ui'
-import { Wrench, CheckCircle2, Clock, AlertTriangle, CheckCircle, Calendar, AlertCircle } from 'lucide-react'
+import { useState } from 'react'
+import { 
+  ZohoLayout, 
+  ZohoCard, 
+  ZohoButton,
+  ZohoBadge 
+} from '../../components/zoho-ui'
+import { 
+  Wrench,
+  Calendar,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  TrendingUp,
+  Filter,
+  RefreshCw
+} from 'lucide-react'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 import { apiGet } from '@/app/lib/utils/api-client'
 
 interface MaintenanceRecord {
@@ -17,7 +32,7 @@ interface MaintenanceRecord {
   notes: string
 }
 
-export default function MaintenancePage() {
+function MaintenancePageContent() {
   const [records, setRecords] = useState<MaintenanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -205,5 +220,13 @@ export default function MaintenancePage() {
         </div>
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function MaintenancePage() {
+  return (
+    <ProtectedPage module="monitoring" item="Maintenance" permission="view">
+      <MaintenancePageContent />
+    </ProtectedPage>
   )
 }

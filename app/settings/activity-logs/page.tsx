@@ -343,17 +343,50 @@ function ActivityLogsPage() {
             ) : (
               <div className="space-y-3">
                 {filteredLogs.map((log) => (
-                  <div key={log.id} className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4">
-                    <div className="flex items-start justify-between">
+                  <div key={log.id} className="border border-[#E3E6F0] dark:border-gray-700 rounded p-4 hover:border-[#2C7BE5] transition-colors">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
+                        {/* Actor Information */}
+                        {log.actor && (
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-full bg-[#2C7BE5] flex items-center justify-center text-white text-xs font-semibold">
+                              {log.actor.full_name?.charAt(0) || log.actor.email?.charAt(0) || '?'}
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-[#12263F] dark:text-white">
+                                {log.actor.full_name || log.actor.email}
+                              </p>
+                              <p className="text-xs text-[#95AAC9]">
+                                {log.actor.role}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Description */}
                         <p className="text-sm text-[#12263F] dark:text-white font-medium">{log.description}</p>
-                        <p className="text-xs text-[#95AAC9] mt-1">
-                          {new Date(log.timestamp).toLocaleString()}
-                        </p>
+                        
+                        {/* Metadata */}
+                        <div className="flex items-center gap-4 mt-2">
+                          <p className="text-xs text-[#95AAC9] flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(log.timestamp).toLocaleString()}
+                          </p>
+                          {log.ip && log.ip !== 'unknown' && (
+                            <p className="text-xs text-[#95AAC9]">
+                              IP: {log.ip}
+                            </p>
+                          )}
+                          {log.details?.creation_method && (
+                            <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-[#95AAC9] rounded">
+                              {log.details.creation_method.replace('_', ' ')}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-[#2C7BE5] rounded">
-                        {log.action.replace(/_/g, ' ')}
-                      </span>
+                      
+                      {/* Action Badge */}
+                      {getActionBadge(log.action)}
                     </div>
                   </div>
                 ))}

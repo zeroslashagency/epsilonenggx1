@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { 
   ZohoLayout, 
   ZohoCard, 
@@ -21,14 +23,35 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
+import { useAuth } from '@/app/lib/contexts/auth-context'
+import { AnalyticsPermissions } from '@/app/lib/utils/permission-checker'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
-export default function AnalyticsPage() {
+function AnalyticsPageContent() {
+  const auth = useAuth()
   const [selectedPeriod, setSelectedPeriod] = useState('month')
   const [reportType, setReportType] = useState('production')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [analyticsData, setAnalyticsData] = useState<any>(null)
+
+  // Permission checks
+  const { userPermissions, user } = auth
+  const userRole = user?.role
+  const canViewAnalytics = AnalyticsPermissions.canViewAnalytics(userPermissions, userRole)
+  const canViewProduction = AnalyticsPermissions.canViewProduction(userPermissions, userRole)
+  const canViewEfficiency = AnalyticsPermissions.canViewEfficiency(userPermissions, userRole)
+  const canViewQuality = AnalyticsPermissions.canViewQuality(userPermissions, userRole)
+  const canViewMachine = AnalyticsPermissions.canViewMachine(userPermissions, userRole)
+  
+  // Check export permission
+  const canExportSensitiveData = userPermissions?.main_analytics?.specialPermissions?.includes(
+    'Allow users to export sensitive data'
+  )
+  
+  // Check if user has any analytics permissions
+  const hasAnyAnalyticsPermission = canViewProduction || canViewEfficiency || canViewQuality || canViewMachine
 
   const fetchAnalyticsData = async () => {
     setRefreshing(true)
@@ -108,6 +131,21 @@ export default function AnalyticsPage() {
               </div>
             </div>
           </div>
+        ) : !hasAnyAnalyticsPermission ? (
+          /* Fallback UI - No Analytics Permissions */
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <TrendingUp className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No Analytics Permissions
+              </h3>
+              <p className="text-sm text-gray-500">
+                You don't have permission to view any analytics.
+                <br />
+                Contact your administrator to request access.
+              </p>
+            </div>
+          </div>
         ) : (
           <>
         {/* Header */}
@@ -144,61 +182,71 @@ export default function AnalyticsPage() {
             >
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </ZohoButton>
-            <ZohoButton
-              variant="primary"
-              icon={<Download className="w-4 h-4" />}
-            >
-              Export Report
-            </ZohoButton>
+            {canExportSensitiveData && (
+              <ZohoButton
+                variant="primary"
+                icon={<Download className="w-4 h-4" />}
+              >
+                Export Report
+              </ZohoButton>
+            )}
           </div>
         </div>
 
         {/* Report Type Selector */}
         <div className="flex items-center gap-2 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg p-1">
-          <button
-            onClick={() => setReportType('production')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              reportType === 'production'
-                ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
-                : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4 inline mr-2" />
-            Production
-          </button>
-          <button
-            onClick={() => setReportType('efficiency')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              reportType === 'efficiency'
-                ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
-                : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
-            }`}
-          >
-            <Activity className="w-4 h-4 inline mr-2" />
-            Efficiency
-          </button>
-          <button
-            onClick={() => setReportType('quality')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              reportType === 'quality'
-                ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
-                : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
-            }`}
-          >
-            <Package className="w-4 h-4 inline mr-2" />
-            Quality
-          </button>
-          <button
-            onClick={() => setReportType('machine')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              reportType === 'machine'
-                ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
-                : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
-            }`}
-          >
-            <Cpu className="w-4 h-4 inline mr-2" />
-            Machine
-          </button>
+          {canViewProduction && (
+            <button
+              onClick={() => setReportType('production')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                reportType === 'production'
+                  ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
+                  : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4 inline mr-2" />
+              Production
+            </button>
+          )}
+          {canViewEfficiency && (
+            <button
+              onClick={() => setReportType('efficiency')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                reportType === 'efficiency'
+                  ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
+                  : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
+              }`}
+            >
+              <Activity className="w-4 h-4 inline mr-2" />
+              Efficiency
+            </button>
+          )}
+          {canViewQuality && (
+            <button
+              onClick={() => setReportType('quality')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                reportType === 'quality'
+                  ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
+                  : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
+              }`}
+            >
+              <Package className="w-4 h-4 inline mr-2" />
+              Quality
+            </button>
+          )}
+          {canViewMachine && (
+            <button
+              onClick={() => setReportType('machine')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                reportType === 'machine'
+                  ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
+                  : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
+              }`}
+            >
+              <Cpu className="w-4 h-4 inline mr-2" />
+              Machine
+            </button>
+          )}
         </div>
 
         {/* Dynamic Content Based on Report Type */}
@@ -936,5 +984,13 @@ export default function AnalyticsPage() {
         )}
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function AnalyticsPage() {
+  return (
+    <ProtectedPage module="main_analytics" item="Analytics" permission="view">
+      <AnalyticsPageContent />
+    </ProtectedPage>
   )
 }

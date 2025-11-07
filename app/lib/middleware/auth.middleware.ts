@@ -270,7 +270,7 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
     }
     
     // Remove duplicates and return
-    return [...new Set(allPermissions)]
+    return Array.from(new Set(allPermissions))
     
   } catch (error) {
     return []
@@ -278,7 +278,7 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
 }
 
 /**
- * Require specific permission
+ * Require specific permission (OLD SYSTEM - for backward compatibility)
  */
 export async function requirePermission(
   request: NextRequest,
@@ -310,6 +310,102 @@ export async function requirePermission(
     )
   }
 
+  return user
+}
+
+/**
+ * Require granular permission from permissions_json
+ * NEW SYSTEM - checks role's permissions_json for granular permissions
+ * 
+ * @param request - Next.js request
+ * @param module - Module key (e.g., 'production', 'monitoring')
+ * @param item - Item key (e.g., 'Orders', 'Alerts')
+ * @param permission - Permission type ('view', 'create', 'edit', 'delete', 'approve', 'export')
+ * @returns User object or error response
+ */
+export async function requireGranularPermission(
+  request: NextRequest,
+  module: string,
+  item: string,
+  permission: string
+): Promise<User | NextResponse> {
+  // Step 1: Get authenticated user
+  const user = await getUserFromRequest(request)
+  
+  if (!user) {
+    console.log('❌ No authenticated user')
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Unauthorized',
+        message: 'Authentication required.'
+      },
+      { status: 401 }
+    )
+  }
+  
+  console.log(`🔍 Checking permission: ${module}.${item}.${permission} for user: ${user.email} (${user.role})`)
+  
+  // Step 2: Super Admin bypass
+  if (user.role === 'Super Admin' || user.role === 'super_admin' || user.role_badge === 'super_admin') {
+    console.log('✅ Super Admin - granting access')
+    return user
+  }
+  
+  // Step 3: Get role's permissions_json from database
+  const supabase = getSupabaseAdminClient()
+  const { data: roleData, error: roleError } = await supabase
+    .from('roles')
+    .select('permissions_json')
+    .eq('name', user.role)
+    .single()
+  
+  if (roleError || !roleData) {
+    console.error('❌ Error fetching role permissions:', roleError)
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden',
+        message: 'Unable to verify permissions.'
+      },
+      { status: 403 }
+    )
+  }
+  
+  // Step 4: Check granular permission
+  const permissions = roleData.permissions_json
+  const modulePerms = permissions?.[module]
+  const itemPerms = modulePerms?.items?.[item]
+  
+  if (!itemPerms) {
+    console.log(`❌ No permissions found for ${module}.${item}`)
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden',
+        message: `Access denied. Required: ${module}.${item}.${permission}`
+      },
+      { status: 403 }
+    )
+  }
+  
+  // Step 5: Check specific permission or full access
+  const hasFullAccess = itemPerms.full === true
+  const hasSpecificPermission = itemPerms[permission] === true
+  
+  if (!hasFullAccess && !hasSpecificPermission) {
+    console.log(`❌ Missing permission: ${module}.${item}.${permission} (full: ${itemPerms.full}, ${permission}: ${itemPerms[permission]})`)
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden',
+        message: `Access denied. Required: ${module}.${item}.${permission}`
+      },
+      { status: 403 }
+    )
+  }
+  
+  console.log(`✅ Permission granted: ${module}.${item}.${permission}`)
   return user
 }
 

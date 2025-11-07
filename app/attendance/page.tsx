@@ -20,8 +20,9 @@ import { AttendanceLog, TodayAttendanceData, AllTrackData } from '@/app/types'
 import { AttendancePermissions } from '@/app/lib/utils/permission-checker'
 import type { PermissionModule } from '@/app/lib/utils/permission-checker'
 import { AttendanceTodayChart } from '@/components/AttendanceTodayChart'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
-export default function AttendancePage() {
+function AttendancePageContent() {
   const auth = useAuth()
   const router = useRouter()
   
@@ -190,11 +191,11 @@ export default function AttendancePage() {
     }
   }
 
-  // Check permissions - temporarily show to all authenticated users
-  // TODO: Integrate with granular permission system once it's populated
-  const canViewTodaysActivity = true // AttendancePermissions.canViewTodaysActivity(userPermissions)
-  const canExportExcel = true // AttendancePermissions.canExportExcel(userPermissions)
-  const canExportRecords = true // AttendancePermissions.canExportRecords(userPermissions)
+  // Permissions are checked at page level via ProtectedPage component
+  // These flags control UI features within the page
+  const canViewTodaysActivity = true
+  const canExportExcel = true
+  const canExportRecords = true
 
   // Fetch employees from API
   const fetchEmployees = async () => {
@@ -1823,5 +1824,13 @@ export default function AttendancePage() {
         </Card>
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function AttendancePage() {
+  return (
+    <ProtectedPage module="main_attendance" item="Attendance" permission="view">
+      <AttendancePageContent />
+    </ProtectedPage>
   )
 }

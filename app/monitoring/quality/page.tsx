@@ -1,8 +1,23 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { ZohoLayout } from '@/app/components/zoho-ui'
-import { CheckCircle2, XCircle, AlertTriangle, Package, CheckCircle, Shield, TrendingUp } from 'lucide-react'
+import { 
+  ZohoLayout, 
+  ZohoCard, 
+  ZohoButton,
+  ZohoBadge 
+} from '../../components/zoho-ui'
+import { 
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  TrendingUp,
+  Award,
+  Target,
+  Filter,
+  RefreshCw
+} from 'lucide-react'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 import { apiGet } from '@/app/lib/utils/api-client'
 
 interface QualityCheck {
@@ -75,7 +90,7 @@ export default function QualityControlPage() {
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Award className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quality Control</h1>
@@ -175,5 +190,13 @@ export default function QualityControlPage() {
         </div>
       </div>
     </ZohoLayout>
+  )
+}
+
+function QualityPageContent() {
+  return (
+    <ProtectedPage module="monitoring" item="Quality Control" permission="view">
+      <QualityControlPage />
+    </ProtectedPage>
   )
 }

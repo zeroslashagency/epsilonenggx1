@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ZohoLayout } from '../components/zoho-ui/ZohoLayout'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 import { 
   Users, 
   Calendar,
@@ -36,9 +37,11 @@ import {
 } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
 import { useAuth } from '@/app/lib/contexts/auth-context'
+import { hasPermission } from '@/app/lib/utils/permission-checker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Shield } from 'lucide-react'
 
 interface DashboardStats {
   totalEmployees: number
@@ -65,7 +68,7 @@ interface RecentActivity {
   type: 'in' | 'out'
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const auth = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats>({
@@ -83,17 +86,47 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
-  // Fetch dashboard data with safe null checks
-  const fetchDashboardData = async () => {
+  // Dashboard sub-item permission checks
+  const canViewOverview = auth.userRole === 'Super Admin' || 
+    hasPermission(auth.userPermissions, 'main_dashboard', 'Overview Widget', 'view')
+  
+  const canViewMetrics = auth.userRole === 'Super Admin' || 
+    hasPermission(auth.userPermissions, 'main_dashboard', 'Production Metrics', 'view')
+  
+  const canViewActivity = auth.userRole === 'Super Admin' || 
+    hasPermission(auth.userPermissions, 'main_dashboard', 'Recent Activity', 'view')
+  
+  const canViewMachines = auth.userRole === 'Super Admin' || 
+    hasPermission(auth.userPermissions, 'main_dashboard', 'Machine Status Table', 'view')
+  
+  const canViewAlerts = auth.userRole === 'Super Admin' || 
+    hasPermission(auth.userPermissions, 'main_dashboard', 'Alerts Panel', 'view')
+  
+  const canExportOverview = auth.userRole === 'Super Admin' || 
+    hasPermission(auth.userPermissions, 'main_dashboard', 'Overview Widget', 'export')
+  
+  const canExportMetrics = auth.userRole === 'Super Admin' || 
+    hasPermission(auth.userPermissions, 'main_dashboard', 'Production Metrics', 'export')
+  
+  const canExportMachines = auth.userRole === 'Super Admin' || 
+    hasPermission(auth.userPermissions, 'main_dashboard', 'Machine Status Table', 'export')
+  
+  const hasAnyDashboardPermission = canViewOverview || canViewMetrics || canViewActivity || canViewMachines || canViewAlerts
+
+  // 🚀 OPTIMIZATION: Memoize fetch function to prevent unnecessary re-creation
+  const fetchDashboardData = useCallback(async () => {
     try {
       setError(null)
       
       // Fetch today's attendance
       const today = new Date().toISOString().split('T')[0]
-      const attendanceResponse = await apiGet(`/api/get-attendance?fromDate=${today}&toDate=${today}`)
+      // 🚀 PERFORMANCE: Fetch data in parallel instead of sequential
+      const [attendanceResponse, employeesResponse] = await Promise.all([
+        apiGet(`/api/get-attendance?fromDate=${today}&toDate=${today}`),
+        apiGet('/api/employee-master')
+      ])
       
-      // Fetch all employees
-      const employeesResponse = await apiGet('/api/employee-master')
+      const attendanceData = attendanceResponse.data || {}
       
       if (attendanceResponse.success && employeesResponse.success) {
         const attendanceData = attendanceResponse.data || {}
@@ -107,8 +140,8 @@ export default function DashboardPage() {
           totalEmployees,
           presentToday,
           attendancePercentage,
-          activeOrders: 0, // TODO: Fetch from orders API
-          machinesRunning: 0, // TODO: Fetch from machines API
+          activeOrders: 0, // Production metrics - implement when orders API is ready
+          machinesRunning: 0, // Production metrics - implement when machines API is ready
           totalMachines: 10,
           utilizationRate: 0
         })
@@ -132,10 +165,9 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  // Fetch attendance trend for last 7 days
-  const fetchAttendanceTrend = async () => {
+  const fetchAttendanceTrend = useCallback(async () => {
     try {
       const trends: AttendanceTrend[] = []
       const today = new Date()
@@ -164,7 +196,7 @@ export default function DashboardPage() {
       setAttendanceTrend(trends)
     } catch (error) {
     }
-  }
+  }, [stats.totalEmployees]) // Depends on totalEmployees
 
   // Authentication guard - REMOVED to prevent redirect loop
   // Auth protection handled by auth-context
@@ -217,7 +249,7 @@ export default function DashboardPage() {
         }
       } catch (err) {
         if (isMounted) {
-          setError('Failed to load dashboard data')
+          setError(err instanceof Error ? err.message : 'Failed to load raw data')
         }
       } finally {
         if (isMounted) {
@@ -274,6 +306,22 @@ export default function DashboardPage() {
   return (
     <ZohoLayout breadcrumbs={[{ label: 'Dashboard' }]}>
       <div className="space-y-4">
+        {/* Check if user has any dashboard sub-item permissions */}
+        {!hasAnyDashboardPermission ? (
+          <div className="min-h-[60vh] flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-lg border border-gray-200 dark:border-gray-700 max-w-md">
+              <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                No Dashboard Permissions
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                You don't have permission to view any dashboard components.
+                Contact your administrator to request access.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Global Header Bar */}
         <div className="bg-gradient-to-r from-blue-400 to-indigo-400 dark:from-blue-500 dark:to-indigo-700 rounded-xl p-4 shadow-lg">
           <div className="flex items-center justify-between">
@@ -358,15 +406,18 @@ export default function DashboardPage() {
                 <SelectItem value="cnc">CNC Machines</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" className="ml-auto gap-2">
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
+            {canExportOverview && (
+              <Button variant="outline" size="sm" className="ml-auto gap-2">
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+            )}
           </div>
         </div>
 
 
-        {/* ROW A: KPI Strip - 6 Cards */}
+        {/* ROW A: KPI Strip - 6 Cards (Overview Widget) */}
+        {canViewOverview && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-fade-in">
           {loading ? (
             <>
@@ -488,9 +539,12 @@ export default function DashboardPage() {
             </>
           )}
         </div>
+        )}
 
         {/* ROW B: Main Chart + Right Rail */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+          {canViewMetrics && (
+          <>
           {/* Main Chart Area (2/3 width) */}
           <div className="lg:col-span-2 space-y-4">
             {/* Production Timeline Chart */}
@@ -585,10 +639,13 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          </>
+          )}
 
           {/* Right Rail (1/3 width) */}
           <div className="space-y-4">
             {/* Alerts & Urgent Items */}
+            {canViewAlerts && (
             <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
               <div className="flex items-center gap-2 mb-4">
                 <Bell className="w-5 h-5 text-red-600" />
@@ -619,6 +676,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Quick Actions */}
             <div className="bg-gradient-to-br from-blue-500 to-cyan-500 dark:from-blue-700 dark:to-cyan-700 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
@@ -648,6 +706,7 @@ export default function DashboardPage() {
         {/* ROW C: Tactical Widgets - 3 Columns */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Recent Activity / Live Feed */}
+          {canViewActivity && (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -674,6 +733,7 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+          )}
 
           {/* Top Operators */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
@@ -743,7 +803,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ROW D: Production Tables */}
+        {/* ROW D: Production Tables (Machine Status Table) */}
+        {canViewMachines && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -755,10 +816,12 @@ export default function DashboardPage() {
                 <Filter className="w-4 h-4" />
                 Filter
               </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Download className="w-4 h-4" />
-                Export CSV
-              </Button>
+              {canExportMachines && (
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </Button>
+              )}
             </div>
           </div>
           
@@ -817,6 +880,7 @@ export default function DashboardPage() {
             </table>
           </div>
         </div>
+        )}
 
         {/* Footer Status Bar */}
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -837,7 +901,17 @@ export default function DashboardPage() {
             </a>
           </div>
         </div>
+        </>
+        )}
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <ProtectedPage module="main_dashboard" item="Dashboard" permission="view">
+      <DashboardPageContent />
+    </ProtectedPage>
   )
 }

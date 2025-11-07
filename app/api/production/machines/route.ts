@@ -2,14 +2,15 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
 
 /**
  * GET /api/production/machines
  * Retrieve all machines
  */
 export async function GET(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: production.Machines.view permission
+  const authResult = await requireGranularPermission(request, 'production', 'Machines', 'view')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -54,7 +55,8 @@ export async function GET(request: NextRequest) {
  * Create a new machine
  */
 export async function POST(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: production.Machines.create permission
+  const authResult = await requireGranularPermission(request, 'production', 'Machines', 'create')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -118,7 +120,8 @@ export async function POST(request: NextRequest) {
  * Update a machine
  */
 export async function PATCH(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: production.Machines.edit permission
+  const authResult = await requireGranularPermission(request, 'production', 'Machines', 'edit')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 

@@ -17,6 +17,7 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
 interface Alert {
   id: string
@@ -28,7 +29,7 @@ interface Alert {
   read: boolean
 }
 
-export default function AlertsPage() {
+function AlertsPageContent() {
   const [alerts, setAlerts] = useState<Alert[]>([
     {
       id: '1',
@@ -270,5 +271,13 @@ export default function AlertsPage() {
         </div>
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function AlertsPage() {
+  return (
+    <ProtectedPage module="monitoring" item="Alerts" permission="view">
+      <AlertsPageContent />
+    </ProtectedPage>
   )
 }

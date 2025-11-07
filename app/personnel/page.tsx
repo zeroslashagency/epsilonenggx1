@@ -7,6 +7,7 @@ import { apiGet } from '@/app/lib/utils/api-client'
 import { ZohoLayout } from '../components/zoho-ui'
 import { calculateDateRange } from '@/lib/utils/date-utils'
 import { RecentAttendanceRecords } from '@/components/RecentAttendanceRecords'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
 interface Employee {
   id: string
@@ -26,7 +27,7 @@ interface AttendanceStats {
   totalPunches: number
 }
 
-export default function PersonnelPage() {
+function PersonnelPageContent() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
@@ -703,5 +704,13 @@ export default function PersonnelPage() {
         )}
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function PersonnelPage() {
+  return (
+    <ProtectedPage module="production" item="Personnel" permission="view">
+      <PersonnelPageContent />
+    </ProtectedPage>
   )
 }

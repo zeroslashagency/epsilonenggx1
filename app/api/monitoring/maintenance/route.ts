@@ -2,14 +2,15 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
 
 /**
  * GET /api/monitoring/maintenance
  * Retrieve all maintenance records
  */
 export async function GET(request: NextRequest) {
-  const authResult = await requirePermission(request, 'view_reports')
+  // ✅ Check: monitoring.Maintenance.view permission
+  const authResult = await requireGranularPermission(request, 'monitoring', 'Maintenance', 'view')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -57,7 +58,8 @@ export async function GET(request: NextRequest) {
  * Create a new maintenance record
  */
 export async function POST(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: monitoring.Maintenance.create permission
+  const authResult = await requireGranularPermission(request, 'monitoring', 'Maintenance', 'create')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -136,7 +138,8 @@ export async function POST(request: NextRequest) {
  * Update a maintenance record
  */
 export async function PATCH(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: monitoring.Maintenance.edit permission
+  const authResult = await requireGranularPermission(request, 'monitoring', 'Maintenance', 'edit')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 

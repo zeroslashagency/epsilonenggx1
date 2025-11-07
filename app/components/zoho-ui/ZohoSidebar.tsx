@@ -186,7 +186,7 @@ MenuItem.displayName = 'MenuItem'
 
 export const ZohoSidebar = memo(({ collapsed, onToggleAction }: ZohoSidebarProps) => {
   const pathname = usePathname()
-  const { logout, userRole, hasPermission } = useAuth()
+  const { logout, userRole, hasPermission, hasPermissionCode } = useAuth()
   const navRef = useRef<HTMLElement>(null)
   
   // Load state from localStorage
@@ -239,7 +239,7 @@ export const ZohoSidebar = memo(({ collapsed, onToggleAction }: ZohoSidebarProps
     
     if (newExpanded.length > 0) {
       setExpandedItems(prev => {
-        const combined = [...new Set([...prev, ...newExpanded])]
+        const combined = Array.from(new Set([...prev, ...newExpanded]))
         if (typeof window !== 'undefined') {
           localStorage.setItem('expandedMenuItems', JSON.stringify(combined))
         }
@@ -249,57 +249,147 @@ export const ZohoSidebar = memo(({ collapsed, onToggleAction }: ZohoSidebarProps
   }, [pathname])
 
   // Memoized menu items
-  const menuItems = useMemo<MenuItem[]>(() => [
-    { id: 'main', label: 'MAIN', isSection: true },
-    ...(userRole === 'Super Admin' || hasPermission('main_dashboard', 'Dashboard', 'view') ? [{
-      id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard
-    }] : []),
-    ...(userRole === 'Super Admin' || hasPermission('main_scheduling', 'Schedule Generator', 'view') ? [{
-      id: 'schedule-generator', label: 'Schedule Generator', href: '/scheduler', icon: Calendar
-    }] : []),
-    ...(userRole === 'Super Admin' || hasPermission('main_charts', 'Chart', 'view') ? [{
-      id: 'chart', label: 'Chart', href: '/chart', icon: BarChart3
-    }] : []),
-    ...(userRole === 'Super Admin' || hasPermission('main_analytics', 'Analytics', 'view') ? [{
-      id: 'analytics', label: 'Analytics', href: '/analytics', icon: TrendingUp
-    }] : []),
-    ...(userRole === 'Super Admin' || hasPermission('main_attendance', 'Attendance', 'view') ? [{
-      id: 'attendance', label: 'Attendance', href: '/attendance', icon: Clock
-    }] : []),
-    ...(userRole === 'Super Admin' || hasPermission('main_attendance', 'Standalone Attendance', 'view') ? [{
-      id: 'standalone-attendance', label: 'Standalone Attendance', href: 'https://epsilon-attendance.vercel.app/', icon: UserCheck
-    }] : []),
-    { id: 'production-section', label: 'PRODUCTION & MONITORING', isSection: true },
-    {
-      id: 'production', label: 'Production', href: '/production', icon: Package,
-      items: [
-        { id: 'orders', label: 'Orders', href: '/production/orders', icon: FileText },
-        { id: 'machines', label: 'Machines', href: '/production/machines', icon: Wrench },
-        { id: 'personnel', label: 'Personnel', href: '/personnel', icon: Users },
-        { id: 'tasks', label: 'Tasks', href: '/production/tasks', icon: FileText }
-      ]
-    },
-    {
-      id: 'monitoring', label: 'Monitoring', href: '/monitoring', icon: Bell,
-      items: [
-        { id: 'alerts', label: 'Alerts', href: '/alerts', icon: Bell },
-        { id: 'reports', label: 'Reports', href: '/monitoring/reports', icon: FileText },
-        { id: 'quality', label: 'Quality Control', href: '/monitoring/quality', icon: Shield },
-        { id: 'maintenance', label: 'Maintenance', href: '/monitoring/maintenance', icon: Wrench }
-      ]
-    },
-    { id: 'system', label: 'SYSTEM', isSection: true },
-    {
-      id: 'settings', label: 'Settings', href: '/settings', icon: Settings,
-      items: [
-        { id: 'user-management', label: 'User Management', href: '/settings/users', icon: Users },
-        { id: 'add-users', label: 'Add Users', href: '/settings/add-users', icon: UserPlus },
-        { id: 'role-profiles', label: 'Role Profiles', href: '/settings/roles', icon: Shield },
-        { id: 'activity-logging', label: 'Activity Logging', href: '/settings/activity-logs', icon: Activity }
-      ]
-    },
-    { id: 'account', label: 'Account', href: '/account', icon: User }
-  ], [userRole, hasPermission])
+  const menuItems = useMemo<MenuItem[]>(() => {
+    const items: MenuItem[] = []
+    
+    // MAIN Section
+    items.push({ id: 'main', label: 'MAIN', isSection: true })
+    
+    if (userRole === 'Super Admin' || hasPermission('main_dashboard', 'Dashboard', 'view')) {
+      items.push({ id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermissionCode('schedule.view')) {
+      items.push({ id: 'schedule-generator', label: 'Schedule Generator', href: '/scheduler', icon: Calendar })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('main_charts', 'Chart', 'view')) {
+      items.push({ id: 'chart', label: 'Chart', href: '/chart', icon: BarChart3 })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('main_analytics', 'Analytics', 'view')) {
+      items.push({ id: 'analytics', label: 'Analytics', href: '/analytics', icon: TrendingUp })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('main_attendance', 'Attendance', 'view')) {
+      items.push({ id: 'attendance', label: 'Attendance', href: '/attendance', icon: Clock })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('main_attendance', 'Standalone Attendance', 'view')) {
+      items.push({ id: 'standalone-attendance', label: 'Standalone Attendance', href: 'https://epsilon-attendance.vercel.app/', icon: UserCheck })
+    }
+    
+    // Build production sub-items based on individual permissions
+    const productionItems: MenuItem[] = []
+    
+    if (userRole === 'Super Admin' || hasPermission('production', 'Orders', 'view')) {
+      productionItems.push({ id: 'orders', label: 'Orders', href: '/production/orders', icon: FileText })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('production', 'Machines', 'view')) {
+      productionItems.push({ id: 'machines', label: 'Machines', href: '/production/machines', icon: Wrench })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('production', 'Personnel', 'view')) {
+      productionItems.push({ id: 'personnel', label: 'Personnel', href: '/personnel', icon: Users })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('production', 'Tasks', 'view')) {
+      productionItems.push({ id: 'tasks', label: 'Tasks', href: '/production/tasks', icon: FileText })
+    }
+    
+    // Build monitoring sub-items based on individual permissions
+    const monitoringItems: MenuItem[] = []
+    
+    if (userRole === 'Super Admin' || hasPermission('monitoring', 'Alerts', 'view')) {
+      monitoringItems.push({ id: 'alerts', label: 'Alerts', href: '/alerts', icon: Bell })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('monitoring', 'Reports', 'view')) {
+      monitoringItems.push({ id: 'reports', label: 'Reports', href: '/monitoring/reports', icon: FileText })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('monitoring', 'Quality Control', 'view')) {
+      monitoringItems.push({ id: 'quality', label: 'Quality Control', href: '/monitoring/quality', icon: Shield })
+    }
+    
+    if (userRole === 'Super Admin' || hasPermission('monitoring', 'Maintenance', 'view')) {
+      monitoringItems.push({ id: 'maintenance', label: 'Maintenance', href: '/monitoring/maintenance', icon: Wrench })
+    }
+    
+    // Only show PRODUCTION & MONITORING section if user has access to at least one item
+    if (productionItems.length > 0 || monitoringItems.length > 0) {
+      items.push({ id: 'production-section', label: 'PRODUCTION & MONITORING', isSection: true })
+      
+      if (productionItems.length > 0) {
+        items.push({
+          id: 'production', 
+          label: 'Production', 
+          href: '/production', 
+          icon: Package,
+          items: productionItems
+        })
+      }
+      
+      if (monitoringItems.length > 0) {
+        items.push({
+          id: 'monitoring', 
+          label: 'Monitoring', 
+          href: '/monitoring', 
+          icon: Bell,
+          items: monitoringItems
+        })
+      }
+    }
+    
+    // Check if user has ANY system administration permissions
+    const hasUserManagementAccess = userRole === 'Super Admin' || hasPermission('system_administration', 'User Management', 'view')
+    const hasAddUsersAccess = userRole === 'Super Admin' || hasPermission('system_administration', 'Add Users', 'view')
+    const hasRoleProfilesAccess = userRole === 'Super Admin' || hasPermission('system_administration', 'Role Profiles', 'view')
+    const hasActivityLoggingAccess = userRole === 'Super Admin' || hasPermission('system_administration', 'Activity Logging', 'view')
+    const hasSystemSettingsAccess = userRole === 'Super Admin' || hasPermission('system_administration', 'System Settings', 'view')
+    const hasAccountAccess = userRole === 'Super Admin' || hasPermission('system_administration', 'Account', 'view')
+    
+    const hasAnySettingsAccess = hasUserManagementAccess || hasAddUsersAccess || hasRoleProfilesAccess || hasActivityLoggingAccess || hasSystemSettingsAccess
+    const hasSystemAccess = hasAnySettingsAccess || hasAccountAccess
+    
+    // Only show SYSTEM section if user has access to at least one system item
+    if (hasSystemAccess) {
+      items.push({ id: 'system', label: 'SYSTEM', isSection: true })
+      
+      // Settings menu - only show if user has access to at least one settings item
+      if (hasAnySettingsAccess) {
+        const settingsItems: MenuItem[] = []
+        
+        if (hasUserManagementAccess) {
+          settingsItems.push({ id: 'user-management', label: 'User Management', href: '/settings/users', icon: Users })
+        }
+        if (hasAddUsersAccess) {
+          settingsItems.push({ id: 'add-users', label: 'Add Users', href: '/settings/add-users', icon: UserPlus })
+        }
+        if (hasRoleProfilesAccess) {
+          settingsItems.push({ id: 'role-profiles', label: 'Role Profiles', href: '/settings/roles', icon: Shield })
+        }
+        if (hasActivityLoggingAccess) {
+          settingsItems.push({ id: 'activity-logging', label: 'Activity Logging', href: '/settings/activity-logs', icon: Activity })
+        }
+        
+        if (settingsItems.length > 0) {
+          items.push({
+            id: 'settings', label: 'Settings', href: '/settings', icon: Settings,
+            items: settingsItems
+          })
+        }
+      }
+      
+      // Account - only show if user has account permission
+      if (hasAccountAccess) {
+        items.push({ id: 'account', label: 'Account', href: '/account', icon: User })
+      }
+    }
+    
+    return items
+  }, [userRole, hasPermission, hasPermissionCode])
 
   const toggleExpanded = useCallback((itemId: string) => {
     setExpandedItems(prev => {

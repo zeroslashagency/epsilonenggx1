@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    const { employee_code, employee_name, email, password, role, department, designation, actorId } = await request.json()
+    const { employee_code, employee_name, email, password, role, department, designation, standalone_attendance, actorId } = await request.json()
 
     // Validate required fields
     if (!employee_code || !employee_name || !email || !password || !role) {
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
           department: department || 'Default',
           designation: designation || 'Employee',
           role: role || 'Operator',
-          standalone_attendance: 'NO'
+          standalone_attendance: standalone_attendance || 'NO'
         })
         .eq('id', authUser.user.id)
         .select()
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
           department: department || 'Default',
           designation: designation || 'Employee',
           role: role || 'Operator',
-          standalone_attendance: 'NO'
+          standalone_attendance: standalone_attendance || 'NO'
         })
         .select()
 
@@ -149,6 +149,26 @@ export async function POST(request: NextRequest) {
     }
 
     
+    // ✅ Log user creation activity
+    await supabase
+      .from('audit_logs')
+      .insert({
+        actor_id: user.id,
+        target_id: authUser.user.id,
+        action: 'user_created',
+        meta_json: {
+          created_user: {
+            email: email,
+            full_name: employee_name,
+            employee_code: employee_code,
+            role: role || 'Operator'
+          },
+          created_by: user.email,
+          created_at: new Date().toISOString(),
+          creation_method: 'employee_selection'
+        }
+      })
+
     return NextResponse.json({
       success: true,
       message: `User account created for ${employee_name}`,

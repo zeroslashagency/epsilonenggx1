@@ -1,6 +1,6 @@
 "use client"
 
-import * as React from "react"
+import React, { useMemo, memo } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import { Activity } from "lucide-react"
 
@@ -36,7 +36,8 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function AttendanceTodayChart({ data, loading }: AttendanceTodayChartProps) {
+// 🚀 OPTIMIZATION: Memoize component to prevent unnecessary re-renders
+export const AttendanceTodayChart = memo(function AttendanceTodayChart({ data, loading }: AttendanceTodayChartProps) {
   // Process data into hourly buckets with employee details
   const chartData = React.useMemo(() => {
     // Create 24-hour buckets
@@ -264,4 +265,4 @@ export function AttendanceTodayChart({ data, loading }: AttendanceTodayChartProp
       </CardContent>
     </Card>
   )
-}
+})

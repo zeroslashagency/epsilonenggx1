@@ -22,8 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 })
     }
 
-    // For now, return all employees since we don't have employee_code linking yet
-    // TODO: Add employee_code column to profiles table for proper filtering
+    // Return all employees - employee_code linking can be added in future if needed
     const availableEmployees = employees || []
 
     return NextResponse.json({

@@ -2,14 +2,15 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
 
 /**
  * GET /api/production/orders
  * Retrieve all production orders
  */
 export async function GET(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: production.Orders.view permission
+  const authResult = await requireGranularPermission(request, 'production', 'Orders', 'view')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -54,7 +55,8 @@ export async function GET(request: NextRequest) {
  * Create a new production order
  */
 export async function POST(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: production.Orders.create permission
+  const authResult = await requireGranularPermission(request, 'production', 'Orders', 'create')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -121,7 +123,8 @@ export async function POST(request: NextRequest) {
  * Update a production order
  */
 export async function PATCH(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: production.Orders.edit permission
+  const authResult = await requireGranularPermission(request, 'production', 'Orders', 'edit')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -178,7 +181,8 @@ export async function PATCH(request: NextRequest) {
  * Delete a production order
  */
 export async function DELETE(request: NextRequest) {
-  const authResult = await requirePermission(request, 'operate_machine')
+  // ✅ Check: production.Orders.delete permission
+  const authResult = await requireGranularPermission(request, 'production', 'Orders', 'delete')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 

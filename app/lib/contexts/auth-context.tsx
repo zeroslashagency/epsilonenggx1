@@ -16,8 +16,10 @@ interface AuthContextType {
   isAuthenticated: boolean
   userEmail: string | null
   userRole: string | null
+  user: { role: string | null; email: string | null } | null
   userPermissions: Record<string, PermissionModule>
   hasPermission: (moduleKey: string, itemKey: string, action?: string) => boolean
+  hasPermissionCode: (permissionCode: string) => boolean
   refreshPermissions: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
   logout: () => void
@@ -38,8 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Function to fetch user profile and permissions from database
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('🔍 Fetching user profile and permissions...')
-      
       // Get user's role
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -48,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single()
       
       if (profileError || !profile) {
-        console.error('❌ Error fetching profile:', profileError)
         // Don't block - set defaults and continue
         setUserRole('User')
         setUserPermissions({})
@@ -56,11 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       setUserRole(profile.role)
-      console.log('👤 User role:', profile.role)
       
       // Super Admin gets all permissions
       if (profile.role === 'Super Admin' || profile.role === 'super_admin') {
-        console.log('⭐ Super Admin detected - granting all permissions')
         setUserPermissions({}) // Empty object = all permissions for Super Admin
         return
       }
@@ -73,27 +70,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single()
       
       if (roleError) {
-        console.error('❌ Error fetching role permissions:', roleError)
         // Don't block - set empty permissions and continue
         setUserPermissions({})
         return
       }
       
       if (roleData?.permissions_json) {
-        console.log('✅ Loaded permissions from database:', Object.keys(roleData.permissions_json).length, 'modules')
         setUserPermissions(roleData.permissions_json)
       } else {
-        console.warn('⚠️ No permissions_json found for role:', profile.role)
         setUserPermissions({})
       }
       
     } catch (error) {
-      console.error('❌ Error in fetchUserProfile:', error)
       setUserPermissions({})
     }
   }
   
-  // Helper function to check if user has a permission
+  // Helper function to check if user has a permission (legacy format)
   const hasPermission = (moduleKey: string, itemKey: string, action: string = 'view'): boolean => {
     // Super Admin has ALL permissions
     if (userRole === 'Super Admin' || userRole === 'super_admin') {
@@ -119,6 +112,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Check specific action
     return item[action] === true
+  }
+
+  // Helper function to check backend permission codes (e.g., 'schedule.view', 'schedule.edit')
+  const hasPermissionCode = (permissionCode: string): boolean => {
+    // Super Admin has ALL permissions
+    if (userRole === 'Super Admin' || userRole === 'super_admin') {
+      return true
+    }
+
+    // For now, map backend codes to frontend permission structure
+    // This is a transitional approach until full migration
+    const codeMap: Record<string, { module: string; item: string; action: string }> = {
+      'schedule.view': { module: 'main_scheduling', item: 'Schedule Generator', action: 'view' },
+      'schedule.create': { module: 'main_scheduling', item: 'Schedule Generator', action: 'create' },
+      'schedule.edit': { module: 'main_scheduling', item: 'Schedule Generator', action: 'edit' },
+      'schedule.delete': { module: 'main_scheduling', item: 'Schedule Generator', action: 'delete' },
+      'schedule.approve': { module: 'main_scheduling', item: 'Schedule Generator', action: 'approve' },
+    }
+
+    const mapping = codeMap[permissionCode]
+    if (mapping) {
+      return hasPermission(mapping.module, mapping.item, mapping.action)
+    }
+
+    return false
   }
 
   // Function to refresh user permissions (for real-time updates)
@@ -279,8 +297,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated,
       userEmail,
       userRole,
+      user: { role: userRole, email: userEmail },
       userPermissions,
       hasPermission,
+      hasPermissionCode,
       refreshPermissions,
       login,
       logout,

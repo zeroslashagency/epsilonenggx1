@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ChevronDown, Save, X, User, UserPlus, Shield, ArrowUpDown, Zap, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
-import { ZohoLayout } from '../../../../components/zoho-ui'
+import { ZohoLayout } from '@/app/components/zoho-ui'
 import { initialPermissionModules, ModulePermission, PermissionModule } from './permissionData'
 
 // Types imported from permissionData.ts
@@ -117,9 +117,9 @@ export default function EditRolePage() {
             cleanPermissions[moduleKey].items[itemKey] = {
               full: false,
               view: false,
-              create: false,
-              edit: false,
-              delete: false,
+              ...('create' in originalItem && { create: false }),
+              ...('edit' in originalItem && { edit: false }),
+              ...('delete' in originalItem && { delete: false }),
               ...(originalItem.approve !== undefined && { approve: false }),
               ...(originalItem.export !== undefined && { export: false }),
               ...(originalItem.isSubItem !== undefined && { isSubItem: originalItem.isSubItem }),
@@ -150,9 +150,9 @@ export default function EditRolePage() {
                       ...cleanPermissions[moduleKey].items[itemKey],
                       full: dbItem.full || false,
                       view: dbItem.view || false,
-                      create: dbItem.create || false,
-                      edit: dbItem.edit || false,
-                      delete: dbItem.delete || false,
+                      ...('create' in cleanPermissions[moduleKey].items[itemKey] && { create: dbItem.create || false }),
+                      ...('edit' in cleanPermissions[moduleKey].items[itemKey] && { edit: dbItem.edit || false }),
+                      ...('delete' in cleanPermissions[moduleKey].items[itemKey] && { delete: dbItem.delete || false }),
                       ...(dbItem.approve !== undefined && { approve: dbItem.approve }),
                       ...(dbItem.export !== undefined && { export: dbItem.export })
                     }
@@ -262,9 +262,9 @@ export default function EditRolePage() {
                 ...currentItem,
                 full: true,
                 view: true,
-                create: true,
-                edit: true,
-                delete: true,
+                ...('create' in currentItem && { create: true }),
+                ...('edit' in currentItem && { edit: true }),
+                ...('delete' in currentItem && { delete: true }),
                 ...(currentItem.approve !== undefined && { approve: true }),
                 ...(currentItem.export !== undefined && { export: true })
               }
@@ -280,9 +280,9 @@ export default function EditRolePage() {
                 ...childItem,
                 full: true,
                 view: true,
-                create: true,
-                edit: true,
-                delete: true,
+                ...('create' in childItem && { create: true }),
+                ...('edit' in childItem && { edit: true }),
+                ...('delete' in childItem && { delete: true }),
                 ...(childItem.approve !== undefined && { approve: true }),
                 ...(childItem.export !== undefined && { export: true })
               }
@@ -305,9 +305,9 @@ export default function EditRolePage() {
                 ...currentItem,
                 full: false,
                 view: false,
-                create: false,
-                edit: false,
-                delete: false,
+                ...('create' in currentItem && { create: false }),
+                ...('edit' in currentItem && { edit: false }),
+                ...('delete' in currentItem && { delete: false }),
                 ...(currentItem.approve !== undefined && { approve: false }),
                 ...(currentItem.export !== undefined && { export: false })
               }
@@ -323,9 +323,9 @@ export default function EditRolePage() {
                 ...childItem,
                 full: false,
                 view: false,
-                create: false,
-                edit: false,
-                delete: false,
+                ...('create' in childItem && { create: false }),
+                ...('edit' in childItem && { edit: false }),
+                ...('delete' in childItem && { delete: false }),
                 ...(childItem.approve !== undefined && { approve: false }),
                 ...(childItem.export !== undefined && { export: false })
               }
@@ -366,7 +366,7 @@ export default function EditRolePage() {
         return updated
       }
       
-      // For child items, update child and check if parent should be updated
+      // For child items, update child only (no parent sync)
       if (isChild) {
         updated = {
           ...updated,
@@ -378,26 +378,6 @@ export default function EditRolePage() {
                 ...currentItem,
                 [permission]: value
               }
-            }
-          }
-        }
-        
-        // Find parent and check if all children have this permission
-        const parentKey = currentItem.parent
-        if (parentKey) {
-          const siblings = Object.entries(updated[moduleKey].items)
-            .filter(([_, item]) => item.isSubItem && item.parent === parentKey)
-          
-          // Check if all siblings have the permission enabled
-          const allSiblingsHavePermission = siblings.every(([_, sibling]) => 
-            permission in sibling && (sibling as any)[permission] === true
-          )
-          
-          // Update parent if all children have permission, or uncheck if not all have it
-          if (parentKey in updated[moduleKey].items) {
-            updated[moduleKey].items[parentKey] = {
-              ...updated[moduleKey].items[parentKey],
-              [permission]: allSiblingsHavePermission
             }
           }
         }
@@ -622,11 +602,20 @@ export default function EditRolePage() {
                     <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">Particulars</th>
                     <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">Full</th>
                     <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">View</th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">Create</th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">Edit</th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">Delete</th>
+                    {Object.values(module.items).some(item => 'create' in item) && (
+                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">Create</th>
+                    )}
+                    {Object.values(module.items).some(item => 'edit' in item) && (
+                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">Edit</th>
+                    )}
+                    {Object.values(module.items).some(item => 'delete' in item) && (
+                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">Delete</th>
+                    )}
                     {Object.values(module.items).some(item => 'approve' in item) && (
-                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 w-20">Approve</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20">Approve</th>
+                    )}
+                    {Object.values(module.items).some(item => 'export' in item) && (
+                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 w-20">Export</th>
                     )}
                   </tr>
                 </thead>
@@ -681,6 +670,7 @@ export default function EditRolePage() {
                         />
                       </td>
                       
+                      {'create' in item && (
                       <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                         <input
                           type="checkbox"
@@ -689,7 +679,9 @@ export default function EditRolePage() {
                           className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </td>
+                      )}
                       
+                      {'edit' in item && (
                       <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                         <input
                           type="checkbox"
@@ -698,7 +690,9 @@ export default function EditRolePage() {
                           className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </td>
+                      )}
                       
+                      {'delete' in item && (
                       <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                         <input
                           type="checkbox"
@@ -707,13 +701,24 @@ export default function EditRolePage() {
                           className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </td>
+                      )}
                       
-                          {item.approve !== undefined && (
-                            <td className="py-4 px-4 text-center">
+                          {'approve' in item && (
+                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                               <input
                                 type="checkbox"
                                 checked={item.approve}
                                 onChange={(e) => updatePermission(moduleKey, itemKey, 'approve', e.target.checked)}
+                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </td>
+                          )}
+                          {'export' in item && (
+                            <td className="py-4 px-4 text-center">
+                              <input
+                                type="checkbox"
+                                checked={item.export}
+                                onChange={(e) => updatePermission(moduleKey, itemKey, 'export', e.target.checked)}
                                 className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </td>
@@ -750,6 +755,7 @@ export default function EditRolePage() {
                                 />
                               </td>
                               
+                              {'create' in subItem && (
                               <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                 <input
                                   type="checkbox"
@@ -758,7 +764,9 @@ export default function EditRolePage() {
                                   className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
                                 />
                               </td>
+                              )}
                               
+                              {'edit' in subItem && (
                               <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                 <input
                                   type="checkbox"
@@ -767,7 +775,9 @@ export default function EditRolePage() {
                                   className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
                                 />
                               </td>
+                              )}
                               
+                              {'delete' in subItem && (
                               <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                 <input
                                   type="checkbox"
@@ -776,9 +786,10 @@ export default function EditRolePage() {
                                   className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
                                 />
                               </td>
+                              )}
                               
-                              {subItem.approve !== undefined && (
-                                <td className="py-3 px-4 text-center">
+                              {'approve' in subItem && (
+                                <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                   <input
                                     type="checkbox"
                                     checked={subItem.approve}
@@ -788,7 +799,7 @@ export default function EditRolePage() {
                                 </td>
                               )}
                               
-                              {subItem.export !== undefined && (
+                              {'export' in subItem && (
                                 <td className="py-3 px-4 text-center">
                                   <input
                                     type="checkbox"

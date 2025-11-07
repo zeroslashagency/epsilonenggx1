@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '../../../lib/services/supabase-client'
-import { userListLimiter } from '../../../lib/rate-limiter'
-import { requirePermission } from '../../../lib/middleware/auth.middleware'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { userListLimiter } from '@/app/lib/rate-limiter'
+import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 
 // Admin API for user management - FIXED VERSION
 export async function GET(request: NextRequest) {

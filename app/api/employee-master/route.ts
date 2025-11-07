@@ -1,14 +1,40 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { getSupabaseClient, getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireAuth } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
-  // ✅ PERMISSION CHECK: Require schedule.view permission
-  const authResult = await requirePermission(request, 'schedule.view')
+  // ✅ SECURITY FIX: Check if user has dashboard OR attendance permission
+  const supabase = getSupabaseAdminClient()
+  
+  // Get user
+  const authResult = await requireAuth(request)
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
+  
+  // Super Admin bypass
+  if (user.role === 'Super Admin' || user.role === 'super_admin') {
+    // Continue to data fetching
+  } else {
+    // Check if user has dashboard.Dashboard.view OR attendance.Attendance.view
+    const { data: roleData } = await supabase
+      .from('roles')
+      .select('permissions_json')
+      .eq('name', user.role)
+      .single()
+    
+    const permissions = roleData?.permissions_json
+    const hasDashboardPermission = permissions?.main_dashboard?.items?.Dashboard?.view === true
+    const hasAttendancePermission = permissions?.main_attendance?.items?.Attendance?.view === true
+    
+    if (!hasDashboardPermission && !hasAttendancePermission) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden', message: 'Access denied. Required: dashboard.Dashboard.view OR attendance.Attendance.view' },
+        { status: 403 }
+      )
+    }
+  }
 
   try {
     const supabase = getSupabaseAdminClient()

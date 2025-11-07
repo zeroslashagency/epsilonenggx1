@@ -2,10 +2,11 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
 
 export async function POST(request: NextRequest) {
-  const authResult = await requirePermission(request, 'schedule.edit')
+  // ✅ Check: main_scheduling.Schedule Generator.edit permission
+  const authResult = await requireGranularPermission(request, 'main_scheduling', 'Schedule Generator', 'edit')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
@@ -113,7 +114,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const authResult = await requirePermission(request, 'schedule.view')
+  // ✅ Check: main_scheduling.Schedule Generator.view permission
+  const authResult = await requireGranularPermission(request, 'main_scheduling', 'Schedule Generator', 'view')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 

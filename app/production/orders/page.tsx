@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
 import { Package, Clock, CheckCircle2, XCircle, Trash2, Eye, Plus, Search, Download, Edit } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
+import { ProtectedPage } from '@/components/auth/ProtectedPage'
 
 interface Order {
   id: string
@@ -17,7 +18,7 @@ interface Order {
   created_at: string
 }
 
-export default function OrdersPage() {
+function OrdersPageContent() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -308,5 +309,13 @@ export default function OrdersPage() {
         </div>
       </div>
     </ZohoLayout>
+  )
+}
+
+export default function OrdersPage() {
+  return (
+    <ProtectedPage module="production" item="Orders" permission="view">
+      <OrdersPageContent />
+    </ProtectedPage>
   )
 }
