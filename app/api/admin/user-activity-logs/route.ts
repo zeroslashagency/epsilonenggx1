@@ -83,7 +83,7 @@ async function enhanceLogsWithUserInfo(supabase: any, logs: any[]): Promise<any[
     .select('id, full_name, email, role')
     .in('id', userIds)
 
-  const userMap = new Map(users?.map((user: any) => [user.id, user]) || [])
+  const userMap = new Map<string, any>(users?.map((user: any) => [user.id, user]) || [])
 
   return logs.map(log => ({
     ...log,
