@@ -485,22 +485,86 @@ export const ZohoSidebar = memo(({ collapsed, onToggleAction }: ZohoSidebarProps
         </div>
       </nav>
 
-      {/* Logout Button */}
+      {/* User Profile Section */}
       <div className="border-t border-[#E3E6F0] dark:border-gray-800 p-3">
-        <button
-          onClick={logout}
-          className={`
-            w-full flex items-center gap-3 px-3 py-2.5 rounded-md
-            text-[#374151] dark:text-gray-300
-            hover:bg-[#F3F4F6] dark:hover:bg-gray-800
-            transition-all duration-150 ease-out
-            ${collapsed ? 'justify-center' : ''}
-          `}
-          title="Logout"
-        >
-          <LogOut className="w-5 h-5" />
-          {!collapsed && <span className="text-sm font-medium">Logout</span>}
-        </button>
+        <div className="relative group">
+          <div
+            className={`
+              w-full flex items-center gap-3 px-3 py-2.5 rounded-md
+              text-[#374151] dark:text-gray-300
+              hover:bg-[#F3F4F6] dark:hover:bg-gray-800
+              transition-all duration-150 ease-out cursor-pointer
+              ${collapsed ? 'justify-center' : ''}
+            `}
+          >
+            <User className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">Account</p>
+                <p className="text-xs text-[#95AAC9] truncate">{userRole || 'User'}</p>
+              </div>
+            )}
+          </div>
+
+          {/* User Profile Dropdown - Shows on hover when collapsed */}
+          {collapsed && (
+            <div className="absolute left-full bottom-0 ml-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    U
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#12263F] dark:text-white truncate">Account</p>
+                    <p className="text-xs text-[#95AAC9] truncate">User Profile</p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <span className="inline-flex items-center px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+                    🟢 {userRole || 'User'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="p-2">
+                <Link
+                  href="/account"
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  <span>View profile</span>
+                  <span className="ml-auto text-xs text-gray-400">⌘K→P</span>
+                </Link>
+                <Link
+                  href="/settings"
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                  <span className="ml-auto text-xs text-gray-400">⌘S</span>
+                </Link>
+                <Link
+                  href="/activity"
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                >
+                  <Activity className="w-4 h-4" />
+                  <span>Activity</span>
+                </Link>
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-700 p-2">
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Log out</span>
+                  <span className="ml-auto text-xs text-gray-400">⌃⇧Q</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   )

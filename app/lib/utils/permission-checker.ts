@@ -247,20 +247,20 @@ export function isSuperAdmin(userRole: string | null | undefined): boolean {
  * Attendance-specific permission checks
  */
 export const AttendancePermissions = {
-  canViewTodaysActivity: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string) =>
+  canViewTodaysActivity: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
     isSuperAdmin(userRole) || canView(permissions, 'main_attendance', "Today's Recent Activity"),
   
-  canViewAllRecords: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_attendance', 'All Track Records'),
+  canViewAllRecords: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canView(permissions, 'main_attendance', 'All Track Records'),
   
-  canExportRecords: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canExport(permissions, 'main_attendance', 'All Track Records'),
+  canExportRecords: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canExport(permissions, 'main_attendance', 'All Track Records'),
   
-  canExportExcel: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canExport(permissions, 'main_attendance', 'Export Excel'),
+  canExportExcel: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || canExport(permissions, 'main_attendance', 'Export Excel'),
   
-  canAccessStandalone: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    hasAnyAccess(permissions, 'main_attendance', 'Standalone Attendance')
+  canAccessStandalone: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
+    isSuperAdmin(userRole) || hasAnyAccess(permissions, 'main_attendance', 'Standalone Attendance')
 }
 
 /**

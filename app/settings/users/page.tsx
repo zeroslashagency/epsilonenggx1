@@ -47,7 +47,7 @@ function UsersPageZoho() {
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'scope' | 'activity' | 'security'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'activity' | 'security'>('overview')
   const [permissions, setPermissions] = useState<string[]>([])
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -390,7 +390,7 @@ function UsersPageZoho() {
         userId: selectedUser.id,
         userEmail: selectedUser.email,
         userName: selectedUser.full_name,
-        actorId: user?.id || 'system' // Use authenticated user ID
+        actorId: 'system' // Actor ID
       })
 
 
@@ -415,6 +415,47 @@ function UsersPageZoho() {
     
     // Switch to security tab to set password
     setActiveTab('security')
+  }
+
+  const handleToggleStatus = async () => {
+    if (!selectedUser) return
+
+    const currentStatus = selectedUser.role === 'deactivated' ? 'inactive' : 'active'
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+    const action = newStatus === 'inactive' ? 'deactivate' : 'activate'
+
+    const confirmMessage = newStatus === 'inactive'
+      ? `⚠️ Are you sure you want to DEACTIVATE this user?\n\n${selectedUser.full_name} (${selectedUser.email})\n\nThis will:\n• Prevent user from logging in\n• Freeze their account\n• Keep all data intact\n\nYou can reactivate later.`
+      : `✅ Are you sure you want to ACTIVATE this user?\n\n${selectedUser.full_name} (${selectedUser.email})\n\nThis will:\n• Allow user to login again\n• Restore account access\n• Enable all features`
+
+    const confirmed = confirm(confirmMessage)
+    if (!confirmed) return
+
+    try {
+      const result = await apiPost('/api/admin/toggle-user-status', {
+        userId: selectedUser.id,
+        newStatus: newStatus
+      })
+
+      if (result.success) {
+        alert(`✅ User ${action}d successfully!`)
+        
+        // Update local state
+        setSelectedUser({
+          ...selectedUser,
+          role: newStatus === 'inactive' ? 'deactivated' : selectedUser.role,
+          status: newStatus
+        })
+        
+        // Refresh user list
+        await fetchUsers()
+      } else {
+        throw new Error(result.error || `Failed to ${action} user`)
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      alert(`❌ Failed to ${action} user:\n\n${errorMessage}`)
+    }
   }
 
   const handleSavePassword = async () => {
@@ -552,24 +593,46 @@ function UsersPageZoho() {
                     <tr 
                       key={user.id} 
                       onClick={() => handleSelectUser(user)}
-                      className="hover:bg-[#F8F9FC] dark:hover:bg-gray-800 cursor-pointer"
+                      className={`hover:bg-[#F8F9FC] dark:hover:bg-gray-800 cursor-pointer ${
+                        user.role === 'deactivated' ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : ''
+                      }`}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                            user.role === 'deactivated'
+                              ? 'bg-gray-500 dark:bg-gray-600'
+                              : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                          }`}>
                             {user.full_name?.charAt(0)?.toUpperCase() || 'U'}
                           </div>
                           <div>
-                            <div className="font-medium text-[#12263F] dark:text-white">{user.full_name}</div>
-                            <div className="text-sm text-[#95AAC9]">{user.email}</div>
+                            <div className={`font-medium ${
+                              user.role === 'deactivated'
+                                ? 'text-gray-500 dark:text-gray-500'
+                                : 'text-[#12263F] dark:text-white'
+                            }`}>{user.full_name}</div>
+                            <div className={`text-sm ${
+                              user.role === 'deactivated'
+                                ? 'text-gray-400 dark:text-gray-600'
+                                : 'text-[#95AAC9]'
+                            }`}>{user.email}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-[#12263F] dark:text-white">{user.role || 'No Role'}</span>
+                        <span className={`text-sm ${
+                          user.role === 'deactivated'
+                            ? 'text-gray-500 dark:text-gray-500'
+                            : 'text-[#12263F] dark:text-white'
+                        }`}>{user.role || 'No Role'}</span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Settings className="w-5 h-5 text-[#95AAC9] inline-block" />
+                        <Settings className={`w-5 h-5 inline-block ${
+                          user.role === 'deactivated'
+                            ? 'text-gray-400'
+                            : 'text-[#95AAC9]'
+                        }`} />
                       </td>
                     </tr>
                   ))
@@ -595,7 +658,7 @@ function UsersPageZoho() {
                 </Link>
               </div>
               
-              <div className="divide-y divide-[#E3E6F0] dark:divide-gray-700 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+              <div className="divide-y divide-[#E3E6F0] dark:divide-gray-700 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
                 {loading ? (
                   <LoadingSpinner text="Loading users" />
                 ) : users.length === 0 ? (
@@ -611,17 +674,31 @@ function UsersPageZoho() {
                         selectedUser?.id === user.id 
                           ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-[#2C7BE5]' 
                           : 'hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
-                      }`}
+                      } ${user.role === 'deactivated' ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : ''}`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${
+                          user.role === 'deactivated' 
+                            ? 'bg-gray-500 dark:bg-gray-600' 
+                            : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                        }`}>
                           {user.full_name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-[#12263F] dark:text-white truncate">
+                          <div className={`font-medium truncate ${
+                            user.role === 'deactivated' 
+                              ? 'text-gray-500 dark:text-gray-500' 
+                              : 'text-[#12263F] dark:text-white'
+                          }`}>
                             {user.full_name || 'Unknown User'}
                           </div>
-                          <div className="text-sm text-[#95AAC9] truncate">{user.email}</div>
+                          <div className={`text-sm truncate ${
+                            user.role === 'deactivated' 
+                              ? 'text-gray-400 dark:text-gray-600' 
+                              : 'text-[#95AAC9]'
+                          }`}>
+                            {user.email}
+                          </div>
                         </div>
                         {selectedUser?.id === user.id && (
                           <div className="w-2 h-2 bg-[#2C7BE5] rounded-full"></div>
@@ -634,102 +711,197 @@ function UsersPageZoho() {
             </div>
           </div>
 
-          {/* Right: Full User Details with Tabs */}
+          {/* Right: DESIGN 2 - Split Panel with Fixed Sidebar */}
           <div className="col-span-8">
             {selectedUser ? (
-              <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded">
-                {/* User Header */}
-                <div className="p-6 border-b border-[#E3E6F0] dark:border-gray-700">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl">
-                        {selectedUser.full_name?.charAt(0)?.toUpperCase() || 'U'}
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-[#12263F] dark:text-white">{selectedUser.full_name}</h2>
-                        <p className="text-[#95AAC9]">{selectedUser.email}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium rounded">
-                            {selectedUser.status || 'active'}
-                          </span>
-                          <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-medium rounded">
-                            {selectedUser.role || 'Operator'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isEditing ? (
-                        <>
+              <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded overflow-hidden">
+                {/* Header with breadcrumb */}
+                <div className="px-6 py-4 border-b border-[#E3E6F0] dark:border-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-[#95AAC9]">
+                    <span>Users</span>
+                    <span>/</span>
+                    <span className="text-[#12263F] dark:text-white font-medium">{selectedUser.full_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isEditing ? (
+                      <>
+                        <button 
+                          onClick={handleCancelEdit}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={handleSaveChanges}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors"
+                        >
+                          <Save className="w-4 h-4" />
+                          Save
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={handleEditClick}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
+                        <button 
+                          onClick={handleDeleteUser}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 border border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                        {selectedUser.role === 'deactivated' ? (
                           <button 
-                            onClick={handleCancelEdit}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+                            onClick={handleToggleStatus}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors"
+                          >
+                            <Check className="w-4 h-4" />
+                            Activate
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={handleToggleStatus}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
                           >
                             <X className="w-4 h-4" />
-                            Cancel
+                            Deactivate
                           </button>
-                          <button 
-                            onClick={handleSaveChanges}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors"
-                          >
-                            <Save className="w-4 h-4" />
-                            Save Changes
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button 
-                            onClick={handleEditClick}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
-                          >
-                            <Edit className="w-4 h-4" />
-                            Edit
-                          </button>
-                          <button 
-                            onClick={handleDeleteUser}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 border border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete Account
-                          </button>
-                          <button 
-                            onClick={handleSetPassword}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors"
-                          >
-                            <Key className="w-4 h-4" />
-                            Set Password Manually
-                          </button>
-                        </>
-                      )}
-                      <button 
-                        onClick={() => setSelectedUser(null)}
-                        className="p-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 rounded transition-colors"
-                        title="Close"
-                      >
-                        <X className="w-5 h-5 text-[#95AAC9]" />
-                      </button>
-                    </div>
+                        )}
+                      </>
+                    )}
+                    <button 
+                      onClick={() => setSelectedUser(null)}
+                      className="p-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 rounded transition-colors"
+                      title="Close"
+                    >
+                      <X className="w-5 h-5 text-[#95AAC9]" />
+                    </button>
                   </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="border-b border-[#E3E6F0] dark:border-gray-700">
-                  <div className="flex gap-6 px-6">
-                    {['overview', 'roles', 'scope', 'activity', 'security'].map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab as any)}
-                        className={`px-4 py-3 text-sm font-medium capitalize ${
-                          activeTab === tab
-                            ? 'text-[#2C7BE5] border-b-2 border-[#2C7BE5]'
-                            : 'text-[#95AAC9] hover:text-[#12263F] dark:hover:text-white'
-                        }`}
-                      >
-                        {tab}
-                      </button>
-                    ))}
+                {/* Split Panel Layout */}
+                <div className="grid grid-cols-12">
+                  {/* LEFT SIDEBAR - Fixed User Summary */}
+                  <div className="col-span-4 border-r border-[#E3E6F0] dark:border-gray-700 bg-[#F8F9FC] dark:bg-gray-800/50">
+                    <div className="p-6 space-y-4">
+                      {/* Large Avatar */}
+                      <div className="flex justify-center">
+                        <div className={`w-32 h-32 rounded-full flex items-center justify-center text-white font-bold text-5xl shadow-lg ${
+                          selectedUser.role === 'deactivated'
+                            ? 'bg-gray-500 dark:bg-gray-600'
+                            : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                        }`}>
+                          {selectedUser.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+                      </div>
+
+                      {/* User Name & Email */}
+                      <div className="text-center">
+                        <h2 className="text-lg font-semibold text-[#12263F] dark:text-white mb-1">
+                          {selectedUser.full_name}
+                        </h2>
+                        <p className="text-sm text-[#95AAC9] break-all">
+                          {selectedUser.email}
+                        </p>
+                      </div>
+
+                      {/* Status & Role Badges */}
+                      <div className="flex items-center justify-center gap-2">
+                        {selectedUser.role === 'deactivated' ? (
+                          <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs font-medium rounded-full">
+                            🔴 inactive
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+                            🟢 {selectedUser.status || 'active'}
+                          </span>
+                        )}
+                        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-full">
+                          🔵 {selectedUser.role === 'deactivated' ? 'Deactivated' : selectedUser.role || 'Operator'}
+                        </span>
+                      </div>
+
+                      <div className="border-t border-[#E3E6F0] dark:border-gray-700 my-3"></div>
+
+                      {/* Quick Info */}
+                      <div className="space-y-2.5">
+                        <div>
+                          <p className="text-xs text-[#95AAC9] mb-0.5">Employee Code</p>
+                          <p className="text-sm text-[#12263F] dark:text-white font-medium">
+                            {selectedUser.employee_code || 'Not assigned'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#95AAC9] mb-0.5">Department</p>
+                          <p className="text-sm text-[#12263F] dark:text-white font-medium">
+                            {selectedUser.department || 'Not specified'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#95AAC9] mb-0.5">Designation</p>
+                          <p className="text-sm text-[#12263F] dark:text-white font-medium">
+                            {selectedUser.designation || 'Not specified'}
+                          </p>
+                        </div>
+                        {selectedUser.standalone_attendance === 'YES' && (
+                          <div className="pt-2">
+                            <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded">
+                              <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              <span className="text-xs font-medium text-purple-700 dark:text-purple-400">Standalone Access</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border-t border-[#E3E6F0] dark:border-gray-700 my-3"></div>
+
+                      {/* Timestamps */}
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-[#95AAC9] mb-0.5">Created</p>
+                          <p className="text-sm text-[#12263F] dark:text-white font-medium">
+                            {selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#95AAC9] mb-0.5">Last Login</p>
+                          <p className="text-sm text-[#12263F] dark:text-white font-medium">
+                            {selectedUser.last_login ? new Date(selectedUser.last_login).toLocaleString() : 'Never'}
+                          </p>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
-                </div>
+
+                  {/* RIGHT PANEL - Scrollable Content */}
+                  <div className="col-span-8">
+                    {/* Tabs */}
+                    <div className="border-b border-[#E3E6F0] dark:border-gray-700 bg-white dark:bg-gray-900">
+                      <div className="flex gap-4 px-6">
+                        {['overview', 'roles', 'activity', 'security'].map((tab) => (
+                          <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab as any)}
+                            className={`flex-1 px-4 py-3 text-sm font-medium capitalize transition-colors ${
+                              activeTab === tab
+                                ? 'text-[#2C7BE5] border-b-2 border-[#2C7BE5]'
+                                : 'text-[#95AAC9] hover:text-[#12263F] dark:hover:text-white'
+                            }`}
+                          >
+                            {tab}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
                 {/* Tab Content */}
                 <div className="p-6">
@@ -750,7 +922,7 @@ function UsersPageZoho() {
                                 className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:ring-2 focus:ring-[#2C7BE5] focus:border-transparent"
                               />
                             ) : (
-                              <p className="text-sm text-[#12263F] dark:text-white">{selectedUser.phone || 'Not provided'} ✏️</p>
+                              <p className="text-sm text-[#12263F] dark:text-white">{selectedUser.phone || 'Not provided'}</p>
                             )}
                           </div>
                           <div>
@@ -764,7 +936,7 @@ function UsersPageZoho() {
                                 className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:ring-2 focus:ring-[#2C7BE5] focus:border-transparent"
                               />
                             ) : (
-                              <p className="text-sm text-[#12263F] dark:text-white">{selectedUser.employee_code || 'Not assigned'} ✏️</p>
+                              <p className="text-sm text-[#12263F] dark:text-white">{selectedUser.employee_code || 'Not assigned'}</p>
                             )}
                           </div>
                           <div>
@@ -778,7 +950,7 @@ function UsersPageZoho() {
                                 className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:ring-2 focus:ring-[#2C7BE5] focus:border-transparent"
                               />
                             ) : (
-                              <p className="text-sm text-[#12263F] dark:text-white">{selectedUser.department || 'Not specified'} ✏️</p>
+                              <p className="text-sm text-[#12263F] dark:text-white">{selectedUser.department || 'Not specified'}</p>
                             )}
                           </div>
                           <div>
@@ -792,7 +964,7 @@ function UsersPageZoho() {
                                 className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:ring-2 focus:ring-[#2C7BE5] focus:border-transparent"
                               />
                             ) : (
-                              <p className="text-sm text-[#12263F] dark:text-white">{selectedUser.designation || 'Not specified'} ✏️</p>
+                              <p className="text-sm text-[#12263F] dark:text-white">{selectedUser.designation || 'Not specified'}</p>
                             )}
                           </div>
                           <div>
@@ -854,13 +1026,6 @@ function UsersPageZoho() {
                     </div>
                   )}
 
-                  {/* Scope Tab */}
-                  {activeTab === 'scope' && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#12263F] dark:text-white mb-4">Scope</h3>
-                      <p className="text-[#95AAC9]">Scope configuration will appear here</p>
-                    </div>
-                  )}
 
                   {/* Activity Tab */}
                   {activeTab === 'activity' && selectedUser && (
@@ -993,6 +1158,8 @@ function UsersPageZoho() {
                       </div>
                     </div>
                   )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (

@@ -26,8 +26,7 @@ function AttendancePageContent() {
   const auth = useAuth()
   const router = useRouter()
   
-  // Permission state
-  const [userPermissions, setUserPermissions] = useState<Record<string, PermissionModule> | null>(null)
+  // Permission state (removed - now using auth context directly)
   
   const [dateRange, setDateRange] = useState("today")
   const [employeeFilter, setEmployeeFilter] = useState("all")
@@ -191,11 +190,13 @@ function AttendancePageContent() {
     }
   }
 
-  // Permissions are checked at page level via ProtectedPage component
-  // These flags control UI features within the page
-  const canViewTodaysActivity = true
-  const canExportExcel = true
-  const canExportRecords = true
+  // Permission checks using role-based system
+  const { userPermissions, user } = auth
+  const userRole = user?.role
+  const canViewTodaysActivity = AttendancePermissions.canViewTodaysActivity(userPermissions, userRole)
+  const canViewAllRecords = AttendancePermissions.canViewAllRecords(userPermissions, userRole)
+  const canExportExcel = AttendancePermissions.canExportExcel(userPermissions, userRole)
+  const canExportRecords = AttendancePermissions.canExportRecords(userPermissions, userRole)
 
   // Fetch employees from API
   const fetchEmployees = async () => {
