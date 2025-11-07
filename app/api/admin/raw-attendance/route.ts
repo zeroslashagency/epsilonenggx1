@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient, getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireAuth } from '@/app/lib/middleware/auth.middleware'
+import { requireAuth, requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
   // ✅ SECURITY FIX: Check if user has dashboard OR attendance permission
