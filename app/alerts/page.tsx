@@ -88,13 +88,13 @@ function AlertsPageContent() {
     }
   }
 
-  const getAlertColor = (type: string) => {
+  const getAlertColor = (type: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary' => {
     switch (type) {
       case 'critical': return 'danger'
       case 'warning': return 'warning'
       case 'info': return 'primary'
       case 'success': return 'success'
-      default: return 'secondary'
+      default: return 'neutral'
     }
   }
 
