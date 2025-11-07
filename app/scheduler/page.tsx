@@ -83,7 +83,7 @@ interface Breakdown {
   reason: string
 }
 
-function SchedulerPage() {
+function SchedulerPageContent() {
   const [activeTab, setActiveTab] = useState("orders")
   const [orders, setOrders] = useState<Order[]>([])
   const [holidays, setHolidays] = useState<Holiday[]>([])
@@ -1971,5 +1971,3 @@ function SchedulerPage() {
     </div>
   )
 }
-
-export default SchedulerPage
