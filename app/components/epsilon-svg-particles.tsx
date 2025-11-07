@@ -96,6 +96,7 @@ export default function EpsilonSvgParticles() {
     }
 
     function createInitialParticles(scale: number) {
+      if (!canvas) return
       const baseParticleCount = 4000
       const particleCount = Math.floor(baseParticleCount * Math.sqrt((canvas.width * canvas.height) / (800 * 600)))
       for (let i = 0; i < particleCount; i++) {

@@ -139,9 +139,12 @@ export function getRateLimitIdentifier(request: NextRequest, userId?: string): s
  * Create custom rate limiter
  */
 export function createRateLimit(requests: number, window: string, prefix: string) {
+  if (!redis) {
+    throw new Error('Redis not configured for rate limiting')
+  }
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(requests, window),
+    limiter: Ratelimit.slidingWindow(requests, window as any), // Duration type from Upstash
     analytics: true,
     prefix: `ratelimit:${prefix}`,
   })

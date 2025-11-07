@@ -43,13 +43,13 @@ function MachinesPageContent() {
     { id: '10', name: 'VMC 10', status: 'offline', utilization: 0, currentTask: null, uptime: '0h 0m' },
   ])
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary' => {
     switch (status) {
       case 'active': return 'success'
-      case 'idle': return 'secondary'
+      case 'idle': return 'neutral'
       case 'maintenance': return 'warning'
       case 'offline': return 'danger'
-      default: return 'secondary'
+      default: return 'neutral'
     }
   }
 

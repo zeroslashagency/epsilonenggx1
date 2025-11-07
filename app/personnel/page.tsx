@@ -53,7 +53,7 @@ function PersonnelPageContent() {
           const employees = data.data || []
           const uniqueEmployees = Array.from(new Map(
             employees.map((e: any) => [e.employee_id, e])
-          ).values())
+          ).values()) as Employee[]
           setEmployees(uniqueEmployees)
         }
       } catch (error) {

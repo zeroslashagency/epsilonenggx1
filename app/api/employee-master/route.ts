@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Get unique employee codes from attendance logs
     const { data: attendanceLogs, error: attendanceError } = await supabase
       .from('employee_attendance_logs')
-      .select('employee_code, employee_name')
+      .select('employee_code, employee_name, sync_timestamp')
       .order('sync_timestamp', { ascending: false })
       .limit(100)
     

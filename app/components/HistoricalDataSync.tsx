@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { RefreshCw, Calendar, AlertCircle, CheckCircle2, Download } from 'lucide-react'
 import { HistoricalSyncResult } from '@/app/types'
 import { ZohoButton, ZohoBadge } from './zoho-ui'
 
@@ -118,7 +118,7 @@ export default function HistoricalDataSync() {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Date Range:</span>
                 <ZohoBadge variant="info">
-                  {result.dateRange.fromDate} to {result.dateRange.toDate}
+                  {result.dateRange?.fromDate} to {result.dateRange?.toDate}
                 </ZohoBadge>
               </div>
               <div className="flex items-center justify-between text-sm">
@@ -133,7 +133,7 @@ export default function HistoricalDataSync() {
                 <span className="text-gray-600">Stored in Database:</span>
                 <ZohoBadge variant="success">{result.stored} records</ZohoBadge>
               </div>
-              {result.errors > 0 && (
+              {result.errors && result.errors.length > 0 && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Errors:</span>
                   <ZohoBadge variant="warning">{result.errors} records</ZohoBadge>
