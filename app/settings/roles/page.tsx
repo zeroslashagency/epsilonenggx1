@@ -165,41 +165,8 @@ function RolesPage() {
   }
 
   return (
-    <ZohoLayout>
+    <>
       <div className="space-y-6">
-        {/* Tab Navigation */}
-        <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
-          <div className="flex items-center gap-2 px-6">
-            <Link
-              href="/settings/users"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <User className="w-4 h-4" />
-              User Management
-            </Link>
-            <Link
-              href="/settings/add-users"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add Users
-            </Link>
-            <Link
-              href="/settings/roles"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-white bg-[#00A651] rounded-t transition-colors border-b-2 border-[#00A651]"
-            >
-              <Shield className="w-4 h-4" />
-              Role Profiles
-            </Link>
-            <Link
-              href="/settings/activity-logs"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <Zap className="w-4 h-4" />
-              Activity Logging
-            </Link>
-          </div>
-        </div>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -422,7 +389,7 @@ function RolesPage() {
           </div>
         )}
       </div>
-    </ZohoLayout>
+    </>
   )
 }
 

@@ -117,7 +117,7 @@ export const AttendanceTodayChart = memo(function AttendanceTodayChart({ data, l
   }
 
   return (
-    <Card className="shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+    <Card className="shadow-xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
       <CardHeader className="flex flex-col items-stretch border-b !p-0 sm:flex-row">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
           <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ export const AttendanceTodayChart = memo(function AttendanceTodayChart({ data, l
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
+      <CardContent className="px-2 sm:p-6 overflow-visible">
         <ChartContainer
           config={chartConfig}
           className="aspect-auto h-[300px] w-full"
@@ -186,6 +186,8 @@ export const AttendanceTodayChart = memo(function AttendanceTodayChart({ data, l
               domain={[0, 'auto']}
             />
             <ChartTooltip
+              wrapperStyle={{ zIndex: 9999, position: 'fixed' }}
+              allowEscapeViewBox={{ x: true, y: true }}
               content={({ active, payload }) => {
                 if (!active || !payload || !payload.length) return null
                 
@@ -193,14 +195,14 @@ export const AttendanceTodayChart = memo(function AttendanceTodayChart({ data, l
                 if (data.checkIn === null || data.checkIn === 0) return null
                 
                 return (
-                  <div className="rounded-lg border bg-background p-3 shadow-lg min-w-[250px]">
+                  <div className="rounded-lg border bg-background p-3 shadow-2xl min-w-[250px] max-w-[350px]" style={{ position: 'relative', zIndex: 9999 }}>
                     <div className="mb-2 border-b pb-2">
                       <p className="font-semibold text-sm">{data.hour}</p>
                       <p className="text-xs text-muted-foreground">
                         {data.checkIn} check-in{data.checkIn > 1 ? 's' : ''}
                       </p>
                     </div>
-                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                    <div className="space-y-1.5">
                       {data.employees.map((emp: any, idx: number) => (
                         <div key={idx} className="text-xs border-l-2 border-blue-500 pl-2 py-1">
                           <p className="font-medium text-foreground">{emp.name}</p>

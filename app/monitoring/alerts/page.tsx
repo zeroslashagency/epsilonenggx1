@@ -133,32 +133,32 @@ export default function AlertsPage() {
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-red-500">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-red-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Critical</p>
-                  <p className="text-2xl font-bold text-red-600">{alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Critical</p>
+                  <p className="text-xl sm:text-2xl font-bold text-red-600">{alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length}</p>
                 </div>
-                <AlertCircle className="w-8 h-8 text-red-600" />
+                <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-yellow-500">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-yellow-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Warnings</p>
-                  <p className="text-2xl font-bold text-yellow-600">{alerts.filter(a => a.severity === 'warning' && !a.acknowledged).length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Warnings</p>
+                  <p className="text-xl sm:text-2xl font-bold text-yellow-600">{alerts.filter(a => a.severity === 'warning' && !a.acknowledged).length}</p>
                 </div>
-                <AlertTriangle className="w-8 h-8 text-yellow-600" />
+                <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600" />
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-blue-500">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-blue-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Info</p>
-                  <p className="text-2xl font-bold text-blue-600">{alerts.filter(a => a.severity === 'info' && !a.acknowledged).length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Info</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-600">{alerts.filter(a => a.severity === 'info' && !a.acknowledged).length}</p>
                 </div>
-                <Info className="w-8 h-8 text-blue-600" />
+                <Info className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               </div>
             </div>
           </div>

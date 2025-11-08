@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Header Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        /* Header - Testing fixed positioning */
+        .header {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .hamburger {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .hamburger span {
+            width: 24px;
+            height: 2px;
+            background: #374151;
+            display: block;
+        }
+        
+        /* Content area */
+        .content {
+            margin-top: 64px;
+            padding: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            margin-bottom: 12px;
+            color: #1f2937;
+        }
+        
+        .card p {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+        
+        /* Debug info */
+        .debug {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Header -->
+    <header class="header">
+        <button class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <div style="margin-left: 16px; font-weight: 600;">Mobile Header Test</div>
+    </header>
+    
+    <!-- Content -->
+    <div class="content">
+        <div class="card">
+            <h2>Card 1</h2>
+            <p>Scroll down to test if header stays fixed at the top.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Card 2</h2>
+            <p>The header should remain visible even when you scroll.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Card 3</h2>
+            <p>Keep scrolling to verify the header behavior.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Card 4</h2>
+            <p>Header should be sticky at the top.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Card 5</h2>
+            <p>More content to enable scrolling.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Card 6</h2>
+            <p>Continue scrolling down.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Card 7</h2>
+            <p>The header must stay visible.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Card 8</h2>
+            <p>Almost at the bottom.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Card 9</h2>
+            <p>Last card - header should still be visible.</p>
+        </div>
+    </div>
+    
+    <!-- Debug Info -->
+    <div class="debug">
+        <div>Scroll Y: <span id="scrollY">0</span>px</div>
+        <div>Header Position: <span id="headerPos">fixed</span></div>
+        <div>Header Top: <span id="headerTop">0</span>px</div>
+    </div>
+    
+    <script>
+        // Update debug info on scroll
+        window.addEventListener('scroll', () => {
+            document.getElementById('scrollY').textContent = window.scrollY;
+            
+            const header = document.querySelector('.header');
+            const styles = window.getComputedStyle(header);
+            document.getElementById('headerPos').textContent = styles.position;
+            document.getElementById('headerTop').textContent = styles.top;
+        });
+    </script>
+</body>
+</html>

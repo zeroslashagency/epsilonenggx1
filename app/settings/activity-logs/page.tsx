@@ -127,57 +127,24 @@ function ActivityLogsPage() {
   const uniqueActions = Array.from(new Set(logs.map(log => log.action)))
 
   return (
-    <ZohoLayout>
+    <>
       <div className="space-y-6">
-        {/* Tab Navigation */}
-        <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
-          <div className="flex items-center gap-2 px-6">
-            <Link
-              href="/settings/users"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <User className="w-4 h-4" />
-              User Management
-            </Link>
-            <Link
-              href="/settings/add-users"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add Users
-            </Link>
-            <Link
-              href="/settings/roles"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <Shield className="w-4 h-4" />
-              Role Profiles
-            </Link>
-            <Link
-              href="/settings/activity-logs"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-white bg-[#00A651] rounded-t transition-colors border-b-2 border-[#00A651]"
-            >
-              <Zap className="w-4 h-4" />
-              Activity Logging
-            </Link>
-          </div>
-        </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div>
-            <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white">Activity Logging</h1>
-            <p className="text-[#95AAC9] mt-1">View all system activity logs and user unlock data from the entire system.</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#12263F] dark:text-white">Activity Logging</h1>
+            <p className="text-sm sm:text-base text-[#95AAC9] mt-1">View all system activity logs and user unlock data from the entire system.</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button 
               onClick={fetchActivityLogs}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors flex-1 sm:flex-initial justify-center"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh Logs
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors">
+            <button className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors flex-1 sm:flex-initial justify-center">
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -185,59 +152,59 @@ function ActivityLogsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
-                <Activity className="w-6 h-6 text-[#2C7BE5]" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+          <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
+                <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-[#2C7BE5]" />
               </div>
               <div>
-                <p className="text-sm text-[#95AAC9]">Total Activities</p>
-                <p className="text-2xl font-bold text-[#12263F] dark:text-white">{stats.totalActivities}</p>
+                <p className="text-xs sm:text-sm text-[#95AAC9]">Total Activities</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#12263F] dark:text-white">{stats.totalActivities}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded">
-                <Users className="w-6 h-6 text-[#00A651]" />
+          <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-green-50 dark:bg-green-900/20 rounded">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-[#00A651]" />
               </div>
               <div>
-                <p className="text-sm text-[#95AAC9]">Active Users</p>
-                <p className="text-2xl font-bold text-[#12263F] dark:text-white">{stats.activeUsers}</p>
+                <p className="text-xs sm:text-sm text-[#95AAC9]">Active Users</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#12263F] dark:text-white">{stats.activeUsers}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded">
-                <Trash2 className="w-6 h-6 text-[#DC3545]" />
+          <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-red-50 dark:bg-red-900/20 rounded">
+                <Trash2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#DC3545]" />
               </div>
               <div>
-                <p className="text-sm text-[#95AAC9]">Deletions</p>
-                <p className="text-2xl font-bold text-[#12263F] dark:text-white">{stats.deletions}</p>
+                <p className="text-xs sm:text-sm text-[#95AAC9]">Deletions</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#12263F] dark:text-white">{stats.deletions}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded">
-                <Shield className="w-6 h-6 text-[#6F42C1]" />
+          <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 bg-purple-50 dark:bg-purple-900/20 rounded">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-[#6F42C1]" />
               </div>
               <div>
-                <p className="text-sm text-[#95AAC9]">Permission Changes</p>
-                <p className="text-2xl font-bold text-[#12263F] dark:text-white">{stats.permissionChanges}</p>
+                <p className="text-xs sm:text-sm text-[#95AAC9]">Permission Changes</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#12263F] dark:text-white">{stats.permissionChanges}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">
                 Filter by User
@@ -300,7 +267,7 @@ function ActivityLogsPage() {
           </div>
 
           <div className="flex justify-end mt-4">
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 bg-[#00A651] text-white text-xs sm:text-sm rounded hover:bg-green-600 transition-colors w-full sm:w-auto justify-center">
               <Zap className="w-4 h-4" />
               Apply Filters
             </button>
@@ -309,17 +276,17 @@ function ActivityLogsPage() {
 
         {/* Activity Logs */}
         <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded">
-          <div className="p-6 border-b border-[#E3E6F0] dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#12263F] dark:text-white">System Activity Logs</h2>
-              <div className="flex items-center gap-4">
+          <div className="p-4 sm:p-6 border-b border-[#E3E6F0] dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+              <h2 className="text-base sm:text-lg font-semibold text-[#12263F] dark:text-white">System Activity Logs</h2>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 w-full sm:w-auto">
                 <select
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value))
                     setPage(1)
                   }}
-                  className="px-3 py-1 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white"
+                  className="px-3 py-1 border border-[#E3E6F0] dark:border-gray-700 rounded text-xs sm:text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white"
                 >
                   <option value="25">25 per page</option>
                   <option value="50">50 per page</option>
@@ -449,7 +416,7 @@ function ActivityLogsPage() {
           )}
         </div>
       </div>
-    </ZohoLayout>
+    </>
   )
 }
 

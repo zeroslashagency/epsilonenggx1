@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -40,6 +40,7 @@ interface MenuItem {
 interface ZohoSidebarProps {
   collapsed: boolean
   onToggleAction: () => void
+  onMobileMenuClose?: () => void
 }
 
 // Memoized menu item component to prevent re-renders
@@ -48,20 +49,24 @@ const MenuItem = memo(({
   collapsed, 
   isExpanded, 
   isActive, 
-  onToggle 
+  onToggle,
+  onMobileMenuClose
 }: { 
   item: MenuItem
   collapsed: boolean
   isExpanded: boolean
   isActive: (href: string) => boolean
   onToggle: (id: string) => void
+  onMobileMenuClose?: () => void
 }) => {
   const hasChildren = item.items && item.items.length > 0
+  const buttonRef = React.useRef<HTMLButtonElement>(null)
 
   if (hasChildren) {
     return (
       <div className="relative">
         <button
+          ref={buttonRef}
           onClick={(e) => {
             e.preventDefault()
             onToggle(item.id)
@@ -71,8 +76,8 @@ const MenuItem = memo(({
             transition-all duration-200 ease-out group
             ${
               isActive(item.href || '')
-                ? 'bg-[#4285F4] text-white shadow-md'
-                : 'text-[#374151] dark:text-gray-300 hover:bg-[#F3F4F6] dark:hover:bg-gray-800 hover:translate-x-0.5'
+                ? 'bg-[#4285F4] text-white shadow-md shadow-[0_0_20px_rgba(66,133,244,0.4)]'
+                : 'text-[#374151] dark:text-gray-300 hover:bg-[#F3F4F6] dark:hover:bg-gray-800 hover:translate-x-0.5 hover:shadow-[0_0_15px_rgba(156,163,175,0.3)]'
             }
             ${collapsed ? 'justify-center' : ''}
           `}
@@ -92,22 +97,35 @@ const MenuItem = memo(({
           
           {/* Submenu popup for collapsed state */}
           {collapsed && (
-            <div className="absolute left-full ml-2 px-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 min-w-[200px]">
-              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                {item.label}
+            <div 
+              className="absolute left-full ml-2 top-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[9999] min-w-[220px] opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto"
+              onMouseEnter={(e) => e.stopPropagation()}
+            >
+              {/* Header with icon */}
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <div className="flex items-center gap-2">
+                  {item.icon && <item.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
+                  <span className="font-semibold text-sm text-gray-900 dark:text-white">{item.label}</span>
+                </div>
               </div>
-              <div className="space-y-1">
+              
+              {/* Submenu items */}
+              <div className="p-2">
                 {item.items!.map((child) => (
                   <Link
                     key={child.id}
                     href={child.href || '#'}
-                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                    onClick={onMobileMenuClose}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-150"
                   >
                     {child.icon && <child.icon className="w-4 h-4" />}
                     <span>{child.label}</span>
                   </Link>
                 ))}
               </div>
+              
+              {/* Arrow pointer */}
+              <div className="absolute right-full top-4 mr-[-1px] border-8 border-transparent border-r-white dark:border-r-gray-900"></div>
             </div>
           )}
         </button>
@@ -123,6 +141,7 @@ const MenuItem = memo(({
               <Link
                 key={child.id}
                 href={child.href || '#'}
+                onClick={onMobileMenuClose}
                 className={`
                   flex items-center space-x-3 px-4 py-2 rounded-md text-sm
                   transition-all duration-200 ease-out
@@ -149,6 +168,7 @@ const MenuItem = memo(({
         href={item.href || '#'}
         target={item.href?.startsWith('http') ? '_blank' : undefined}
         rel={item.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+        onClick={onMobileMenuClose}
         className={`
           flex items-center justify-between px-4 py-2.5 rounded-md
           transition-all duration-200 ease-out group
@@ -173,8 +193,10 @@ const MenuItem = memo(({
         
         {/* Tooltip for collapsed state */}
         {collapsed && (
-          <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-md shadow-lg whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-md shadow-xl whitespace-nowrap z-[9999] opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none">
             {item.label}
+            {/* Arrow pointer */}
+            <div className="absolute right-full top-1/2 -translate-y-1/2 mr-[-1px] border-4 border-transparent border-r-gray-900 dark:border-r-gray-800"></div>
           </div>
         )}
       </Link>
@@ -184,7 +206,7 @@ const MenuItem = memo(({
 
 MenuItem.displayName = 'MenuItem'
 
-export const ZohoSidebar = memo(({ collapsed, onToggleAction }: ZohoSidebarProps) => {
+export const ZohoSidebar = memo(({ collapsed, onToggleAction, onMobileMenuClose }: ZohoSidebarProps) => {
   const pathname = usePathname()
   const { logout, userRole, hasPermission, hasPermissionCode } = useAuth()
   const navRef = useRef<HTMLElement>(null)
@@ -413,50 +435,60 @@ export const ZohoSidebar = memo(({ collapsed, onToggleAction }: ZohoSidebarProps
   return (
     <aside
       className={`
-        fixed left-0 top-0 h-screen bg-white dark:bg-gray-900 
+        relative h-full bg-white dark:bg-gray-900 
         border-r border-[#E3E6F0] dark:border-gray-800
-        transition-all duration-300 ease-in-out z-40 flex flex-col
+        transition-all duration-300 ease-in-out flex flex-col
         ${collapsed ? 'w-[70px]' : 'w-[280px]'}
+        overflow-visible
       `}
     >
       {/* Logo Section */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-[#E3E6F0] dark:border-gray-800">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-[#E3E6F0] dark:border-gray-800 flex-shrink-0">
         {!collapsed && (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+              <img 
+                src="/Epsilologo.svg" 
+                alt="Epsilon Logo" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base font-bold text-[#12263F] dark:text-white leading-tight">Epsilon</h1>
+              <p className="text-xs text-[#95AAC9] leading-tight">Scheduling</p>
+            </div>
+          </div>
+        )}
+        {collapsed && (
+          <div className="w-full flex items-center justify-center">
             <div className="w-8 h-8 flex items-center justify-center">
               <img 
                 src="/Epsilologo.svg" 
                 alt="Epsilon Logo" 
-                className="w-8 h-8 object-contain"
+                className="w-full h-full object-contain"
               />
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold text-[#12263F] dark:text-white">Epsilon</h1>
-              <p className="text-xs text-[#95AAC9]">Scheduling</p>
             </div>
           </div>
         )}
-        <button
-          onClick={onToggleAction}
-          className="p-1.5 rounded-[4px] hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4 text-[#95AAC9]" />
-          ) : (
+        {!collapsed && (
+          <button
+            onClick={onToggleAction}
+            className="p-1.5 rounded-[4px] hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+          >
             <ChevronLeft className="w-4 h-4 text-[#95AAC9]" />
-          )}
-        </button>
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
       <nav 
         ref={navRef}
-        className="flex-1 py-4 overflow-y-auto" 
+        className={`flex-1 py-4 ${collapsed ? 'overflow-visible' : 'overflow-y-auto'}`}
         style={{ 
-          scrollbarWidth: 'thin', 
+          scrollbarWidth: collapsed ? 'none' : 'thin', 
           scrollbarColor: '#cbd5e0 transparent',
           overscrollBehavior: 'contain',
-          WebkitOverflowScrolling: 'touch'
+          touchAction: 'pan-y'
         }}
       >
         <div className="px-3 space-y-1">
@@ -479,14 +511,28 @@ export const ZohoSidebar = memo(({ collapsed, onToggleAction }: ZohoSidebarProps
                 isExpanded={expandedItems.includes(item.id)}
                 isActive={isActive}
                 onToggle={toggleExpanded}
+                onMobileMenuClose={onMobileMenuClose}
               />
             )
           })}
         </div>
       </nav>
 
+      {/* Expand/Collapse Button - Bottom of Sidebar */}
+      {collapsed && (
+        <div className="border-t border-[#E3E6F0] dark:border-gray-800 p-2 flex justify-center">
+          <button
+            onClick={onToggleAction}
+            className="p-2 rounded-[4px] hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+            title="Expand sidebar"
+          >
+            <ChevronRight className="w-4 h-4 text-[#95AAC9]" />
+          </button>
+        </div>
+      )}
+
       {/* User Profile Section */}
-      <div className="border-t border-[#E3E6F0] dark:border-gray-800 p-3">
+      <div className="border-t border-[#E3E6F0] dark:border-gray-800 p-4">
         <div className="relative group">
           <div
             className={`
@@ -508,7 +554,7 @@ export const ZohoSidebar = memo(({ collapsed, onToggleAction }: ZohoSidebarProps
 
           {/* User Profile Dropdown - Shows on hover when collapsed */}
           {collapsed && (
-            <div className="absolute left-full bottom-0 ml-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
+            <div className="absolute left-full bottom-0 ml-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[9999] opacity-0 scale-95 -translate-x-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-x-0 transition-all duration-250 delay-200 ease-out pointer-events-none group-hover:pointer-events-auto">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">

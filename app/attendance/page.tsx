@@ -1220,15 +1220,15 @@ function AttendancePageContent() {
     ]}>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           <div>
-            <h1 className="text-4xl font-bold text-foreground mb-3 tracking-tight">Attendance Dashboard</h1>
-            <p className="text-muted-foreground text-lg">Real-time attendance data synced from office computer</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-2 sm:mb-3 tracking-tight">Attendance Dashboard</h1>
+            <p className="text-muted-foreground text-sm sm:text-base md:text-lg">Real-time attendance data synced from office computer</p>
           </div>
-          <div className="flex flex-col items-end gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-sm">
-                <Activity className="h-4 w-4 text-primary" />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 text-xs sm:text-sm">
+                <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                 <span className="font-semibold text-foreground">Auto-Sync Status</span>
               </div>
               <Button
@@ -1236,21 +1236,21 @@ function AttendancePageContent() {
                 size="sm"
                 onClick={triggerManualSync}
                 disabled={manualSyncing}
-                className="gap-2 font-semibold bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200 hover:from-orange-100 hover:to-orange-200 shadow-md"
+                className="gap-2 font-semibold bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200 hover:from-orange-100 hover:to-orange-200 shadow-md text-xs sm:text-sm"
               >
-                <RefreshCw className={`h-4 w-4 ${manualSyncing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${manualSyncing ? 'animate-spin' : ''}`} />
                 {manualSyncing ? 'Syncing...' : 'Force Sync'}
               </Button>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
+                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="font-medium">
                   Last sync: {lastSyncTime ? new Date(lastSyncTime).toLocaleTimeString() : 'Loading...'}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-[hsl(var(--success))] font-medium">
-                <div className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--success))] animate-pulse shadow-sm" />
+                <div className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-[hsl(var(--success))] animate-pulse shadow-sm" />
                 <span>Cloud Synced</span>
               </div>
             </div>
@@ -1267,14 +1267,14 @@ function AttendancePageContent() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-4 bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             <Select value={dateRange} onValueChange={(value) => {
               setDateRange(value)
               // Date range only affects All Track Records section, not Today's section
             }}>
-              <SelectTrigger className="w-[200px] bg-background border-border/50 font-medium shadow-sm">
+              <SelectTrigger className="w-full sm:w-[200px] bg-background border-border/50 font-medium shadow-sm text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1449,10 +1449,10 @@ function AttendancePageContent() {
         {canViewTodaysActivity && (
           <Card className="shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
             <div className="p-8 space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200">
-                  <Clock className="h-5 w-5 text-purple-600" />
+                <div className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight">Today's Recent Activity</h2>
@@ -1575,8 +1575,8 @@ function AttendancePageContent() {
         {/* All Track Records */}
         <Card className="shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
           <div className="p-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold tracking-tight">All Track Records</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">All Track Records</h2>
               <Button variant="outline" className="bg-gradient-to-r from-sky-50 to-sky-100 dark:from-sky-950 dark:to-sky-900 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 hover:from-sky-100 hover:to-sky-200 dark:hover:from-sky-900 dark:hover:to-sky-800 shadow-md">
                 <Calendar className="h-4 w-4 mr-2" />
                 Cloud Synced
@@ -1639,7 +1639,7 @@ function AttendancePageContent() {
                 <div className="relative">
                   <button
                     onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 border border-input rounded-md hover:bg-accent transition-colors bg-card"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 border border-input rounded-md hover:bg-accent transition-colors bg-card text-sm"
                   >
                     <span className="text-sm">
                       {selectedEmployees.length === allEmployees.length

@@ -203,41 +203,45 @@ function ChartPageContent() {
     <ZohoLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div>
-            <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white">Charts</h1>
-            <p className="text-[#95AAC9] mt-1">Production timeline and performance charts</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#12263F] dark:text-white">Charts</h1>
+            <p className="text-[#95AAC9] mt-1 text-sm">Production timeline and performance charts</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-[#95AAC9]">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="text-xs text-[#95AAC9] hidden sm:block">
               Last updated: {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading...'}
             </div>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded-[4px] text-sm"
+              className="px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded-[4px] text-sm w-full sm:w-auto"
             >
               <option value="today">Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
               <option value="quarter">This Quarter</option>
             </select>
-            <ZohoButton
-              variant="secondary"
-              icon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
-              onClick={fetchMetrics}
-              disabled={loading}
-            >
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </ZohoButton>
-            {canExportCharts && (
+            <div className="flex gap-2">
               <ZohoButton
-                variant="primary"
-                icon={<Download className="w-4 h-4" />}
+                variant="secondary"
+                icon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+                onClick={fetchMetrics}
+                disabled={loading}
+                className="flex-1 sm:flex-none"
               >
-                Export
+                <span className="hidden sm:inline">{loading ? 'Refreshing...' : 'Refresh'}</span>
               </ZohoButton>
-            )}
+              {canExportCharts && (
+                <ZohoButton
+                  variant="primary"
+                  icon={<Download className="w-4 h-4" />}
+                  className="flex-1 sm:flex-none"
+                >
+                  <span className="hidden sm:inline">Export</span>
+                </ZohoButton>
+              )}
+            </div>
           </div>
         </div>
 
@@ -259,49 +263,51 @@ function ChartPageContent() {
         ) : (
           <>
             {/* Tab Navigation */}
-            <div className="border-b border-[#E3E6F0] dark:border-gray-700">
-              <nav className="flex space-x-8">
+            <div className="border-b border-[#E3E6F0] dark:border-gray-700 overflow-x-auto">
+              <nav className="flex space-x-4 sm:space-x-8 min-w-max sm:min-w-0">
                 {canViewTimeline && (
                   <button
                     onClick={() => setActiveTab('timeline')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                       activeTab === 'timeline'
                         ? 'border-[#2C7BE5] text-[#2C7BE5]'
                         : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="w-4 h-4" />
-                      Timeline View
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">Timeline View</span>
+                      <span className="sm:hidden">Timeline</span>
                     </div>
                   </button>
                 )}
                 {canViewGantt && (
                   <button
                     onClick={() => setActiveTab('gantt')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                       activeTab === 'gantt'
                         ? 'border-[#2C7BE5] text-[#2C7BE5]'
                         : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <Grid3X3 className="w-4 h-4" />
-                      Gantt Chart
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <Grid3X3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">Gantt Chart</span>
+                      <span className="sm:hidden">Gantt</span>
                     </div>
                   </button>
                 )}
                 {canViewKPI && (
                   <button
                     onClick={() => setActiveTab('analytics')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                       activeTab === 'analytics'
                         ? 'border-[#2C7BE5] text-[#2C7BE5]'
                         : 'border-transparent text-[#95AAC9] hover:text-[#12263F] hover:border-[#E3E6F0]'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <PieChart className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       Analytics
                     </div>
                   </button>
@@ -316,31 +322,32 @@ function ChartPageContent() {
           <div className="space-y-6">
             {/* Timeline Controls */}
             <ZohoCard>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#2C7BE5]/10 rounded-lg flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-[#2C7BE5]" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#2C7BE5]/10 rounded-lg flex items-center justify-center">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-[#2C7BE5]" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Production Timeline</h3>
-                    <p className="text-sm text-[#95AAC9]">Real-time machine scheduling & task management</p>
+                    <h3 className="text-base sm:text-lg font-semibold text-[#12263F] dark:text-white">Production Timeline</h3>
+                    <p className="text-xs sm:text-sm text-[#95AAC9]">Real-time machine scheduling & task management</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
+                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                  <div className="text-right flex-1 sm:flex-none">
                     <p className="text-xs text-[#95AAC9]">Current Time</p>
-                    <p className="text-sm font-medium text-[#12263F] dark:text-white">
+                    <p className="text-xs sm:text-sm font-medium text-[#12263F] dark:text-white">
                       {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
                     </p>
                   </div>
                   <ZohoButton variant="primary" size="sm" icon={<Clock className="w-4 h-4" />}>
-                    Jump to Now
+                    <span className="hidden sm:inline">Jump to Now</span>
+                    <span className="sm:hidden">Now</span>
                   </ZohoButton>
                 </div>
               </div>
 
               {/* Controls */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 lg:gap-0 mb-4 sm:mb-6 overflow-x-auto">
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-[#12263F] dark:text-white">Zoom:</span>
@@ -658,7 +665,7 @@ function ChartPageContent() {
         {canViewKPI && activeTab === 'analytics' && (
           <div className="space-y-6">
             {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Production Output */}
           <ZohoCard>
             <div className="flex items-center justify-between">

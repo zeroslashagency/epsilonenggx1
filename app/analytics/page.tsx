@@ -105,7 +105,7 @@ function AnalyticsPageContent() {
             <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
 
             {/* Stats Cards Skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                   <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded mb-3 animate-pulse"></div>
@@ -149,24 +149,24 @@ function AnalyticsPageContent() {
         ) : (
           <>
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#2C7BE5]/10 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-[#2C7BE5]" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#2C7BE5]/10 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-[#2C7BE5]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-[#12263F] dark:text-white">Reports & Analytics</h1>
-              <p className="text-[#95AAC9] mt-1">Generate and view production reports</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#12263F] dark:text-white">Reports & Analytics</h1>
+              <p className="text-[#95AAC9] mt-1 text-sm">Generate and view production reports</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-[#95AAC9]">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="text-xs text-[#95AAC9] hidden sm:block">
               Last updated: {lastUpdate.toLocaleTimeString()}
             </div>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded-[4px] text-sm"
+              className="px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded-[4px] text-sm w-full sm:w-auto"
             >
               <option value="today">Today</option>
               <option value="week">This Week</option>
@@ -174,76 +174,81 @@ function AnalyticsPageContent() {
               <option value="quarter">This Quarter</option>
               <option value="year">This Year</option>
             </select>
-            <ZohoButton
-              variant="secondary"
-              icon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
-              onClick={fetchAnalyticsData}
-              disabled={refreshing}
-            >
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </ZohoButton>
-            {canExportSensitiveData && (
+            <div className="flex gap-2">
               <ZohoButton
-                variant="primary"
-                icon={<Download className="w-4 h-4" />}
+                variant="secondary"
+                icon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
+                onClick={fetchAnalyticsData}
+                disabled={refreshing}
+                className="flex-1 sm:flex-none"
               >
-                Export Report
+                <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
               </ZohoButton>
-            )}
+              {canExportSensitiveData && (
+                <ZohoButton
+                  variant="primary"
+                  icon={<Download className="w-4 h-4" />}
+                  className="flex-1 sm:flex-none"
+                >
+                  <span className="hidden sm:inline">Export Report</span>
+                  <span className="sm:hidden">Export</span>
+                </ZohoButton>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Report Type Selector */}
-        <div className="flex items-center gap-2 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex items-center gap-1 sm:gap-2 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg p-1 overflow-x-auto">
           {canViewProduction && (
             <button
               onClick={() => setReportType('production')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
                 reportType === 'production'
                   ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
                   : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
               }`}
             >
-              <BarChart3 className="w-4 h-4 inline mr-2" />
+              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1.5 sm:mr-2" />
               Production
             </button>
           )}
           {canViewEfficiency && (
             <button
               onClick={() => setReportType('efficiency')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
                 reportType === 'efficiency'
                   ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
                   : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
               }`}
             >
-              <Activity className="w-4 h-4 inline mr-2" />
+              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1.5 sm:mr-2" />
               Efficiency
             </button>
           )}
           {canViewQuality && (
             <button
               onClick={() => setReportType('quality')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
                 reportType === 'quality'
                   ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
                   : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
               }`}
             >
-              <Package className="w-4 h-4 inline mr-2" />
+              <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1.5 sm:mr-2" />
               Quality
             </button>
           )}
           {canViewMachine && (
             <button
               onClick={() => setReportType('machine')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
                 reportType === 'machine'
                   ? 'bg-white dark:bg-gray-700 text-[#2C7BE5] shadow-sm'
                   : 'text-[#95AAC9] hover:text-[#12263F] hover:bg-white/50'
               }`}
             >
-              <Cpu className="w-4 h-4 inline mr-2" />
+              <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1.5 sm:mr-2" />
               Machine
             </button>
           )}
@@ -253,7 +258,7 @@ function AnalyticsPageContent() {
         {reportType === 'production' && (
           <>
             {/* Production Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <ZohoCard>
                 <div className="flex items-center justify-between">
                   <div>
@@ -312,7 +317,7 @@ function AnalyticsPageContent() {
         {reportType === 'efficiency' && (
           <>
             {/* Efficiency Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <ZohoCard>
                 <div className="flex items-center justify-between">
                   <div>
@@ -371,7 +376,7 @@ function AnalyticsPageContent() {
         {reportType === 'quality' && (
           <>
             {/* Quality Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <ZohoCard>
                 <div className="flex items-center justify-between">
                   <div>
@@ -430,7 +435,7 @@ function AnalyticsPageContent() {
         {reportType === 'machine' && (
           <>
             {/* Machine Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <ZohoCard>
                 <div className="flex items-center justify-between">
                   <div>

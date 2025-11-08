@@ -522,29 +522,8 @@ function UsersPageZoho() {
   }
 
   return (
-    <ZohoLayout breadcrumbs={[]}>
+    <>
       <div className="space-y-6">
-        {/* Tab Navigation */}
-        <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
-          <div className="flex items-center gap-2 px-6">
-            <Link href="/settings/users" className="flex items-center gap-2 px-4 py-3 text-sm text-white bg-[#00A651] rounded-t transition-colors border-b-2 border-[#00A651]">
-              <User className="w-4 h-4" />
-              User Management
-            </Link>
-            <Link href="/settings/add-users" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
-              <UserPlus className="w-4 h-4" />
-              Add Users
-            </Link>
-            <Link href="/settings/roles" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
-              <Shield className="w-4 h-4" />
-              Role Profiles
-            </Link>
-            <Link href="/settings/activity-logs" className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent">
-              <Zap className="w-4 h-4" />
-              Activity Logging
-            </Link>
-          </div>
-        </div>
 
         {/* User Statistics */}
         <div className="flex items-center gap-6 px-4 py-3 bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded">
@@ -642,23 +621,23 @@ function UsersPageZoho() {
           </div>
         ) : (
           /* Two Column Layout - When User is Selected */
-          <div className="grid grid-cols-12 gap-6">
-            {/* Left: User List */}
-            <div className="col-span-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+            {/* Left: User List - Hidden on mobile when user selected */}
+            <div className={`lg:col-span-4 ${selectedUser ? 'hidden lg:block' : ''}`}>
             <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded">
-              <div className="p-4 border-b border-[#E3E6F0] dark:border-gray-700 flex items-center justify-between">
+              <div className="p-3 sm:p-4 border-b border-[#E3E6F0] dark:border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#12263F] dark:text-white">All Users</h2>
+                  <h2 className="text-base sm:text-lg font-semibold text-[#12263F] dark:text-white">All Users</h2>
                   <p className="text-xs text-[#95AAC9] mt-1">USER DETAILS</p>
                 </div>
                 <Link href="/settings/add-users">
-                  <button className="px-3 py-1.5 bg-[#2C7BE5] text-white text-sm rounded hover:bg-blue-600 transition-colors">
+                  <button className="px-3 py-1.5 bg-[#2C7BE5] text-white text-xs sm:text-sm rounded hover:bg-blue-600 transition-colors w-full sm:w-auto">
                     Invite User
                   </button>
                 </Link>
               </div>
               
-              <div className="divide-y divide-[#E3E6F0] dark:divide-gray-700 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+              <div className="divide-y divide-[#E3E6F0] dark:divide-gray-700 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 {loading ? (
                   <LoadingSpinner text="Loading users" />
                 ) : users.length === 0 ? (
@@ -670,14 +649,14 @@ function UsersPageZoho() {
                       onClick={() => {
                         handleUserSelect(user)
                       }}
-                      className={`px-6 py-4 cursor-pointer transition-colors ${
+                      className={`px-4 sm:px-6 py-3 sm:py-4 cursor-pointer transition-colors ${
                         selectedUser?.id === user.id 
                           ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-[#2C7BE5]' 
                           : 'hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
                       } ${user.role === 'deactivated' ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : ''}`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${
+                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-sm sm:text-base ${
                           user.role === 'deactivated' 
                             ? 'bg-gray-500 dark:bg-gray-600' 
                             : 'bg-gradient-to-br from-blue-500 to-blue-600'
@@ -685,14 +664,14 @@ function UsersPageZoho() {
                           {user.full_name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className={`font-medium truncate ${
+                          <div className={`text-sm sm:text-base font-medium truncate ${
                             user.role === 'deactivated' 
                               ? 'text-gray-500 dark:text-gray-500' 
                               : 'text-[#12263F] dark:text-white'
                           }`}>
                             {user.full_name || 'Unknown User'}
                           </div>
-                          <div className={`text-sm truncate ${
+                          <div className={`text-xs sm:text-sm truncate ${
                             user.role === 'deactivated' 
                               ? 'text-gray-400 dark:text-gray-600' 
                               : 'text-[#95AAC9]'
@@ -711,30 +690,38 @@ function UsersPageZoho() {
             </div>
           </div>
 
-          {/* Right: DESIGN 2 - Split Panel with Fixed Sidebar */}
-          <div className="col-span-8">
+          {/* Right: DESIGN 2 - Split Panel with Fixed Sidebar - Full width on mobile */}
+          <div className={`lg:col-span-8 ${selectedUser ? 'col-span-1' : 'hidden'}`}>
             {selectedUser ? (
               <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded overflow-hidden">
                 {/* Header with breadcrumb */}
-                <div className="px-6 py-4 border-b border-[#E3E6F0] dark:border-gray-700 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-[#95AAC9]">
+                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#E3E6F0] dark:border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-[#95AAC9]">
+                    {/* Back button for mobile */}
+                    <button
+                      onClick={() => setSelectedUser(null)}
+                      className="lg:hidden flex items-center gap-1 text-[#2C7BE5] hover:text-blue-700 mr-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                      Back
+                    </button>
                     <span>Users</span>
                     <span>/</span>
                     <span className="text-[#12263F] dark:text-white font-medium">{selectedUser.full_name}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {isEditing ? (
                       <>
                         <button 
                           onClick={handleCancelEdit}
-                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+                          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
                         >
                           <X className="w-4 h-4" />
                           Cancel
                         </button>
                         <button 
                           onClick={handleSaveChanges}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors"
+                          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-[#00A651] text-white text-xs sm:text-sm rounded hover:bg-green-600 transition-colors"
                         >
                           <Save className="w-4 h-4" />
                           Save
@@ -744,14 +731,14 @@ function UsersPageZoho() {
                       <>
                         <button 
                           onClick={handleEditClick}
-                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+                          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
                         >
                           <Edit className="w-4 h-4" />
                           Edit
                         </button>
                         <button 
                           onClick={handleDeleteUser}
-                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 border border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-red-600 border border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete
@@ -759,7 +746,7 @@ function UsersPageZoho() {
                         {selectedUser.role === 'deactivated' ? (
                           <button 
                             onClick={handleToggleStatus}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-[#00A651] text-white text-sm rounded hover:bg-green-600 transition-colors"
+                            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-[#00A651] text-white text-xs sm:text-sm rounded hover:bg-green-600 transition-colors"
                           >
                             <Check className="w-4 h-4" />
                             Activate
@@ -767,7 +754,7 @@ function UsersPageZoho() {
                         ) : (
                           <button 
                             onClick={handleToggleStatus}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-red-600 text-white text-xs sm:text-sm rounded hover:bg-red-700 transition-colors"
                           >
                             <X className="w-4 h-4" />
                             Deactivate
@@ -777,7 +764,7 @@ function UsersPageZoho() {
                     )}
                     <button 
                       onClick={() => setSelectedUser(null)}
-                      className="p-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 rounded transition-colors"
+                      className="hidden lg:block p-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 rounded transition-colors"
                       title="Close"
                     >
                       <X className="w-5 h-5 text-[#95AAC9]" />
@@ -786,13 +773,13 @@ function UsersPageZoho() {
                 </div>
 
                 {/* Split Panel Layout */}
-                <div className="grid grid-cols-12">
+                <div className="grid grid-cols-1 lg:grid-cols-12">
                   {/* LEFT SIDEBAR - Fixed User Summary */}
-                  <div className="col-span-4 border-r border-[#E3E6F0] dark:border-gray-700 bg-[#F8F9FC] dark:bg-gray-800/50">
-                    <div className="p-6 space-y-4">
+                  <div className="lg:col-span-4 lg:border-r border-[#E3E6F0] dark:border-gray-700 bg-[#F8F9FC] dark:bg-gray-800/50">
+                    <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                       {/* Large Avatar */}
                       <div className="flex justify-center">
-                        <div className={`w-32 h-32 rounded-full flex items-center justify-center text-white font-bold text-5xl shadow-lg ${
+                        <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center text-white font-bold text-4xl sm:text-5xl shadow-lg ${
                           selectedUser.role === 'deactivated'
                             ? 'bg-gray-500 dark:bg-gray-600'
                             : 'bg-gradient-to-br from-blue-500 to-blue-600'
@@ -803,7 +790,7 @@ function UsersPageZoho() {
 
                       {/* User Name & Email */}
                       <div className="text-center">
-                        <h2 className="text-lg font-semibold text-[#12263F] dark:text-white mb-1">
+                        <h2 className="text-base sm:text-lg font-semibold text-[#12263F] dark:text-white mb-1">
                           {selectedUser.full_name}
                         </h2>
                         <p className="text-sm text-[#95AAC9] break-all">
@@ -883,15 +870,15 @@ function UsersPageZoho() {
                   </div>
 
                   {/* RIGHT PANEL - Scrollable Content */}
-                  <div className="col-span-8">
+                  <div className="lg:col-span-8">
                     {/* Tabs */}
-                    <div className="border-b border-[#E3E6F0] dark:border-gray-700 bg-white dark:bg-gray-900">
-                      <div className="flex gap-4 px-6">
+                    <div className="border-b border-[#E3E6F0] dark:border-gray-700 bg-white dark:bg-gray-900 overflow-x-auto">
+                      <div className="flex gap-2 sm:gap-4 px-4 sm:px-6 min-w-max">
                         {['overview', 'roles', 'activity', 'security'].map((tab) => (
                           <button
                             key={tab}
                             onClick={() => setActiveTab(tab as any)}
-                            className={`flex-1 px-4 py-3 text-sm font-medium capitalize transition-colors ${
+                            className={`px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium capitalize transition-colors whitespace-nowrap ${
                               activeTab === tab
                                 ? 'text-[#2C7BE5] border-b-2 border-[#2C7BE5]'
                                 : 'text-[#95AAC9] hover:text-[#12263F] dark:hover:text-white'
@@ -904,10 +891,10 @@ function UsersPageZoho() {
                     </div>
 
                 {/* Tab Content */}
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {/* Overview Tab */}
                   {activeTab === 'overview' && (
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       <div>
                         <h3 className="text-sm font-semibold text-[#12263F] dark:text-white mb-4">Contact Information</h3>
                         <div className="space-y-3">
@@ -1174,7 +1161,7 @@ function UsersPageZoho() {
         </div>
         )}
       </div>
-    </ZohoLayout>
+    </>
   )
 }
 

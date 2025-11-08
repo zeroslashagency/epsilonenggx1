@@ -120,14 +120,14 @@ function MaintenancePageContent() {
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
-                  <p className="text-2xl font-bold text-green-600">{records.filter(r => r.status === 'completed').length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Completed</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-600">{records.filter(r => r.status === 'completed').length}</p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-green-600" />
+                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">

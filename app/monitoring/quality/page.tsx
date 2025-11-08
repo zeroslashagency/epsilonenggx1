@@ -100,41 +100,41 @@ export default function QualityControlPage() {
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Pass Rate</p>
-                  <p className="text-2xl font-bold text-green-600">{passRate}%</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Pass Rate</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-600">{passRate}%</p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-green-600" />
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Passed</p>
-                  <p className="text-2xl font-bold text-green-600">{checks.filter(c => c.result === 'passed').length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Passed</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-600">{checks.filter(c => c.result === 'passed').length}</p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-green-600" />
+                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Failed</p>
-                  <p className="text-2xl font-bold text-red-600">{checks.filter(c => c.result === 'failed').length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Failed</p>
+                  <p className="text-xl sm:text-2xl font-bold text-red-600">{checks.filter(c => c.result === 'failed').length}</p>
                 </div>
-                <XCircle className="w-8 h-8 text-red-600" />
+                <XCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-600">{checks.filter(c => c.result === 'pending').length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Pending</p>
+                  <p className="text-xl sm:text-2xl font-bold text-yellow-600">{checks.filter(c => c.result === 'pending').length}</p>
                 </div>
-                <AlertTriangle className="w-8 h-8 text-yellow-600" />
+                <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600" />
               </div>
             </div>
           </div>

@@ -11,7 +11,8 @@ import {
   ChevronDown,
   LogOut,
   UserCircle,
-  HelpCircle
+  HelpCircle,
+  Menu
 } from 'lucide-react'
 import { useTheme } from '@/app/lib/contexts/theme-context'
 import { useAuth } from '@/app/lib/contexts/auth-context'
@@ -19,9 +20,10 @@ import { useAuth } from '@/app/lib/contexts/auth-context'
 interface ZohoHeaderProps {
   breadcrumbs?: any
   sidebarCollapsed?: boolean
+  onMobileMenuToggle?: () => void
 }
 
-export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeaderProps) {
+export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false, onMobileMenuToggle }: ZohoHeaderProps) {
   const themeContext = useTheme()
   const theme = themeContext?.theme || 'light'
   const toggleTheme = themeContext?.toggleTheme || (() => {})
@@ -41,24 +43,38 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
   return (
     <header
       className={`
-        fixed top-0 right-0 h-16 bg-white dark:bg-gray-900 
-        border-b border-gray-200 dark:border-gray-800
-        transition-all duration-300 z-30
-        ${sidebarCollapsed ? 'left-16' : 'left-64'}
+        fixed top-0 h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-[100]
+        left-0 right-0
+        md:left-[70px]
+        ${!sidebarCollapsed ? 'lg:left-[280px]' : ''}
       `}
+      style={{
+        position: 'fixed !important' as any,
+        top: '0 !important',
+        zIndex: 100
+      }}
     >
-      <div className="h-full px-6 flex items-center justify-between">
-        {/* Search Bar */}
-        <div className="flex-1 max-w-2xl">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+      <div className="h-full px-4 md:px-6 flex items-center gap-3">
+        {/* Mobile Hamburger Menu */}
+        <button
+          onClick={onMobileMenuToggle}
+          className="md:hidden p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+          aria-label="Toggle menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Search Bar - Hidden on very small mobile only */}
+        <div className="hidden sm:flex flex-1 max-w-xl">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search users, schedules, reports..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="
-                w-full pl-10 pr-4 py-2 
+                w-full pl-9 pr-3 py-2 
                 bg-gray-50 dark:bg-gray-800 
                 border border-gray-200 dark:border-gray-700
                 rounded-lg text-sm
@@ -73,12 +89,12 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center space-x-3 ml-6">
+        <div className="flex items-center space-x-2 ml-auto">
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
             className="
-              p-2.5 rounded-full
+              p-2 rounded-full
               text-gray-600 dark:text-gray-400
               hover:bg-gray-100 dark:hover:bg-gray-800
               transition-colors
@@ -86,27 +102,27 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
             title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
           >
             {theme === 'light' ? (
-              <Moon className="w-5 h-5" />
+              <Moon className="w-4 h-4" />
             ) : (
-              <Sun className="w-5 h-5" />
+              <Sun className="w-4 h-4" />
             )}
           </button>
 
           {/* Notifications */}
-          <div className="relative">
+          <div className="relative hidden sm:block">
             <button
               onClick={() => {
                 setShowNotifications(!showNotifications)
                 setShowUserMenu(false)
               }}
               className="
-                relative p-2.5 rounded-full
+                relative p-2 rounded-full
                 text-gray-600 dark:text-gray-400
                 hover:bg-gray-100 dark:hover:bg-gray-800
                 transition-colors
               "
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
               )}
@@ -172,14 +188,14 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
           {/* Settings */}
           <button
             className="
-              p-2.5 rounded-full
+              p-2 rounded-full
               text-gray-600 dark:text-gray-400
               hover:bg-gray-100 dark:hover:bg-gray-800
               transition-colors
             "
             title="Settings"
           >
-            <Settings className="w-5 h-5" />
+            <Settings className="w-4 h-4" />
           </button>
 
           {/* User Menu */}
@@ -190,19 +206,19 @@ export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false }: ZohoHeader
                 setShowNotifications(false)
               }}
               className="
-                flex items-center space-x-2.5 px-3 py-1.5 rounded-full
+                flex items-center space-x-2 px-2.5 py-1.5 rounded-full
                 text-gray-700 dark:text-gray-300
                 hover:bg-gray-100 dark:hover:bg-gray-800
                 transition-colors border border-gray-200 dark:border-gray-700
               "
             >
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
+              <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
+                <User className="w-3.5 h-3.5 text-white" />
               </div>
               <span className="text-sm font-medium">
                 {userEmail?.split('@')[0] || 'admin'}
               </span>
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-3.5 h-3.5" />
             </button>
 
             {/* User Dropdown */}

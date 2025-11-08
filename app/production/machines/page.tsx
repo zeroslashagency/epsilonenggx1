@@ -88,17 +88,17 @@ export default function MachinesPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                <Cpu className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                <Cpu className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Machines</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Monitor and manage production machines</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Machines</h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Monitor and manage production machines</p>
               </div>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+            <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm w-full sm:w-auto justify-center">
               <Plus className="w-4 h-4" />
               Add Machine
             </button>
@@ -107,14 +107,14 @@ export default function MachinesPage() {
 
         {/* Stats */}
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Running</p>
-                  <p className="text-2xl font-bold text-green-600">{machines.filter(m => m.status === 'running').length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Running</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-600">{machines.filter(m => m.status === 'running').length}</p>
                 </div>
-                <Activity className="w-8 h-8 text-green-600" />
+                <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
