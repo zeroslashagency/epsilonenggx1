@@ -115,7 +115,7 @@ export default function GamificationTab({ employeeCode, employeeName }: Gamifica
     // Current streak (check if last date is recent)
     if (lastDate) {
       const today = new Date()
-      const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+      const diffDays = Math.floor((today.getTime() - (lastDate as Date).getTime()) / (1000 * 60 * 60 * 24))
       if (diffDays <= 3) {
         currentStreak = tempStreak
       }
