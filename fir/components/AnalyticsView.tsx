@@ -21,6 +21,7 @@ const STATUS_COLORS = {
     [ReportStatus.Reported]: '#3B82F6',
     [ReportStatus.PersonResponse]: '#F59E0B',
     [ReportStatus.SuperAdminReview]: '#8B5CF6',
+    [ReportStatus.Refused]: '#9CA3AF', // Gray for refused
 };
 
 export function AnalyticsView({ reports }: AnalyticsViewProps) {
