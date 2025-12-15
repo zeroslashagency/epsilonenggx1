@@ -37,14 +37,14 @@ export async function POST(
     }
 
     // Get the shift change request
-    const { data: request, error: requestError } = await supabase
+    const { data: shiftRequest, error: requestError } = await supabase
       .from('shift_change_requests')
       .select('*')
       .eq('id', id)
       .eq('status', 'pending')
       .single()
 
-    if (requestError || !request) {
+    if (requestError || !shiftRequest) {
       return NextResponse.json(
         { success: false, error: 'Shift change request not found or already processed' },
         { status: 404 }
@@ -79,9 +79,9 @@ export async function POST(
       action: 'shift_change_rejected',
       target_id: id,
       meta_json: {
-        employee_code: request.employee_code,
-        assignment_type: request.assignment_type,
-        effective_date: request.effective_date,
+        employee_code: shiftRequest.employee_code,
+        assignment_type: shiftRequest.assignment_type,
+        effective_date: shiftRequest.effective_date,
         rejected_reason: rejectedReason,
         comments: comments
       }
