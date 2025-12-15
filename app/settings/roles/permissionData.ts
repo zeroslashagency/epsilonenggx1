@@ -772,5 +772,146 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
       }
     },
     specialPermissions: ['Allow users to update organization details', 'Allow users to manage billing']
+  },
+
+  // 20. TOOLS - Shift Management (1 parent + 4 sub-items = 5)
+  tools_shift: {
+    name: 'TOOLS - Shift Management',
+    items: {
+      'Shift Management': {
+        full: false,
+        view: false,
+        create: false,
+        edit: false,
+        delete: false,
+        isCollapsible: true
+      },
+      'Shift Manager': {
+        full: false,
+        view: false,
+        create: false,
+        edit: false,
+        delete: false,
+        isSubItem: true,
+        parent: 'Shift Management'
+      },
+      'Roster Board': {
+        full: false,
+        view: false,
+        create: false, // Controls Drag & Drop / Assignment
+        edit: false,
+        delete: false,
+        isSubItem: true,
+        parent: 'Shift Management'
+      },
+      'Calendar View': {
+        full: false,
+        view: false,
+        export: false,
+        isSubItem: true,
+        parent: 'Shift Management'
+      },
+      'Employee Assignment': {
+        full: false,
+        view: false,
+        create: false,
+        edit: false, // Controls Bulk Assignment
+        delete: false,
+        isSubItem: true,
+        parent: 'Shift Management'
+      }
+    },
+    specialPermissions: ['Allow users to override shift constraints', 'Allow users to approve swap requests']
+  },
+
+  // 21. TOOLS - Leave Management (1 parent + 1 sub-item = 2)
+  tools_leave: {
+    name: 'TOOLS - Leave Management',
+    items: {
+      'Leave Management': {
+        full: false,
+        view: false,
+        create: false,
+        edit: false,
+        delete: false,
+        approve: false,
+        isCollapsible: true
+      },
+      'Leave Requests': {
+        full: false,
+        view: false,
+        create: false,
+        edit: false,
+        delete: false,
+        approve: false,
+        isSubItem: true,
+        parent: 'Leave Management'
+      }
+    },
+    specialPermissions: ['Allow users to view all department leaves', 'Allow users to bypass leave policies']
+  },
+
+  // 22. TOOLS - Health (1 parent + 1 sub-item = 2)
+  tools_health: {
+    name: 'TOOLS - Health',
+    items: {
+      'Device Monitor': {
+        full: false,
+        view: false,
+        create: false, // Reset/Reboot commands
+        edit: false,
+        delete: false,
+        isCollapsible: true
+      },
+      'Device Status': {
+        full: false,
+        view: false,
+        create: false,
+        isSubItem: true,
+        parent: 'Device Monitor'
+      }
+    },
+    specialPermissions: ['Allow users to reboot devices', 'Allow users to update device firmware']
+  },
+
+  // 23. TOOLS - FIR (1 parent + 4 sub-items = 5)
+  tools_fir: {
+    name: 'TOOLS - FIR Reporter',
+    items: {
+      'FIR Reporter': {
+        full: false,
+        view: false,
+        create: false,
+        edit: false,
+        delete: false,
+        approve: false,
+        isCollapsible: true
+      },
+      'Dashboard': {
+        view: false,
+        isSubItem: true,
+        parent: 'FIR Reporter'
+      },
+      'All Reports': {
+        view: false,
+        create: false,
+        isSubItem: true,
+        parent: 'FIR Reporter'
+      },
+      'Categories': {
+        view: false,
+        create: false,
+        edit: false,
+        delete: false,
+        isSubItem: true,
+        parent: 'FIR Reporter'
+      },
+      'Analytics': {
+        view: false,
+        isSubItem: true,
+        parent: 'FIR Reporter'
+      }
+    },
+    specialPermissions: ['Allow users to assign reports', 'Allow users to close reports']
   }
 }

@@ -67,3 +67,6 @@ CLEANUP_PLAN.md
 
 # Config files with credentials (use .env instead)
 config/supabase.js
+
+# Mobile
+mobile/

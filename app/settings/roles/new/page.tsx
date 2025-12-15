@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, ChevronDown, Save, X, Info, User, UserPlus, Shield, ArrowUpDown, Zap } from 'lucide-react'
 import { ZohoLayout } from '@/app/components/zoho-ui'
 import Link from 'next/link'
-import { initialPermissionModules, type ModulePermission, type PermissionModule } from './permissionData'
+import { initialPermissionModules, ModulePermission, PermissionModule } from '../permissionData'
 
 export default function NewRolePage() {
   const router = useRouter()
@@ -40,12 +40,16 @@ export default function NewRolePage() {
     role_profiles: true,
     activity_logging: true,
     system_settings: true,
-    account: true
+    account: true,
+    // Tools
+    shift_management: true,
+    leave_management: true,
+    device_monitor: true
   })
-  
+
   // Initialize permission modules from imported data
   const [permissionModules, setPermissionModules] = useState<Record<string, PermissionModule>>(initialPermissionModules)
-  
+
   // Toggle collapse state for parent items
   const toggleCollapse = (itemKey: string) => {
     setCollapsed(prev => ({
@@ -53,16 +57,16 @@ export default function NewRolePage() {
       [itemKey]: !prev[itemKey]
     }))
   }
-  
+
   // Helper to get collapse key from item name
   const getCollapseKey = (itemName: string): string => {
     return itemName.toLowerCase().replace(/[^a-z0-9]+/g, '_')
   }
-  
+
   const updatePermission = (moduleKey: string, itemKey: string, permission: keyof ModulePermission, value: boolean) => {
     setPermissionModules(prev => {
       const currentItem = prev[moduleKey].items[itemKey]
-      
+
       // If "Full" is checked, automatically check all other permissions
       if (permission === 'full' && value) {
         return {
@@ -83,7 +87,7 @@ export default function NewRolePage() {
           }
         }
       }
-      
+
       // If "Full" is unchecked, uncheck all permissions
       if (permission === 'full' && !value) {
         return {
@@ -104,7 +108,7 @@ export default function NewRolePage() {
           }
         }
       }
-      
+
       // For other permissions, just update that specific permission
       return {
         ...prev,
@@ -129,10 +133,10 @@ export default function NewRolePage() {
     }
 
     try {
-      
+
       // Convert permission modules to simple permission codes for API
       const permissionCodes: string[] = []
-      
+
       Object.entries(permissionModules).forEach(([moduleKey, module]) => {
         Object.entries(module.items).forEach(([itemName, permissions]) => {
           // Map UI permissions to database permission codes
@@ -145,6 +149,13 @@ export default function NewRolePage() {
             if (itemName === 'Analytics') permissionCodes.push('view_reports')
             if (itemName === 'Attendance') permissionCodes.push('attendance_read')
             if (itemName === 'Standalone Attendance') permissionCodes.push('attendance_read')
+            // Tools Mappings
+            if (itemName === 'Shift Manager') permissionCodes.push('view_schedule')
+            if (itemName === 'Roster Board') permissionCodes.push('view_schedule')
+            if (itemName === 'Calendar View') permissionCodes.push('view_schedule')
+            if (itemName === 'Employee Assignment') permissionCodes.push('view_schedule')
+            if (itemName === 'Leave Management') permissionCodes.push('leave_read')
+            if (itemName === 'Device Monitor') permissionCodes.push('view_devices')
           }
           if (permissions.create) {
             if (itemName === 'Schedule Generator') permissionCodes.push('edit_schedule')
@@ -158,18 +169,20 @@ export default function NewRolePage() {
           }
         })
       })
-      
+
       // Remove duplicates
       const uniquePermissions = Array.from(new Set(permissionCodes))
-      
+
       const { apiPost } = await import('@/app/lib/utils/api-client')
-      const data = await apiPost('/api/admin/roles', {
+      const roleData = {
         name: roleName,
-        description: description || `Custom role: ${roleName}`,
+        description: description,
         is_manufacturing_role: isManufacturingRole,
-        permissions: uniquePermissions,
-        permissions_json: permissionModules
-      })
+        permissions: [], // Legacy permissions array
+        permissions_json: permissionModules, // New granular permissions
+        updated_at: new Date().toISOString()
+      }
+      const data = await apiPost('/api/admin/roles', roleData)
 
       if (!data.success) {
         throw new Error(data.error || 'Failed to create role')
@@ -268,7 +281,7 @@ export default function NewRolePage() {
                   placeholder="Enter role name"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
@@ -282,7 +295,7 @@ export default function NewRolePage() {
                   maxLength={500}
                 />
               </div>
-              
+
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 max-w-2xl">
                 <div className="flex items-start gap-3">
                   <input
@@ -309,7 +322,7 @@ export default function NewRolePage() {
           {Object.entries(permissionModules).map(([moduleKey, module]) => (
             <div key={moduleKey} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">{module.name}</h2>
-              
+
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   {/* Header */}
@@ -326,19 +339,19 @@ export default function NewRolePage() {
                       )}
                     </tr>
                   </thead>
-                  
+
                   {/* Body */}
                   <tbody>
                     {Object.entries(module.items).map(([itemKey, item]) => {
                       // Skip sub-items here, they'll be rendered after their parent
                       if (item.isSubItem) return null
-                      
+
                       const collapseKey = getCollapseKey(itemKey)
                       const isCollapsed = collapsed[collapseKey] ?? true
                       const hasSubItems = item.isCollapsible
-                      
+
                       return (
-                        <>
+                        <Fragment key={itemKey}>
                           {/* Parent Row */}
                           <tr key={itemKey} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
                             <td className="py-4 px-4 text-sm font-medium text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600">
@@ -359,64 +372,64 @@ export default function NewRolePage() {
                                 <span className={hasSubItems ? "font-semibold" : ""}>{itemKey}</span>
                               </div>
                             </td>
-                        
-                        <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600 dark:border-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={item.full}
-                            onChange={(e) => updatePermission(moduleKey, itemKey, 'full', e.target.checked)}
-                            className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </td>
-                        
-                        <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={item.view}
-                            onChange={(e) => updatePermission(moduleKey, itemKey, 'view', e.target.checked)}
-                            className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </td>
-                        
-                        <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={item.create}
-                            onChange={(e) => updatePermission(moduleKey, itemKey, 'create', e.target.checked)}
-                            className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </td>
-                        
-                        <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={item.edit}
-                            onChange={(e) => updatePermission(moduleKey, itemKey, 'edit', e.target.checked)}
-                            className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </td>
-                        
-                        <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={item.delete}
-                            onChange={(e) => updatePermission(moduleKey, itemKey, 'delete', e.target.checked)}
-                            className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </td>
-                        
+
+                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600 dark:border-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={item.full ?? false}
+                                onChange={(e) => updatePermission(moduleKey, itemKey, 'full', e.target.checked)}
+                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </td>
+
+                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={item.view ?? false}
+                                onChange={(e) => updatePermission(moduleKey, itemKey, 'view', e.target.checked)}
+                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </td>
+
+                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={item.create ?? false}
+                                onChange={(e) => updatePermission(moduleKey, itemKey, 'create', e.target.checked)}
+                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </td>
+
+                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={item.edit ?? false}
+                                onChange={(e) => updatePermission(moduleKey, itemKey, 'edit', e.target.checked)}
+                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </td>
+
+                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={item.delete ?? false}
+                                onChange={(e) => updatePermission(moduleKey, itemKey, 'delete', e.target.checked)}
+                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </td>
+
                             {item.approve !== undefined && (
                               <td className="py-4 px-4 text-center">
                                 <input
                                   type="checkbox"
-                                  checked={item.approve}
+                                  checked={item.approve ?? false}
                                   onChange={(e) => updatePermission(moduleKey, itemKey, 'approve', e.target.checked)}
                                   className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
                               </td>
                             )}
                           </tr>
-                          
+
                           {/* Sub-items (only shown when parent is expanded) */}
                           {!isCollapsed && hasSubItems && Object.entries(module.items)
                             .filter(([_, subItem]) => subItem.isSubItem && subItem.parent === itemKey)
@@ -425,57 +438,57 @@ export default function NewRolePage() {
                                 <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 pl-12">
                                   {subItemKey}
                                 </td>
-                                
+
                                 <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                   <input
                                     type="checkbox"
-                                    checked={subItem.full}
+                                    checked={subItem.full ?? false}
                                     onChange={(e) => updatePermission(moduleKey, subItemKey, 'full', e.target.checked)}
                                     className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   />
                                 </td>
-                                
+
                                 <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                   <input
                                     type="checkbox"
-                                    checked={subItem.view}
+                                    checked={subItem.view ?? false}
                                     onChange={(e) => updatePermission(moduleKey, subItemKey, 'view', e.target.checked)}
                                     className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   />
                                 </td>
-                                
+
                                 <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                   <input
                                     type="checkbox"
-                                    checked={subItem.create}
+                                    checked={subItem.create ?? false}
                                     onChange={(e) => updatePermission(moduleKey, subItemKey, 'create', e.target.checked)}
                                     className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   />
                                 </td>
-                                
+
                                 <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                   <input
                                     type="checkbox"
-                                    checked={subItem.edit}
+                                    checked={subItem.edit ?? false}
                                     onChange={(e) => updatePermission(moduleKey, subItemKey, 'edit', e.target.checked)}
                                     className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   />
                                 </td>
-                                
+
                                 <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
                                   <input
                                     type="checkbox"
-                                    checked={subItem.delete}
+                                    checked={subItem.delete ?? false}
                                     onChange={(e) => updatePermission(moduleKey, subItemKey, 'delete', e.target.checked)}
                                     className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   />
                                 </td>
-                                
+
                                 {subItem.approve !== undefined && (
                                   <td className="py-3 px-4 text-center">
                                     <input
                                       type="checkbox"
-                                      checked={subItem.approve}
+                                      checked={subItem.approve ?? false}
                                       onChange={(e) => updatePermission(moduleKey, subItemKey, 'approve', e.target.checked)}
                                       className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
@@ -483,13 +496,13 @@ export default function NewRolePage() {
                                 )}
                               </tr>
                             ))}
-                        </>
+                        </Fragment>
                       )
                     })}
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Special Permissions */}
               {module.specialPermissions && module.specialPermissions.length > 0 && (
                 <div className="p-4 bg-gray-50 border-t border-gray-200">

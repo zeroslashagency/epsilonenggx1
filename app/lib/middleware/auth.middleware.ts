@@ -181,11 +181,28 @@ export async function hasPermission(user: User, permission: string): Promise<boo
       .select('role_id')
       .eq('user_id', user.id)
     
-    if (!userRoles || userRoles.length === 0) {
-      return false
+    let roleIds: string[] = []
+
+    if (userRoles && userRoles.length > 0) {
+      roleIds = userRoles.map(ur => ur.role_id)
+      console.log(`[Auth] Found role IDs in user_roles: ${roleIds.join(', ')}`)
+    } else {
+      console.log(`[Auth] No roles in user_roles for user ${user.id}. Checking profile role: ${user.role}`)
+      // Fallback: Get role ID from roles table using user.role from profile
+      const { data: roleData } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', user.role)
+        .single()
+      
+      if (roleData) {
+        roleIds = [roleData.id]
+        console.log(`[Auth] Found fallback role ID for ${user.role}: ${roleData.id}`)
+      } else {
+        console.log(`[Auth] No fallback role found for ${user.role}`)
+        return false
+      }
     }
-    
-    const roleIds = userRoles.map(ur => ur.role_id)
     
     // Get role permissions for all user's roles (RBAC only)
     const { data: rolePermissions } = await supabase
@@ -208,10 +225,14 @@ export async function hasPermission(user: User, permission: string): Promise<boo
       })
     }
     
+    console.log(`[Auth] User ${user.id} has permissions: ${allPermissions.join(', ')}`)
+    console.log(`[Auth] Checking for permission: ${permission}. Result: ${allPermissions.includes(permission)}`)
+
     // Check if user has the required permission
     return allPermissions.includes(permission)
     
   } catch (error) {
+    console.error('[Auth] Error in hasPermission:', error)
     return false
   }
 }

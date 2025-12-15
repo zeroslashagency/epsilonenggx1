@@ -1,9 +1,11 @@
-  "use client"
+"use client"
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, UserPlus, Shield, Zap, Mail, Lock, Building, Briefcase, Eye, CheckCircle2, Edit } from 'lucide-react'
+import { Search, Filter, Plus, Mail, Pencil, Trash2, X, ChevronRight, Upload, Camera, Check, Settings, Loader2, RefreshCw, Key, Shield, User, ChevronDown, Lock, Calendar, Edit, Eye, Briefcase, UserPlus } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { ZohoLayout } from '@/app/components/zoho-ui/ZohoLayout'
 import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 import { useToast } from '@/components/ui/use-toast'
@@ -13,6 +15,8 @@ interface Employee {
   name: string
   code: string
   role: string
+  email?: string | null
+  lastActive?: string | null
 }
 
 interface Role {
@@ -24,13 +28,14 @@ interface Role {
 export default function AddUsersPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [activeMethod, setActiveMethod] = useState<'manual' | 'employees'>('manual')
+  const [activeMethod, setActiveMethod] = useState<'manual' | 'employees'>('employees')
   const [roles, setRoles] = useState<Role[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [showEmployeeForm, setShowEmployeeForm] = useState(false)
-  
+  const [searchTerm, setSearchTerm] = useState('')
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -49,14 +54,68 @@ export default function AddUsersPage() {
     confirmPassword: '',
     roleId: '',
     department: '',
-    standaloneAttendance: false
+    standaloneAttendance: false,
+    avatarUrl: '',
+    forcePasswordReset: false
+  })
+
+  const cardRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  // Shift Assignment State
+  const [showShiftAssignment, setShowShiftAssignment] = useState(false)
+  const [shiftTemplates, setShiftTemplates] = useState<any[]>([])
+  const [assignmentData, setAssignmentData] = useState({
+    type: 'fixed',
+    templateId: '',
+    startDate: new Date().toISOString().split('T')[0]
   })
 
   const [sendEmailInvitation, setSendEmailInvitation] = useState(false)
   const [employeeFormErrors, setEmployeeFormErrors] = useState<Record<string, string>>({})
   const [isCreating, setIsCreating] = useState(false)
 
-  const cardRef = useRef<HTMLDivElement>(null)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // helper to validate size/type if needed
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Error', description: 'File size must be less than 5MB', variant: 'destructive' })
+      return
+    }
+
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setEmployeeFormData(prev => ({ ...prev, avatarUrl: data.url }))
+        toast({ title: 'Success', description: 'Profile photo uploaded' })
+      } else {
+        toast({ title: 'Error', description: data.error || 'Upload failed', variant: 'destructive' })
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast({ title: 'Error', description: 'Failed to upload photo', variant: 'destructive' })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleCardClick = () => {
+    fileInputRef.current?.click()
+  }
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
@@ -98,19 +157,49 @@ export default function AddUsersPage() {
     }
   }
 
+  const fetchShiftTemplates = async () => {
+    try {
+      console.log('Fetching shift templates...')
+      const data = await apiGet('/api/shift-templates')
+      console.log('Shift templates response:', data)
+      if (data.data) {
+        setShiftTemplates(data.data)
+        if (data.data.length > 0 && !assignmentData.templateId) {
+          setAssignmentData(prev => ({ ...prev, templateId: data.data[0].id }))
+        }
+      } else if (Array.isArray(data)) {
+        // Robustness: handle if it returns array directly
+        setShiftTemplates(data)
+      }
+    } catch (error) {
+      console.error('Error fetching shift templates:', error)
+    }
+  }
+
   const fetchEmployees = async () => {
     setLoading(true)
     try {
       const data = await apiGet('/api/get-employees')
-      
+
       if (data.success && data.employees) {
         const transformedEmployees = data.employees.map((emp: any) => ({
           id: emp.employee_code,
           name: emp.employee_name || emp.name || `Employee ${emp.employee_code}`,
           code: emp.employee_code,
-          role: emp.designation || 'Employee'
-        }))
-        
+          role: emp.designation || 'Employee',
+          email: emp.email,
+          lastActive: emp.lastActive
+        })).sort((a: any, b: any) => {
+          // Sort by lastActive descending (active top, inactive bottom)
+          if (a.lastActive && !b.lastActive) return -1
+          if (!a.lastActive && b.lastActive) return 1
+          if (a.lastActive && b.lastActive) {
+            return new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime()
+          }
+          // If both inactive, sort by name
+          return a.name.localeCompare(b.name)
+        })
+
         setEmployees(transformedEmployees)
       } else {
         setEmployees([])
@@ -133,7 +222,9 @@ export default function AddUsersPage() {
       confirmPassword: '',
       roleId: defaultRole?.id || '',
       department: '',
-      standaloneAttendance: false
+      standaloneAttendance: false,
+      avatarUrl: '',
+      forcePasswordReset: false
     })
     setSendEmailInvitation(false)
     setEmployeeFormErrors({})
@@ -154,19 +245,19 @@ export default function AddUsersPage() {
 
   const validateEmployeeForm = (): { valid: boolean; errors: Record<string, string> } => {
     const errors: Record<string, string> = {}
-    
+
     const emailValidation = validateEmail(employeeFormData.email)
     if (!emailValidation.valid) errors.email = emailValidation.error!
-    
+
     const passwordValidation = validatePassword(employeeFormData.password)
     if (!passwordValidation.valid) errors.password = passwordValidation.error!
-    
+
     if (employeeFormData.password !== employeeFormData.confirmPassword) {
       errors.confirmPassword = 'Passwords do not match'
     }
-    
+
     if (!employeeFormData.roleId) errors.roleId = 'Please select a role'
-    
+
     return {
       valid: Object.keys(errors).length === 0,
       errors
@@ -177,7 +268,7 @@ export default function AddUsersPage() {
     if (!selectedEmployee) return
 
     const validation = validateEmployeeForm()
-    
+
     if (!validation.valid) {
       setEmployeeFormErrors(validation.errors)
       toast({
@@ -187,14 +278,14 @@ export default function AddUsersPage() {
       })
       return
     }
-    
+
     setEmployeeFormErrors({})
 
     setIsCreating(true)
     try {
       const selectedRole = roles.find(r => r.id === employeeFormData.roleId)
       const roleName = selectedRole?.name || 'Operator'
-      
+
       const result = await apiPost('/api/admin/create-user-from-employee', {
         employee_code: selectedEmployee.code,
         employee_name: selectedEmployee.name,
@@ -204,20 +295,48 @@ export default function AddUsersPage() {
         department: employeeFormData.department || 'Default',
         designation: selectedEmployee.role,
         standalone_attendance: employeeFormData.standaloneAttendance ? 'YES' : 'NO',
-        send_email_invitation: sendEmailInvitation
+        send_email_invitation: sendEmailInvitation,
+        avatar_url: employeeFormData.avatarUrl || null,
+        force_password_reset: employeeFormData.forcePasswordReset
       })
 
       if (result.success) {
-        toast({
-          title: "✅ User Created Successfully",
-          description: sendEmailInvitation
-            ? `Account created for ${selectedEmployee.name}. Invitation email sent to ${employeeFormData.email}`
-            : result.tempPassword 
-              ? `Account created for ${selectedEmployee.name}. Temporary password: ${result.tempPassword}`
-              : `Account created for ${selectedEmployee.name}`,
-          variant: "default"
-        })
-        
+
+        // Handle Shift Assignment if enabled
+        if (showShiftAssignment && assignmentData.templateId && assignmentData.startDate) {
+          try {
+            await apiPost('/api/assignments/bulk', {
+              employees: [selectedEmployee.code],
+              shiftType: assignmentData.type,
+              shiftId: assignmentData.templateId,
+              startDate: assignmentData.startDate
+            })
+            toast({
+              title: "User & Shift Assigned",
+              description: `User created and shift assigned successfully.`,
+              variant: "default"
+            })
+          } catch (assignError) {
+            console.error("Shift assignment failed:", assignError)
+            toast({
+              title: "User Created, Assignment Failed",
+              description: "User was created but shift assignment failed. Please check Shift Manager.",
+              variant: "destructive"
+            })
+            // Don't return here, proceed to reset form
+          }
+        } else {
+          toast({
+            title: "✅ User Created Successfully",
+            description: sendEmailInvitation
+              ? `Account created for ${selectedEmployee.name}. Invitation email sent to ${employeeFormData.email}`
+              : (result.isTempPassword || result.tempPassword)
+                ? `Account created for ${selectedEmployee.name}. Temporary password: ${result.tempPassword}`
+                : `Account created for ${selectedEmployee.name}`,
+            variant: "default"
+          })
+        }
+
         setShowEmployeeForm(false)
         setSelectedEmployee(null)
         const defaultRole = roles.find((r: Role) => r.name === 'Operator') || roles[0]
@@ -227,7 +346,9 @@ export default function AddUsersPage() {
           confirmPassword: '',
           roleId: defaultRole?.id || '',
           department: '',
-          standaloneAttendance: false
+          standaloneAttendance: false,
+          avatarUrl: '',
+          forcePasswordReset: false
         })
         setSendEmailInvitation(false)
         setEmployeeFormErrors({})
@@ -263,11 +384,10 @@ export default function AddUsersPage() {
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => setActiveMethod('manual')}
-          className={`px-4 py-2 text-sm font-medium rounded transition-all ${
-            activeMethod === 'manual'
-              ? 'bg-[#2C7BE5] text-white shadow-sm'
-              : 'bg-white dark:bg-gray-900 text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
-          }`}
+          className={`px-4 py-2 text-sm font-medium rounded transition-all ${activeMethod === 'manual'
+            ? 'bg-[#2C7BE5] text-white shadow-sm'
+            : 'bg-white dark:bg-gray-900 text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
+            }`}
         >
           <div className="flex items-center gap-2">
             <Edit className="w-4 h-4" />
@@ -277,15 +397,14 @@ export default function AddUsersPage() {
 
         <button
           onClick={() => setActiveMethod('employees')}
-          className={`px-4 py-2 text-sm font-medium rounded transition-all ${
-            activeMethod === 'employees'
-              ? 'bg-[#2C7BE5] text-white shadow-sm'
-              : 'bg-white dark:bg-gray-900 text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
-          }`}
+          className={`px-4 py-2 text-sm font-medium rounded transition-all ${activeMethod === 'employees'
+            ? 'bg-[#2C7BE5] text-white shadow-sm'
+            : 'bg-white dark:bg-gray-900 text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 hover:bg-[#F8F9FC] dark:hover:bg-gray-800'
+            }`}
         >
           <div className="flex items-center gap-2">
             <User className="w-4 h-4" />
-            Select from Employees
+            Select from Biometric
           </div>
         </button>
       </div>
@@ -300,7 +419,7 @@ export default function AddUsersPage() {
                 <Eye className="w-4 h-4" />
                 Live Preview
               </div>
-              
+
               {/* Lanyard Clip */}
               <div className="flex justify-center mb-4">
                 <div className="w-16 h-8 bg-gradient-to-b from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 rounded-t-lg shadow-md relative">
@@ -309,28 +428,27 @@ export default function AddUsersPage() {
               </div>
 
               {/* ID Card with 3D Flip */}
-              <div 
+              <div
                 ref={cardRef}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 className="perspective-1000"
               >
-                <div 
-                  className={`relative w-full transition-all duration-700 transform-style-3d ${
-                    formData.fullName || formData.email ? 'rotate-y-180' : ''
-                  }`}
+                <div
+                  className={`relative w-full transition-all duration-700 transform-style-3d ${formData.fullName || formData.email ? 'rotate-y-180' : ''
+                    }`}
                   style={{
                     transform: `rotateX(${tilt.x}deg) rotateY(${formData.fullName || formData.email ? 180 + tilt.y : tilt.y}deg)`,
                     transition: 'transform 0.1s ease-out'
                   }}
                 >
-                  
+
                   {/* FRONT SIDE - Company Logo (Empty State) */}
                   <div className="backface-hidden">
                     <div className="bg-gradient-to-br from-[#2C7BE5] to-[#1a5bb8] rounded-xl overflow-hidden border-4 border-white dark:border-gray-700 shadow-[0_20px_60px_-15px_rgba(44,123,229,0.5)] hover:shadow-[0_25px_70px_-15px_rgba(44,123,229,0.6)] transition-shadow duration-300 relative">
                       {/* 3D Shine Effect */}
                       <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none"></div>
-                      
+
                       {/* Lanyard Hole */}
                       <div className="flex justify-center pt-3 relative z-10">
                         <div className="w-6 h-6 rounded-full bg-white/20 border-2 border-white/40"></div>
@@ -359,23 +477,22 @@ export default function AddUsersPage() {
 
                   {/* BACK SIDE - Employee Details (Filled State) */}
                   <div className="absolute inset-0 backface-hidden rotate-y-180">
-                    <div className={`rounded-xl overflow-hidden border-4 border-gray-200 dark:border-gray-700 relative shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] hover:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.4)] transition-shadow duration-300 ${
-                      (() => {
-                        const selectedRole = roles.find(r => r.id === formData.roleId)
-                        const roleName = selectedRole?.name?.toLowerCase() || ''
-                        if (roleName.includes('super')) return 'bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950'
-                        if (roleName.includes('admin')) return 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950'
-                        return 'bg-white dark:bg-gray-900'
-                      })()
-                    }`}>
+                    <div className={`rounded-xl overflow-hidden border-4 border-gray-200 dark:border-gray-700 relative shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] hover:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.4)] transition-shadow duration-300 ${(() => {
+                      const selectedRole = roles.find(r => r.id === formData.roleId)
+                      const roleName = selectedRole?.name?.toLowerCase() || ''
+                      if (roleName.includes('super')) return 'bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950'
+                      if (roleName.includes('admin')) return 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950'
+                      return 'bg-white dark:bg-gray-900'
+                    })()
+                      }`}>
                       {/* 3D Shine Effect */}
                       <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"></div>
-                      
+
                       {/* Background Logo Watermark */}
                       <div className="absolute inset-0 flex items-end justify-center pb-8 pointer-events-none overflow-hidden">
-                        <img 
-                          src="/Epsilologo.svg" 
-                          alt="Background Logo" 
+                        <img
+                          src="/Epsilologo.svg"
+                          alt="Background Logo"
                           className="w-64 h-auto grayscale opacity-5"
                         />
                       </div>
@@ -386,15 +503,14 @@ export default function AddUsersPage() {
                       </div>
 
                       {/* Header */}
-                      <div className={`px-6 py-3 relative z-10 ${
-                        (() => {
-                          const selectedRole = roles.find(r => r.id === formData.roleId)
-                          const roleName = selectedRole?.name?.toLowerCase() || ''
-                          if (roleName.includes('super')) return 'bg-gradient-to-r from-yellow-500 to-amber-500'
-                          if (roleName.includes('admin')) return 'bg-gradient-to-r from-blue-500 to-cyan-500'
-                          return 'bg-[#2C7BE5]'
-                        })()
-                      }`}>
+                      <div className={`px-6 py-3 relative z-10 ${(() => {
+                        const selectedRole = roles.find(r => r.id === formData.roleId)
+                        const roleName = selectedRole?.name?.toLowerCase() || ''
+                        if (roleName.includes('super')) return 'bg-gradient-to-r from-yellow-500 to-amber-500'
+                        if (roleName.includes('admin')) return 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                        return 'bg-[#2C7BE5]'
+                      })()
+                        }`}>
                         <div className="text-white text-xs font-bold tracking-wider">EMPLOYEE ID CARD</div>
                         <div className="text-white/70 text-[10px] mt-0.5">Epsilon Engineering Pvt. Ltd.</div>
                       </div>
@@ -416,13 +532,13 @@ export default function AddUsersPage() {
                                 <User className="w-20 h-20 text-white/50 relative z-10" />
                               )}
                             </div>
-                            
+
                             {/* Role Badge - Bottom Right */}
                             <div className="absolute -bottom-1 -right-1 z-20">
                               {(() => {
                                 const selectedRole = roles.find(r => r.id === formData.roleId)
                                 const roleName = selectedRole?.name?.toLowerCase() || ''
-                                
+
                                 if (roleName.includes('admin') || roleName.includes('super')) {
                                   return (
                                     <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center border-4 border-white dark:border-gray-900 shadow-lg">
@@ -683,15 +799,31 @@ export default function AddUsersPage() {
               <h2 className="text-lg font-semibold text-[#12263F] dark:text-white">Available Employees</h2>
               <p className="text-sm text-[#95AAC9] mt-1">Select an employee to create a user account</p>
             </div>
-            <button
-              onClick={fetchEmployees}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </button>
+            <div className="flex gap-2 w-full md:w-auto">
+              <div className="relative flex-1 md:w-64">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by name or code..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-800 text-[#12263F] dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2C7BE5] focus:border-[#2C7BE5] sm:text-sm"
+                />
+              </div>
+              <button
+                onClick={fetchEmployees}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -705,25 +837,59 @@ export default function AddUsersPage() {
                 <User className="w-12 h-12 text-[#95AAC9] mx-auto mb-3" />
                 <p className="text-[#95AAC9]">No employees found</p>
               </div>
+            ) : employees.filter(emp =>
+              emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              emp.code.toLowerCase().includes(searchTerm.toLowerCase())
+            ).length === 0 ? (
+              <div className="col-span-3 text-center py-12">
+                <User className="w-12 h-12 text-[#95AAC9] mx-auto mb-3" />
+                <p className="text-[#95AAC9]">No employees match your search</p>
+              </div>
             ) : (
-              employees.map((employee) => (
-                <button
-                  key={employee.id}
-                  onClick={() => handleSelectEmployee(employee)}
-                  className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg p-6 hover:border-[#2C7BE5] hover:shadow-sm transition-all text-left"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-[#2C7BE5] to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                      {employee.name.charAt(0).toUpperCase()}
+              employees
+                .filter(emp =>
+                  emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  emp.code.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map((employee) => (
+                  <button
+                    key={employee.id}
+                    onClick={() => handleSelectEmployee(employee)}
+                    className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg p-6 hover:border-[#2C7BE5] hover:shadow-sm transition-all text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      ```
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#2C7BE5] to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                        {employee.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-[#12263F] dark:text-white truncate">{employee.name}</h3>
+                        {employee.email && (
+                          <p className="text-xs text-[#2C7BE5] truncate mb-0.5">{employee.email}</p>
+                        )}
+                        <p className="text-xs text-[#95AAC9] truncate flex items-center gap-1.5">
+                          Code: {employee.code}
+                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                          {employee.role}
+                        </p>
+                      </div>
+                      {/* Activity Status Dot */}
+                      <div className="flex-shrink-0 self-center pl-2">
+                        <div className={`w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${(() => {
+                          if (!employee.lastActive) return 'bg-gray-300 dark:bg-gray-600'
+
+                          const daysAgo = (new Date().getTime() - new Date(employee.lastActive).getTime()) / (1000 * 3600 * 24)
+
+                          if (daysAgo <= 30) return 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
+                          if (daysAgo <= 60) return 'bg-green-400 opacity-80'
+                          if (daysAgo <= 90) return 'bg-green-300 opacity-60'
+                          return 'bg-gray-300 dark:bg-gray-600'
+                        })()
+                          }`} title={employee.lastActive ? `Last Active: ${new Date(employee.lastActive).toLocaleDateString()}` : 'No activity'}></div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-[#12263F] dark:text-white truncate">{employee.name}</h3>
-                      <p className="text-sm text-[#95AAC9] truncate">Code: {employee.code}</p>
-                      <p className="text-xs text-[#95AAC9] truncate">{employee.role}</p>
-                    </div>
-                  </div>
-                </button>
-              ))
+                  </button>
+                ))
             )}
           </div>
         </div>
@@ -738,7 +904,7 @@ export default function AddUsersPage() {
               onClick={() => {
                 setShowEmployeeForm(false)
                 setSelectedEmployee(null)
-                setEmployeeFormData({ email: '', password: '', confirmPassword: '', roleId: '', department: '', standaloneAttendance: false })
+                setEmployeeFormData({ email: '', password: '', confirmPassword: '', roleId: '', department: '', standaloneAttendance: false, avatarUrl: '', forcePasswordReset: false })
               }}
               className="text-sm text-[#2C7BE5] hover:underline flex items-center gap-1"
             >
@@ -757,7 +923,7 @@ export default function AddUsersPage() {
                   <Eye className="w-4 h-4" />
                   Live Preview
                 </div>
-                
+
                 {/* Lanyard Clip */}
                 <div className="flex justify-center mb-4">
                   <div className="w-16 h-8 bg-gradient-to-b from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 rounded-t-lg shadow-md relative">
@@ -766,13 +932,13 @@ export default function AddUsersPage() {
                 </div>
 
                 {/* ID Card - Auto-flipped to show details */}
-                <div 
+                <div
                   ref={cardRef}
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                   className="perspective-1000"
                 >
-                  <div 
+                  <div
                     className="relative w-full transition-all duration-700 transform-style-3d rotate-y-180"
                     style={{
                       transform: `rotateX(${tilt.x}deg) rotateY(${180 + tilt.y}deg)`,
@@ -781,21 +947,20 @@ export default function AddUsersPage() {
                   >
                     {/* BACK SIDE - Employee Details */}
                     <div className="absolute inset-0 backface-hidden rotate-y-180">
-                      <div className={`rounded-xl overflow-hidden border-4 border-gray-200 dark:border-gray-700 relative shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] hover:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.4)] transition-shadow duration-300 ${
-                        (() => {
-                          const selectedRole = roles.find(r => r.id === employeeFormData.roleId)
-                          const roleName = selectedRole?.name?.toLowerCase() || ''
-                          if (roleName.includes('super')) return 'bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950'
-                          if (roleName.includes('admin')) return 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950'
-                          return 'bg-white dark:bg-gray-900'
-                        })()
-                      }`}>
+                      <div className={`rounded-xl overflow-hidden border-4 border-gray-200 dark:border-gray-700 relative shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] hover:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.4)] transition-shadow duration-300 ${(() => {
+                        const selectedRole = roles.find(r => r.id === employeeFormData.roleId)
+                        const roleName = selectedRole?.name?.toLowerCase() || ''
+                        if (roleName.includes('super')) return 'bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950'
+                        if (roleName.includes('admin')) return 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950'
+                        return 'bg-white dark:bg-gray-900'
+                      })()
+                        }`}>
                         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"></div>
-                        
+
                         <div className="absolute inset-0 flex items-end justify-center pb-8 pointer-events-none overflow-hidden">
-                          <img 
-                            src="/Epsilologo.svg" 
-                            alt="Background Logo" 
+                          <img
+                            src="/Epsilologo.svg"
+                            alt="Background Logo"
                             className="w-64 h-auto grayscale opacity-5"
                           />
                         </div>
@@ -804,15 +969,14 @@ export default function AddUsersPage() {
                           <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-gray-400 dark:border-gray-500"></div>
                         </div>
 
-                        <div className={`px-6 py-3 relative z-10 ${
-                          (() => {
-                            const selectedRole = roles.find(r => r.id === employeeFormData.roleId)
-                            const roleName = selectedRole?.name?.toLowerCase() || ''
-                            if (roleName.includes('super')) return 'bg-gradient-to-r from-yellow-500 to-amber-500'
-                            if (roleName.includes('admin')) return 'bg-gradient-to-r from-blue-500 to-cyan-500'
-                            return 'bg-[#2C7BE5]'
-                          })()
-                        }`}>
+                        <div className={`px-6 py-3 relative z-10 ${(() => {
+                          const selectedRole = roles.find(r => r.id === employeeFormData.roleId)
+                          const roleName = selectedRole?.name?.toLowerCase() || ''
+                          if (roleName.includes('super')) return 'bg-gradient-to-r from-yellow-500 to-amber-500'
+                          if (roleName.includes('admin')) return 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                          return 'bg-[#2C7BE5]'
+                        })()
+                          }`}>
                           <div className="text-white text-xs font-bold tracking-wider">EMPLOYEE ID CARD</div>
                           <div className="text-white/70 text-[10px] mt-0.5">Epsilon Engineering Pvt. Ltd.</div>
                         </div>
@@ -822,16 +986,36 @@ export default function AddUsersPage() {
                             <div className="relative">
                               <div className="w-32 h-32 rounded-full bg-[#2C7BE5] flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-[0_10px_30px_-5px_rgba(44,123,229,0.5)] overflow-hidden relative">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent pointer-events-none"></div>
-                                <div className="w-full h-full bg-[#2C7BE5] flex items-center justify-center relative z-10">
-                                  <User className="w-20 h-20 text-white" />
+                                <div className="w-full h-full bg-[#2C7BE5] flex items-center justify-center relative z-10 cursor-pointer group" onClick={handleCardClick}>
+                                  {employeeFormData.avatarUrl ? (
+                                    <img src={employeeFormData.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <User className="w-20 h-20 text-white" />
+                                  )}
+
+                                  {/* Upload Overlay */}
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {uploading ? (
+                                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                                    ) : (
+                                      <Camera className="w-8 h-8 text-white" />
+                                    )}
+                                  </div>
+                                  <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleFileUpload}
+                                  />
                                 </div>
                               </div>
-                              
+
                               <div className="absolute -bottom-1 -right-1 z-20">
                                 {(() => {
                                   const selectedRole = roles.find(r => r.id === employeeFormData.roleId)
                                   const roleName = selectedRole?.name?.toLowerCase() || ''
-                                  
+
                                   if (roleName.includes('admin') || roleName.includes('super')) {
                                     return (
                                       <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center border-4 border-white dark:border-gray-900 shadow-lg">
@@ -972,9 +1156,8 @@ export default function AddUsersPage() {
                             }
                           }}
                           placeholder="employee@company.com"
-                          className={`w-full px-3 py-2 border ${
-                            employeeFormErrors.email ? 'border-red-500' : 'border-[#E3E6F0]'
-                          } dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
+                          className={`w-full px-3 py-2 border ${employeeFormErrors.email ? 'border-red-500' : 'border-[#E3E6F0]'
+                            } dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                         />
                         {employeeFormErrors.email && (
                           <p className="text-xs text-red-500 mt-1">{employeeFormErrors.email}</p>
@@ -997,9 +1180,8 @@ export default function AddUsersPage() {
                             }
                           }}
                           placeholder="Minimum 8 characters"
-                          className={`w-full px-3 py-2 border ${
-                            employeeFormErrors.password ? 'border-red-500' : 'border-[#E3E6F0]'
-                          } dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
+                          className={`w-full px-3 py-2 border ${employeeFormErrors.password ? 'border-red-500' : 'border-[#E3E6F0]'
+                            } dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                         />
                         {employeeFormErrors.password && (
                           <p className="text-xs text-red-500 mt-1">{employeeFormErrors.password}</p>
@@ -1022,9 +1204,8 @@ export default function AddUsersPage() {
                             }
                           }}
                           placeholder="Re-enter password"
-                          className={`w-full px-3 py-2 border ${
-                            employeeFormErrors.confirmPassword ? 'border-red-500' : 'border-[#E3E6F0]'
-                          } dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
+                          className={`w-full px-3 py-2 border ${employeeFormErrors.confirmPassword ? 'border-red-500' : 'border-[#E3E6F0]'
+                            } dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                         />
                         {employeeFormErrors.confirmPassword && (
                           <p className="text-xs text-red-500 mt-1">{employeeFormErrors.confirmPassword}</p>
@@ -1051,9 +1232,8 @@ export default function AddUsersPage() {
                             })
                           }
                         }}
-                        className={`w-full px-3 py-2 border ${
-                          employeeFormErrors.roleId ? 'border-red-500' : 'border-[#E3E6F0]'
-                        } dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
+                        className={`w-full px-3 py-2 border ${employeeFormErrors.roleId ? 'border-red-500' : 'border-[#E3E6F0]'
+                          } dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                       >
                         <option value="">Select a role</option>
                         {roles.map(role => (
@@ -1121,6 +1301,102 @@ export default function AddUsersPage() {
                         </div>
                       </label>
                     </div>
+
+                    <div className="mt-4 space-y-3">
+                      <label className="flex items-start gap-3 p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={employeeFormData.forcePasswordReset}
+                          onChange={(e) => setEmployeeFormData({ ...employeeFormData, forcePasswordReset: e.target.checked })}
+                          className="mt-1 h-4 w-4 rounded border-[#E3E6F0] text-[#2C7BE5] focus:ring-[#2C7BE5]"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Lock className="w-4 h-4 text-[#2C7BE5]" />
+                            <p className="text-sm font-medium text-[#12263F] dark:text-white">Require Password Change</p>
+                          </div>
+                          <p className="text-xs text-[#95AAC9] mt-1">User will be forced to reset their password upon first login</p>
+                        </div>
+                      </label>
+                    </div>
+
+
+                    {/* Shift Assignment Section - Modal */}
+                    <div className="mt-6 pt-6 border-t border-[#E3E6F0] dark:border-gray-700">
+                      <Dialog onOpenChange={(open) => {
+                        if (open) fetchShiftTemplates()
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="p-0 h-auto text-sm font-medium text-[#2C7BE5] hover:text-[#2C7BE5] hover:bg-transparent flex items-center gap-2"
+                          >
+                            <Calendar className="w-4 h-4" />
+                            {assignmentData.templateId ? 'Shift Assignment Configured' : 'Assign Shift (Optional)'}
+                            {assignmentData.templateId && <Check className="w-3 h-3 text-green-500 ml-1" />}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                          <DialogHeader>
+                            <DialogTitle>Assign Shift</DialogTitle>
+                            <DialogDescription>
+                              Select a shift template to assign to this user immediately upon creation.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Assignment Type</label>
+                              <select
+                                value={assignmentData.type}
+                                onChange={(e) => setAssignmentData({ ...assignmentData, type: e.target.value })}
+                                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              >
+                                <option value="fixed">Fixed Shift</option>
+                                <option value="rotation">Rotating Pattern</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Shift Template</label>
+                              <select
+                                value={assignmentData.templateId}
+                                onChange={(e) => setAssignmentData({ ...assignmentData, templateId: e.target.value })}
+                                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              >
+                                {shiftTemplates.length === 0 ? (
+                                  <option value="">No templates found</option>
+                                ) : (
+                                  <>
+                                    <option value="">Select a template</option>
+                                    {shiftTemplates.map(t => (
+                                      <option key={t.id} value={t.id}>{t.name} ({t.start_time} - {t.end_time})</option>
+                                    ))}
+                                  </>
+                                )}
+                              </select>
+                              {shiftTemplates.length === 0 && (
+                                <p className="text-xs text-red-500">
+                                  No templates found. Please create one in <Link href="/shifts/templates" className="underline">Shift Manager</Link>.
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Start Date</label>
+                              <input
+                                type="date"
+                                value={assignmentData.startDate}
+                                onChange={(e) => setAssignmentData({ ...assignmentData, startDate: e.target.value })}
+                                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button type="button" onClick={() => setShowShiftAssignment(true)}>Save Assignment</Button>
+                            </DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
 
                   {/* Actions */}
@@ -1129,7 +1405,7 @@ export default function AddUsersPage() {
                       onClick={() => {
                         setShowEmployeeForm(false)
                         setSelectedEmployee(null)
-                        setEmployeeFormData({ email: '', password: '', confirmPassword: '', roleId: '', department: '', standaloneAttendance: false })
+                        setEmployeeFormData({ email: '', password: '', confirmPassword: '', roleId: '', department: '', standaloneAttendance: false, avatarUrl: '', forcePasswordReset: false })
                         setSendEmailInvitation(false)
                       }}
                       className="px-4 py-2 bg-white dark:bg-gray-800 text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded text-sm font-medium hover:bg-[#F8F9FC] dark:hover:bg-gray-700 transition-colors"
@@ -1139,9 +1415,8 @@ export default function AddUsersPage() {
                     <button
                       onClick={handleCreateFromEmployee}
                       disabled={isCreating}
-                      className={`flex-1 px-4 py-2 bg-[#00A651] text-white rounded text-sm font-medium hover:bg-[#008F46] transition-colors shadow-sm ${
-                        isCreating ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                      className={`flex-1 px-4 py-2 bg-[#00A651] text-white rounded text-sm font-medium hover:bg-[#008F46] transition-colors shadow-sm ${isCreating ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                     >
                       {isCreating ? (
                         <>

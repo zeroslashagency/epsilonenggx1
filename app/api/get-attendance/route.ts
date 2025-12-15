@@ -3,7 +3,8 @@ export const revalidate = 0
 export const fetchCache = 'force-no-store'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient, getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseServerClient } from '@/app/lib/services/supabase-server'
 import { requireAuth } from '@/app/lib/middleware/auth.middleware'
 
 export async function GET(request: NextRequest) {
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log(' [GET-ATTENDANCE] Request received at:', new Date().toISOString())
-    const supabase = getSupabaseClient()
+    const supabase = await getSupabaseServerClient()
     const searchParams = request.nextUrl.searchParams
     
     // Get query parameters - support both dateRange and fromDate/toDate

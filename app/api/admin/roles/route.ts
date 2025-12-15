@@ -172,14 +172,14 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * PATCH /api/admin/roles
+ * PUT /api/admin/roles
  * Update an existing role and its permissions
  * 
  * @param request - Next.js request object with updated role data
  * @returns JSON response with success message
  * @security Requires Super Admin role
  */
-export async function PATCH(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   // ✅ PERMISSION CHECK: Require assign_roles permission
   const authResult = await requirePermission(request, 'assign_roles')
   if (authResult instanceof NextResponse) return authResult
@@ -192,15 +192,15 @@ export async function PATCH(request: NextRequest) {
     const validation = await validateRequestBody(request, updateRoleSchema.extend({ roleId: z.string().uuid() }))
     if (!validation.success) return validation.response
     
-    const { roleId, name, description, permissions = [] } = validation.data
+    const { roleId, name, description, permissions = [], permissions_json } = validation.data
 
     // Update role
+    const updatePayload: any = { name, description }
+    if (permissions_json) updatePayload.permissions_json = permissions_json
+
     const { error: roleError } = await supabase
       .from('roles')
-      .update({
-        name,
-        description
-      })
+      .update(updatePayload)
       .eq('id', roleId)
 
     if (roleError) throw roleError

@@ -1,13 +1,13 @@
 import type React from "react"
-import type { Metadata } from "next"
+import { Suspense } from "react"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { Suspense } from "react"
-import { AuthProvider } from "./lib/contexts/auth-context"
+import "./globals.css"
 import { ThemeProvider } from "./lib/contexts/theme-context"
 import { ToastProvider } from "./lib/contexts/toast-context"
+import { AuthProvider } from "./lib/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
-import "./globals.css"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,17 +19,18 @@ export const metadata: Metadata = {
   title: "Epsilon Scheduling - Premium Manufacturing Dashboard",
   description: "Advanced scheduling and operations management for manufacturing",
   generator: "v0.app",
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
   icons: {
     icon: '/Epsilologo.svg',
     shortcut: '/Epsilologo.svg',
     apple: '/Epsilologo.svg',
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({

@@ -6,6 +6,7 @@
  * @security CRITICAL - Never hardcode API keys
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 // Get environment variables (validation happens lazily in respective functions)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -65,6 +66,8 @@ export function getSupabaseClient(): SupabaseClient {
   return clientInstance
 }
 
+
+
 /**
  * Get browser-side Supabase instance (anon key)
  * For use in client components and auth context
@@ -91,13 +94,7 @@ export function getSupabaseBrowserClient(): SupabaseClient {
   }
   
   // Create and cache instance (browser-side config)
-  browserClientInstance = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true, // ✅ Persist sessions to localStorage
-      autoRefreshToken: true, // ✅ Auto-refresh tokens
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    },
-  })
+  browserClientInstance = createBrowserClient(supabaseUrl, supabaseAnonKey)
   
   return browserClientInstance
 }

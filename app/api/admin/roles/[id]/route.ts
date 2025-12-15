@@ -91,7 +91,7 @@ export async function PUT(
     
     console.log('🔧 PUT /api/admin/roles/[id] - Request body:', JSON.stringify(body, null, 2))
     
-    const { name, description, is_manufacturing_role, permissions } = body
+    const { name, description, is_manufacturing_role, permissions, permissions_json } = body
 
     // Prepare update data - only include fields that exist in the table
     const updateData: any = {
@@ -105,9 +105,13 @@ export async function PUT(
       updateData.is_manufacturing_role = is_manufacturing_role
     }
     
-    if (permissions) {
+    // Fix: Prioritize permissions_json (granular) over permissions (legacy array)
+    if (permissions_json) {
+      updateData.permissions_json = permissions_json
+      console.log('📝 Saving permissions_json:', JSON.stringify(permissions_json, null, 2).substring(0, 500))
+    } else if (permissions && !Array.isArray(permissions)) {
+      // Legacy fallback: If permissions is passed as an object (old behavior), treat as json
       updateData.permissions_json = permissions
-      console.log('📝 Saving permissions_json:', JSON.stringify(permissions, null, 2).substring(0, 500))
     }
 
     console.log('💾 Updating role with data:', updateData)

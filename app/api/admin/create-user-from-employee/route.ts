@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    const { employee_code, employee_name, email, password, role, department, designation, standalone_attendance, actorId } = await request.json()
+    const { employee_code, employee_name, email, password, role, department, designation, standalone_attendance, avatar_url, force_password_reset, actorId } = await request.json()
 
     // Validate required fields
     if (!employee_code || !employee_name || !email || !password || !role) {
@@ -80,7 +80,9 @@ export async function POST(request: NextRequest) {
       user_metadata: {
         full_name: employee_name,
         role,
-        employee_code
+        employee_code,
+        avatar_url,
+        force_password_reset: force_password_reset || false
       }
     })
 
@@ -111,7 +113,8 @@ export async function POST(request: NextRequest) {
           department: department || 'Default',
           designation: designation || 'Employee',
           role: role || 'Operator',
-          standalone_attendance: standalone_attendance || 'NO'
+          standalone_attendance: standalone_attendance || 'NO',
+          avatar_url: avatar_url || null
         })
         .eq('id', authUser.user.id)
         .select()
@@ -135,7 +138,8 @@ export async function POST(request: NextRequest) {
           department: department || 'Default',
           designation: designation || 'Employee',
           role: role || 'Operator',
-          standalone_attendance: standalone_attendance || 'NO'
+          standalone_attendance: standalone_attendance || 'NO',
+          avatar_url: avatar_url || null
         })
         .select()
 

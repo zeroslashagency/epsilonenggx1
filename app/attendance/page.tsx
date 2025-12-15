@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/lib/contexts/auth-context'
-import { Home, ChevronRight, Activity, Users, AlertCircle, UserX, UserCheck, Clock, Download, RefreshCw, Calendar, ChevronDown } from "lucide-react"
+import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
+import { Home, ChevronRight, Activity, Users, AlertCircle, UserX, UserCheck, Clock, Download, RefreshCw, Calendar, ChevronDown, Printer, Play } from "lucide-react"
 import { StatsCard } from "@/components/StatsCard"
 import { StatusBadge } from "@/components/StatusBadge"
 import { Button } from "@/components/ui/button"
@@ -21,13 +22,18 @@ import { AttendancePermissions } from '@/app/lib/utils/permission-checker'
 import type { PermissionModule } from '@/app/lib/utils/permission-checker'
 import { AttendanceTodayChart } from '@/components/AttendanceTodayChart'
 import { ProtectedPage } from '@/components/auth/ProtectedPage'
+import { TimeAgo } from '@/components/TimeAgo'
+import { PunchStream, Punch } from '@/components/realtime/PunchStream'
+import { toast } from "sonner" // Assuming sonner or similar is used, checking imports
+
 
 function AttendancePageContent() {
   const auth = useAuth()
+  const { user } = auth
   const router = useRouter()
-  
+
   // Permission state (removed - now using auth context directly)
-  
+
   const [dateRange, setDateRange] = useState("today")
   const [employeeFilter, setEmployeeFilter] = useState("all")
   const [loading, setLoading] = useState(false)
@@ -43,14 +49,17 @@ function AttendancePageContent() {
   const [allTrackLoading, setAllTrackLoading] = useState(false)
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [manualSyncing, setManualSyncing] = useState(false)
-  const [syncMessage, setSyncMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [showDateDropdown, setShowDateDropdown] = useState(false)
-  const [allEmployees, setAllEmployees] = useState<Array<{code: string, name: string}>>([])
+  const [allEmployees, setAllEmployees] = useState<Array<{ code: string, name: string }>>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false)
   const [todayError, setTodayError] = useState<string | null>(null)
   const [allTrackError, setAllTrackError] = useState<string | null>(null)
   const [employeeError, setEmployeeError] = useState<string | null>(null)
+  const [realtimeConnected, setRealtimeConnected] = useState(false)
+  const [lastPunch, setLastPunch] = useState<Punch | null>(null)
+  const [showAnimation, setShowAnimation] = useState(false) // Default off until loaded
 
   // Authentication guard - REMOVED to prevent redirect loop
   // Auth protection handled by checking isLoading and isAuthenticated below
@@ -72,17 +81,61 @@ function AttendancePageContent() {
     return error.message || 'Something went wrong. Please try again.'
   }
 
+  // Load User Settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      // Local check first for speed
+      const local = localStorage.getItem('animation_receipts')
+      if (local) setShowAnimation(local === 'true')
+
+      // Sync with Cloud
+      if (user?.id) {
+        const supabase = getSupabaseBrowserClient()
+        const { data } = await supabase
+          .from('profiles')
+          .select('settings')
+          .eq('id', user.id)
+          .single()
+
+        if (data?.settings?.animation_receipts !== undefined) {
+          setShowAnimation(data.settings.animation_receipts)
+          // Update local to match cloud
+          localStorage.setItem('animation_receipts', String(data.settings.animation_receipts))
+        }
+      }
+    }
+    loadSettings()
+  }, [user?.id])
+
+  const toggleAnimation = async () => {
+    const newState = !showAnimation
+    setShowAnimation(newState)
+    localStorage.setItem('animation_receipts', String(newState))
+
+    // Save to Cloud
+    if (user?.id) {
+      const supabase = getSupabaseBrowserClient()
+      // We need to get current settings first to merge, or use jsonb_set in SQL, 
+      // but simplest is just upsert or update if we assume settings is small.
+      // Let's just update the key.
+      const { data: current } = await supabase.from('profiles').select('settings').eq('id', user.id).single()
+      const newSettings = { ...current?.settings, animation_receipts: newState }
+
+      await supabase.from('profiles').update({ settings: newSettings }).eq('id', user.id)
+    }
+  }
+
   // Manual sync - trigger office computer to sync from SmartOffice
   const triggerManualSync = async () => {
     setManualSyncing(true)
     setSyncMessage(null)
-    
+
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       if (!supabaseUrl) {
         throw new Error('Supabase URL not configured')
       }
-      
+
       const response = await fetch(
         `${supabaseUrl}/functions/v1/trigger-sync`,
         {
@@ -98,23 +151,23 @@ function AttendancePageContent() {
           })
         }
       )
-      
+
       if (!response.ok) {
         throw new Error(`Sync failed: ${response.statusText}`)
       }
-      
+
       const result = await response.json()
-      
+
       setSyncMessage({
         type: 'success',
         text: `Sync triggered successfully! ${result.message || 'Office computer will sync within 5 seconds.'}`
       })
-      
+
       // Wait 6 seconds then refresh data
       setTimeout(() => {
         fetchTodayData()
       }, 6000)
-      
+
     } catch (error) {
       console.error('Manual sync error:', error)
       setSyncMessage({
@@ -134,12 +187,12 @@ function AttendancePageContent() {
     try {
       // Always fetch today's data only
       const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange('today')
-      
+
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
       params.append('toDate', toDateParam)
-      
-      
+
+
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
         // Ensure allLogs is populated for export functionality
@@ -168,17 +221,17 @@ function AttendancePageContent() {
     try {
       // Use centralized date calculation utility
       const { fromDate: fromDateParam, toDate: toDateParam } = calculateDateRange(dateRange, fromDate, toDate)
-      
+
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
       params.append('toDate', toDateParam)
-      
+
       // Add employee filter if specific employees selected
       if (selectedEmployees.length > 0 && selectedEmployees.length < allEmployees.length) {
         params.append('employeeCodes', selectedEmployees.join(','))
       } else {
       }
-      
+
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (response.success && response.data) {
         setAllTrackData(response.data)
@@ -191,7 +244,8 @@ function AttendancePageContent() {
   }
 
   // Permission checks using role-based system
-  const { userPermissions, user } = auth
+  // Permission checks using role-based system
+  const { userPermissions } = auth
   const userRole = user?.role
   const canViewTodaysActivity = AttendancePermissions.canViewTodaysActivity(userPermissions, userRole)
   const canViewAllRecords = AttendancePermissions.canViewAllRecords(userPermissions, userRole)
@@ -201,11 +255,11 @@ function AttendancePageContent() {
   // Fetch employees from API
   const fetchEmployees = async () => {
     let isMounted = true
-    
+
     const loadEmployees = async () => {
       try {
         const data = await apiGet('/api/get-employees')
-        
+
         if (isMounted && data.success && data.employees) {
           const employees = data.employees
             .filter((emp: any) => emp.employee_code)
@@ -222,7 +276,7 @@ function AttendancePageContent() {
         }
       }
     }
-    
+
     await loadEmployees()
     return () => { isMounted = false }
   }
@@ -230,26 +284,79 @@ function AttendancePageContent() {
   // Load today's data on mount and set up auto-refresh
   useEffect(() => {
     let isMounted = true
-    
+
     const loadInitialData = async () => {
       if (isMounted) {
         await fetchTodayData()
         await fetchEmployees()
       }
     }
-    
+
     loadInitialData()
-    
-    // Auto-refresh today's data every 5 seconds (silent background refresh)
+
+
+    // Realtime Subscription (Replaces Polling)
+    const supabase = getSupabaseBrowserClient()
+    const channel = supabase
+      .channel('realtime:attendance_dashboard')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'employee_raw_logs'
+        },
+        (payload) => {
+          console.log('⚡ [REALTIME] Change received:', payload.eventType)
+          if (isMounted) {
+            // Instant silent refresh to update counts/tables
+            console.log('⚡ [REALTIME] Refreshing data...')
+            fetchTodayData(true)
+
+            // Visual feedback for the owner to know it updated
+            const newRecord = payload.new as any
+            if (newRecord && newRecord.employee_code) {
+              // Simple toast or log
+              console.log(`⚡ [REALTIME] New punch: ${newRecord.employee_code}`)
+
+              // Trigger Receipt Animation
+              // We need to find the name if possible, or just use code
+              const empName = allEmployees.find(e => e.code === newRecord.employee_code)?.name || ''
+
+              setLastPunch({
+                id: newRecord.id || Date.now().toString(),
+                employee_code: newRecord.employee_code,
+                employee_name: empName,
+                punch_direction: newRecord.punch_direction || 'in',
+                log_date: newRecord.log_date || new Date().toISOString()
+              })
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [REALTIME] Connected to employee_raw_logs')
+          setRealtimeConnected(true)
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setRealtimeConnected(false)
+        }
+      })
+
+
+    // Fallback: Poll every 10 seconds (backup for Realtime failures)
+    // The user requested robustness, so we keep this as a safety net.
     const refreshInterval = setInterval(() => {
       if (isMounted) {
-        fetchTodayData(true) // Silent refresh - no loading spinner
+        console.log('⏰ [POLLING] Fallback sync check...')
+        fetchTodayData(true)
       }
-    }, 5000) // 5 seconds
-    
+    }, 10000)
+
     return () => {
       isMounted = false
-      clearInterval(refreshInterval) // Cleanup timer on unmount
+      supabase.removeChannel(channel)
+      clearInterval(refreshInterval)
     }
   }, [])
 
@@ -288,128 +395,128 @@ function AttendancePageContent() {
       const params = new URLSearchParams()
       params.append('fromDate', fromDateParam)
       params.append('toDate', toDateParam)
-      
+
       if (selectedEmployees.length > 0 && selectedEmployees.length < allEmployees.length) {
         params.append('employeeCodes', selectedEmployees.join(','))
       }
-      
+
       const response = await apiGet(`/api/get-attendance?${params.toString()}`)
       if (!response.success || !response.data?.allLogs || response.data.allLogs.length === 0) {
         alert('No attendance data found for the selected date range and employees.')
         return
       }
-      
+
       // Use freshly fetched data for export
       const dataSource = {
         ...response.data,
         allLogs: response.data.allLogs || []
       }
-      
+
       const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRange, fromDate, toDate)
       const startDate = new Date(fromDateStr)
       const endDate = new Date(toDateStr)
-      
+
       const filteredLogs = dataSource.allLogs
       generateExcelFile(filteredLogs, startDate, endDate)
       return
     }
-    
+
     // For bottom section, use existing allTrackData
     const dataSource = allTrackData
-    
+
     if (!dataSource?.allLogs) {
       alert('No data to export. Please load data first.')
       return
     }
-    
+
     // Use centralized date calculation utility
     const { fromDate: fromDateStr, toDate: toDateStr } = calculateDateRange(dateRange, fromDate, toDate)
     const startDate = new Date(fromDateStr)
     const endDate = new Date(toDateStr)
-    
+
     // Filter logs by selected employees (if all employees selected, show all)
     const filteredLogs = dataSource.allLogs.filter((log: any) =>
       selectedEmployees.length === 0 || selectedEmployees.length === allEmployees.length || selectedEmployees.includes(log.employee_code)
     )
-    
+
     // Check if we have any logs after filtering
     if (filteredLogs.length === 0) {
       alert('No attendance data found for the selected date range and employees.')
       return
     }
-    
+
     // Group logs by employee
     const employeeGroups: Record<string, any[]> = {}
     filteredLogs.forEach((log: any) => {
       const empCode = log.employee_code
       const employee = allEmployees.find(e => e.code === empCode)
       const employeeName = employee?.name || `Employee ${empCode}`
-      
+
       if (!employeeGroups[employeeName]) {
         employeeGroups[employeeName] = []
       }
       employeeGroups[employeeName].push(log)
     })
-    
+
     const wb = XLSX.utils.book_new()
-    
+
     // Create a sheet for each employee
     Object.entries(employeeGroups).forEach(([employeeName, logs]) => {
       // Sort logs by date
       const sortedLogs = logs.sort((a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime())
-      
+
       // Create sheet data
       const sheetData: any[] = []
-      
+
       // Add employee name header
       sheetData.push([employeeName.toUpperCase()])
       sheetData.push([]) // Empty row
-      
+
       // Find max punches in a day to determine column count
       const maxPunches = Math.max(...logs.map(log => {
         const dateStr = new Date(log.log_date).toDateString()
         const dayLogs = logs.filter(l => new Date(l.log_date).toDateString() === dateStr)
         return dayLogs.length
       }), 0)
-      
+
       // Create header - just "Punches" without numbered columns
       sheetData.push(['Week', 'Date', 'Punches', 'Status'])
-      
+
       // Generate ALL dates in the range
       const allDates: Date[] = []
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         allDates.push(new Date(d))
       }
-      
+
       // Group all dates by week
       const weekDateGroups: Record<string, Date[]> = {}
       allDates.forEach(date => {
         const weekNumber = getWeekNumber(date)
         const weekKey = `WEEK ${weekNumber}`
-        
+
         if (!weekDateGroups[weekKey]) {
           weekDateGroups[weekKey] = []
         }
         weekDateGroups[weekKey].push(date)
       })
-      
+
       // Add data for each week
       Object.entries(weekDateGroups).forEach(([weekKey, weekDates]) => {
         let isFirstDateInWeek = true
-        
+
         weekDates.forEach(date => {
           const dateKey = date.toLocaleDateString('en-GB', {
             day: 'numeric',
             month: 'short',
             year: '2-digit'
           })
-          
+
           // Find all logs for this date
           const dateLogs = logs.filter(log => {
             const logDate = new Date(log.log_date).toDateString()
             return logDate === date.toDateString()
           })
-          
+
           if (dateLogs.length === 0) {
             // No logs for this date - show as absent
             sheetData.push([
@@ -421,10 +528,10 @@ function AttendancePageContent() {
             isFirstDateInWeek = false
           } else {
             // Sort logs by time for this date
-            const sortedDateLogs = dateLogs.sort((a, b) => 
+            const sortedDateLogs = dateLogs.sort((a, b) =>
               new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
             )
-            
+
             // Combine all punch times in one cell
             const allPunches = sortedDateLogs.map(log => {
               const time = new Date(log.log_date).toLocaleTimeString('en-US', {
@@ -436,7 +543,7 @@ function AttendancePageContent() {
               const direction = log.punch_direction?.toLowerCase() === 'in' ? 'in' : 'out'
               return `${time}(${direction})`
             }).join(',')
-            
+
             sheetData.push([
               isFirstDateInWeek ? weekKey : '',
               dateKey,
@@ -445,17 +552,17 @@ function AttendancePageContent() {
             ])
             isFirstDateInWeek = false
           }
-          
+
           // Add Sunday separator
           if (date.getDay() === 0) { // Sunday
             sheetData.push(['SUNDAY', '', '', ''])
           }
         })
       })
-      
+
       // Create worksheet
       const ws = XLSX.utils.aoa_to_sheet(sheetData)
-      
+
       // Set column widths
       ws['!cols'] = [
         { width: 15 }, // Week
@@ -463,16 +570,16 @@ function AttendancePageContent() {
         { width: 80 }, // Punches (wide to fit all times)
         { width: 12 }  // Status
       ]
-      
+
       // Add sheet to workbook (limit sheet name to 31 characters)
       const sheetName = employeeName.substring(0, 31)
       XLSX.utils.book_append_sheet(wb, ws, sheetName)
     })
-    
+
     const fileName = `attendance_${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}.xlsx`
     XLSX.writeFile(wb, fileName)
   }
-  
+
   // Helper function to generate Excel file
   const generateExcelFile = (filteredLogs: any[], startDate: Date, endDate: Date) => {
     // Group logs by employee
@@ -481,45 +588,45 @@ function AttendancePageContent() {
       const empCode = log.employee_code
       const employee = allEmployees.find(e => e.code === empCode)
       const employeeName = employee?.name || `Employee ${empCode}`
-      
+
       if (!employeeGroups[employeeName]) {
         employeeGroups[employeeName] = []
       }
       employeeGroups[employeeName].push(log)
     })
-    
+
     const wb = XLSX.utils.book_new()
-    
+
     // Create a sheet for each employee
     Object.entries(employeeGroups).forEach(([employeeName, logs]) => {
       // Sort logs by date
       const sortedLogs = logs.sort((a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime())
-      
+
       // Create sheet data
       const sheetData: any[] = []
-      
+
       // Add employee name header
       sheetData.push([employeeName.toUpperCase()])
       sheetData.push([]) // Empty row
-      
+
       // Generate ALL dates in the range
       const allDates: Date[] = []
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         allDates.push(new Date(d))
       }
-      
+
       // CRITICAL: Calculate isMultiMonth and calendarRows FIRST (before using them)
-      const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 
-                          'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
+      const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+        'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
       const firstDate = new Date(startDate)
       const lastDate = new Date(endDate)
-      const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + 
-                         (lastDate.getMonth() - firstDate.getMonth())
+      const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 +
+        (lastDate.getMonth() - firstDate.getMonth())
       const isMultiMonth = monthsDiff >= 2
-      
+
       let calendarRows: any[] = []
       let weeksNeeded = 0
-      
+
       if (!isMultiMonth) {
         const monthName = monthNames[firstDate.getMonth()]
         const year = firstDate.getFullYear()
@@ -527,13 +634,13 @@ function AttendancePageContent() {
         const lastDayOfMonth = new Date(firstDate.getFullYear(), firstDate.getMonth() + 1, 0)
         const daysInMonth = lastDayOfMonth.getDate()
         const startDayOfWeek = firstDayOfMonth.getDay()
-        
+
         calendarRows.push(['', '', `${monthName} ${year} CALENDAR`])
         calendarRows.push(['', '', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
-        
+
         let dayCounter = 1
         weeksNeeded = Math.ceil((startDayOfWeek + daysInMonth) / 7)
-        
+
         for (let week = 0; week < weeksNeeded; week++) {
           const weekRow = ['', '']
           for (let day = 0; day < 7; day++) {
@@ -548,7 +655,7 @@ function AttendancePageContent() {
           calendarRows.push(weekRow)
         }
       }
-      
+
       // Step 1: Find max punches for THIS employee only
       let employeeMaxPunches = 0
       allDates.forEach(date => {
@@ -560,14 +667,14 @@ function AttendancePageContent() {
           employeeMaxPunches = dateLogs.length
         }
       })
-      
+
       // Step 2: Create header with punch columns based on THIS employee's max
       const header = ['Date']
       for (let i = 1; i <= employeeMaxPunches; i++) {
         header.push(`Punch ${i}`)
       }
       header.push('Status')
-      
+
       // Add calendar day headers to the header row (no title)
       if (!isMultiMonth && calendarRows.length > 0) {
         header.push('') // Spacing column
@@ -579,9 +686,9 @@ function AttendancePageContent() {
         header.push('Fri')
         header.push('Sat')
       }
-      
+
       sheetData.push(header)
-      
+
       // Step 3: Add data for each date with punches in separate columns
       // Build calendar data map for quick lookup
       const calendarDataMap = new Map<number, string>()
@@ -597,28 +704,28 @@ function AttendancePageContent() {
           }
         }
       }
-      
+
       allDates.forEach((date, dateIndex) => {
         const dateKey = date.toLocaleDateString('en-GB', {
           day: 'numeric',
           month: 'short',
           year: '2-digit'
         })
-        
+
         // Find all logs for this date
         const dateLogs = logs.filter(log => {
           const logDate = new Date(log.log_date).toDateString()
           return logDate === date.toDateString()
         })
-        
+
         // Sort logs by time for this date
-        const sortedDateLogs = dateLogs.sort((a, b) => 
+        const sortedDateLogs = dateLogs.sort((a, b) =>
           new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
         )
-        
+
         // Create row starting with date
         const row = [dateKey]
-        
+
         // Add each punch in its own column
         sortedDateLogs.forEach(log => {
           const time = new Date(log.log_date).toLocaleTimeString('en-US', {
@@ -628,20 +735,20 @@ function AttendancePageContent() {
           })
           row.push(time)
         })
-        
+
         // Fill remaining punch columns with empty strings (only up to employee's max)
         while (row.length < employeeMaxPunches + 1) {
           row.push('')
         }
-        
+
         // Add status
         const statusValue = dateLogs.length > 0 ? 'Present' : 'Absent'
         row.push(statusValue)
-        
+
         // Add calendar columns to the right (only for single month)
         if (!isMultiMonth && calendarRows.length > 0) {
           row.push('') // Spacing column
-          
+
           // Add calendar row data (offset by 2 rows for title and day headers)
           if (dateIndex + 2 < calendarRows.length) {
             const calendarRow = calendarRows[dateIndex + 2] || []
@@ -655,21 +762,21 @@ function AttendancePageContent() {
             }
           }
         }
-        
+
         sheetData.push(row)
       })
-      
+
       // Step 6: Calculate attendance analytics
       const totalDays = allDates.length
       // Skip: employee name (row 1), empty (row 2), header (row 3)
       const dataRows = sheetData.slice(3)
-      
+
       // Status is now at position: employeeMaxPunches + 1 (after Date + all punch columns)
       const statusColumnIndex = employeeMaxPunches + 1
       const presentDays = dataRows.filter(row => row[statusColumnIndex] === 'Present').length
       const absentDays = totalDays - presentDays
       const attendancePercent = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(2) : '0.00'
-      
+
       // Calculate punch metrics
       let totalPunches = 0
       let maxPunchesInDay = 0
@@ -677,7 +784,7 @@ function AttendancePageContent() {
       let minPunchesInDay = Infinity
       let minPunchesDate = ''
       let oddPunchDays = 0
-      
+
       dataRows.forEach((row, index) => {
         const status = row[statusColumnIndex]
         if (status === 'Present') {
@@ -688,32 +795,32 @@ function AttendancePageContent() {
               dayPunches++
             }
           }
-          
+
           totalPunches += dayPunches
-          
+
           if (dayPunches > maxPunchesInDay) {
             maxPunchesInDay = dayPunches
             maxPunchesDate = row[0]
           }
-          
+
           if (dayPunches > 0 && dayPunches < minPunchesInDay) {
             minPunchesInDay = dayPunches
             minPunchesDate = row[0]
           }
-          
+
           // Check for odd punches (missing IN or OUT)
           if (dayPunches % 2 !== 0) {
             oddPunchDays++
           }
         }
       })
-      
+
       const avgPunches = presentDays > 0 ? (totalPunches / presentDays).toFixed(2) : '0.00'
       const minPunchesDisplay = minPunchesInDay === Infinity ? 0 : minPunchesInDay
-      
+
       // Step 7: Add summary section with calendar grid
       const summaryStartRowIndex = sheetData.length
-      
+
       // Build summary rows (will be placed in columns A-B)
       const summaryRows = [
         [], // Empty row
@@ -731,26 +838,26 @@ function AttendancePageContent() {
         ['Lowest Punches in a Day', `${minPunchesDisplay} (on ${minPunchesDate})`],
         ['Days with Odd Punches', `${oddPunchDays} (missing IN/OUT)`]
       ]
-      
+
       // Add summary section below the data
       sheetData.push([]) // Empty row
       summaryRows.forEach(row => {
         sheetData.push(row)
       })
-      
+
       // Step 9: Add monthly breakdown for multi-month ranges
       if (isMultiMonth) {
         sheetData.push([]) // Empty row
         sheetData.push([]) // Extra spacing
         sheetData.push(['MONTHLY BREAKDOWN']) // Header
         sheetData.push(['Month', 'Days', 'Present', 'Absent', 'Attendance %', 'Total Punches', 'Avg Punches/Day'])
-        
+
         // Calculate stats for each month
         let monthlyStats: Record<string, any> = {}
-        
+
         allDates.forEach(date => {
           const monthKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`
-          
+
           if (!monthlyStats[monthKey]) {
             monthlyStats[monthKey] = {
               days: 0,
@@ -759,15 +866,15 @@ function AttendancePageContent() {
               punches: 0
             }
           }
-          
+
           monthlyStats[monthKey].days++
-          
+
           // Find logs for this date
           const dateLogs = logs.filter(log => {
             const logDate = new Date(log.log_date).toDateString()
             return logDate === date.toDateString()
           })
-          
+
           if (dateLogs.length > 0) {
             monthlyStats[monthKey].present++
             monthlyStats[monthKey].punches += dateLogs.length
@@ -775,12 +882,12 @@ function AttendancePageContent() {
             monthlyStats[monthKey].absent++
           }
         })
-        
+
         // Add monthly rows
         Object.entries(monthlyStats).forEach(([month, stats]: [string, any]) => {
           const attendPercent = stats.days > 0 ? ((stats.present / stats.days) * 100).toFixed(2) : '0.00'
           const avgPunchesPerDay = stats.present > 0 ? (stats.punches / stats.present).toFixed(2) : '0.00'
-          
+
           sheetData.push([
             month,
             stats.days,
@@ -792,22 +899,22 @@ function AttendancePageContent() {
           ])
         })
       }
-      
+
       // Store calendar info for styling (calendar is on the RIGHT)
       const calendarTitleRow = 3 // Calendar title in header row
       const calendarHeaderRow = 3 // Calendar day headers in header row
       const calendarDataStartRow = 4 // First calendar data row
-      
+
       // Create worksheet with styling
       const ws = XLSX.utils.aoa_to_sheet(sheetData)
-      
+
       // Step 4: Set column widths based on THIS employee's max punches + calendar
       const colWidths = [{ width: 20 }] // Date column (wider for employee name)
       for (let i = 0; i < employeeMaxPunches; i++) {
         colWidths.push({ width: 12 }) // Each punch column (time format)
       }
       colWidths.push({ width: 12 }) // Status column
-      
+
       // Add calendar columns to the right (only for single month)
       if (!isMultiMonth && calendarRows.length > 0) {
         colWidths.push({ width: 3 }) // Spacing column
@@ -816,9 +923,9 @@ function AttendancePageContent() {
           colWidths.push({ width: 8 }) // Calendar day columns (Sun-Sat)
         }
       }
-      
+
       ws['!cols'] = colWidths
-      
+
       // Step 5: Apply styling to make sheet pretty
       // Helper function to convert column index to Excel column letter (A, B, ..., Z, AA, AB, ...)
       const getExcelColumnLetter = (index: number): string => {
@@ -830,13 +937,13 @@ function AttendancePageContent() {
         }
         return letter
       }
-      
+
       const columnLetters: string[] = []
       const totalCols = employeeMaxPunches + 2 // Date + Punches + Status
       for (let i = 0; i < totalCols; i++) {
         columnLetters.push(getExcelColumnLetter(i)) // A, B, C, ..., Z, AA, AB, AC...
       }
-      
+
       // Style 1: Employee name header (Row 1) - Dark blue background, white bold text
       columnLetters.forEach((col) => {
         const cellRef = `${col}1`
@@ -848,7 +955,7 @@ function AttendancePageContent() {
           }
         }
       })
-      
+
       // Style 2: Column headers (Row 3) - Light blue background, bold text
       columnLetters.forEach((col) => {
         const cellRef = `${col}3`
@@ -866,7 +973,7 @@ function AttendancePageContent() {
           }
         }
       })
-      
+
       // Style 3: Date column (Column A) - Light gray background
       // No offset for attendance data - starts at row 4
       allDates.forEach((date, index) => {
@@ -880,7 +987,7 @@ function AttendancePageContent() {
           }
         }
       })
-      
+
       // Style 3.5: Punch columns - Center alignment for all punch time cells
       allDates.forEach((date, index) => {
         const rowNum = index + 4
@@ -894,7 +1001,7 @@ function AttendancePageContent() {
           }
         }
       })
-      
+
       // Style 4: Sunday rows - Yellow background (all columns)
       // Check each date to see if it's a Sunday (day 0)
       allDates.forEach((date, index) => {
@@ -913,14 +1020,14 @@ function AttendancePageContent() {
           })
         }
       })
-      
+
       // Style 5: Summary section styling
       const summaryStartRow = allDates.length + 5 // After all date rows + empty row
-      
+
       // Set wider column width for summary labels (Column A)
       if (!ws['!cols']) ws['!cols'] = []
       ws['!cols'][0] = { width: 30 } // Column A wider for long labels
-      
+
       // "ATTENDANCE SUMMARY" header - Green background
       if (!isMultiMonth) {
         // Single month - columns A-B only
@@ -945,7 +1052,7 @@ function AttendancePageContent() {
           }
         }
       }
-      
+
       // Summary metric rows (6 rows: Total Days, Present, Absent, %, empty, PUNCH ANALYSIS header)
       for (let i = 1; i <= 5; i++) {
         const rowNum = summaryStartRow + i
@@ -967,7 +1074,7 @@ function AttendancePageContent() {
           }
         }
       }
-      
+
       // "PUNCH ANALYSIS" header - Orange background
       const punchHeaderRow = summaryStartRow + 7 // +1 for extra spacing row
       if (!isMultiMonth) {
@@ -992,7 +1099,7 @@ function AttendancePageContent() {
           }
         }
       }
-      
+
       // Punch analysis metric rows - add text wrapping
       for (let i = 1; i <= 5; i++) {
         const rowNum = punchHeaderRow + i
@@ -1007,11 +1114,11 @@ function AttendancePageContent() {
           ws[valueRef].s.alignment = { horizontal: "center", vertical: "center", wrapText: true }
         }
       }
-      
+
       // Style 6: Monthly Breakdown section (for multi-month only)
       if (isMultiMonth) {
         const monthlyBreakdownStartRow = punchHeaderRow + 7 // After punch analysis rows + spacing
-        
+
         // Count months from sheetData
         let monthCount = 0
         for (let i = monthlyBreakdownStartRow + 2; i < sheetData.length; i++) {
@@ -1019,7 +1126,7 @@ function AttendancePageContent() {
             monthCount++
           }
         }
-        
+
         // "MONTHLY BREAKDOWN" header - Purple background
         const monthlyHeaderRef = `A${monthlyBreakdownStartRow}`
         if (ws[monthlyHeaderRef]) {
@@ -1029,7 +1136,7 @@ function AttendancePageContent() {
             alignment: { horizontal: "center", vertical: "center" }
           }
         }
-        
+
         // Column headers - Gray background
         const monthlyColHeaderRow = monthlyBreakdownStartRow + 1
         const monthlyColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
@@ -1049,13 +1156,13 @@ function AttendancePageContent() {
             }
           }
         })
-        
+
         // Data rows - Alternating colors
         for (let i = 0; i < monthCount; i++) {
           const rowNum = monthlyColHeaderRow + 1 + i
           const isEvenRow = i % 2 === 0
           const bgColor = isEvenRow ? "FFFFFF" : "F2F2F2"
-          
+
           monthlyColumns.forEach((col) => {
             const cellRef = `${col}${rowNum}`
             if (ws[cellRef]) {
@@ -1074,7 +1181,7 @@ function AttendancePageContent() {
           })
         }
       }
-      
+
       // Style 7: Calendar section styling (only for single month)
       if (!isMultiMonth && calendarRows.length > 0) {
         // Calendar day headers - Gray background (Sun-Sat in row 3)
@@ -1090,7 +1197,7 @@ function AttendancePageContent() {
           }
         }
       }
-      
+
       // Calendar date cells - Green for present, white for absent
       // Create a map of present dates
       const presentDatesSet = new Set<number>()
@@ -1103,19 +1210,19 @@ function AttendancePageContent() {
           }
         }
       })
-      
+
       // Apply styling to calendar date cells (only for single month)
       if (!isMultiMonth && calendarRows.length > 0) {
         const calendarStartCol = employeeMaxPunches + 3 // Date + Punches + Status + Spacing
-        
+
         for (let week = 0; week < weeksNeeded; week++) {
           const rowNum = calendarDataStartRow + week
-          
+
           for (let col = 0; col < 7; col++) { // 7 days
             const cellRef = `${getExcelColumnLetter(calendarStartCol + col)}${rowNum}`
             if (ws[cellRef] && ws[cellRef].v) {
               const dateNum = parseInt(ws[cellRef].v as string)
-              
+
               if (presentDatesSet.has(dateNum)) {
                 // Present day - Green background, white text
                 ws[cellRef].s = {
@@ -1135,7 +1242,7 @@ function AttendancePageContent() {
           }
         }
       }
-      
+
       // Punch analysis metric rows (5 rows)
       for (let i = 1; i <= 5; i++) {
         const rowNum = punchHeaderRow + i
@@ -1158,25 +1265,25 @@ function AttendancePageContent() {
           }
         }
       }
-      
+
       // Add sheet to workbook (limit sheet name to 31 characters)
       const sheetName = employeeName.substring(0, 31)
       XLSX.utils.book_append_sheet(wb, ws, sheetName)
     })
-    
+
     const fileName = `attendance_${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}.xlsx`
     XLSX.writeFile(wb, fileName)
   }
 
-  const stats = (typeof todayData?.summary === 'object' && !Array.isArray(todayData?.summary)) 
-    ? todayData.summary 
+  const stats = (typeof todayData?.summary === 'object' && !Array.isArray(todayData?.summary))
+    ? todayData.summary
     : {
-        totalEmployees: 47,
-        present: 0,
-        absent: 47,
-        lateArrivals: 0,
-        earlyDepartures: 0
-      }
+      totalEmployees: 47,
+      present: 0,
+      absent: 47,
+      lateArrivals: 0,
+      earlyDepartures: 0
+    }
 
   const activePunches = recentLogs.length
   const activeUsers = new Set(recentLogs.map(log => log.employee_code)).size
@@ -1204,7 +1311,7 @@ function AttendancePageContent() {
       </div>
     )
   }
-  
+
   // Redirect to auth if not authenticated (without causing loop)
   if (!auth.isAuthenticated) {
     if (typeof window !== 'undefined') {
@@ -1241,6 +1348,16 @@ function AttendancePageContent() {
                 <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${manualSyncing ? 'animate-spin' : ''}`} />
                 {manualSyncing ? 'Syncing...' : 'Force Sync'}
               </Button>
+              <Button
+                variant={showAnimation ? "default" : "outline"}
+                size="sm"
+                onClick={toggleAnimation}
+                className={`gap-2 ${showAnimation ? "bg-green-600 hover:bg-green-700" : ""}`}
+                title="Toggle Receipt Animation"
+              >
+                <Printer className="h-4 w-4" />
+                {showAnimation ? "Printer ON" : "Printer OFF"}
+              </Button>
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
@@ -1249,17 +1366,16 @@ function AttendancePageContent() {
                   Last sync: {lastSyncTime ? new Date(lastSyncTime).toLocaleTimeString() : 'Loading...'}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-[hsl(var(--success))] font-medium">
-                <div className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-[hsl(var(--success))] animate-pulse shadow-sm" />
-                <span>Cloud Synced</span>
+              <div className={`flex items-center gap-2 font-medium ${realtimeConnected ? 'text-[hsl(var(--success))]' : 'text-yellow-600'}`}>
+                <div className={`h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full ${realtimeConnected ? 'bg-[hsl(var(--success))] animate-pulse' : 'bg-yellow-500'} shadow-sm`} />
+                <span>{realtimeConnected ? 'Realtime Active' : 'Connecting...'}</span>
               </div>
             </div>
             {syncMessage && (
-              <div className={`text-sm font-medium px-3 py-1.5 rounded-md ${
-                syncMessage.type === 'success' 
-                  ? 'bg-green-50 text-green-700 border border-green-200' 
-                  : 'bg-red-50 text-red-700 border border-red-200'
-              }`}>
+              <div className={`text-sm font-medium px-3 py-1.5 rounded-md ${syncMessage.type === 'success'
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
                 {syncMessage.text}
               </div>
             )}
@@ -1310,8 +1426,8 @@ function AttendancePageContent() {
             {showEmployeeDropdown && (
               <>
                 {/* Backdrop to close dropdown when clicking outside */}
-                <div 
-                  className="fixed inset-0 z-[5]" 
+                <div
+                  className="fixed inset-0 z-[5]"
                   onClick={() => setShowEmployeeDropdown(false)}
                 />
                 <div className="absolute top-full mt-2 left-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
@@ -1360,7 +1476,7 @@ function AttendancePageContent() {
                 className="w-[150px]"
                 placeholder="To Date"
               />
-              <Button 
+              <Button
                 onClick={() => {
                   // Custom date range only affects All Track Records section
                 }}
@@ -1387,14 +1503,14 @@ function AttendancePageContent() {
           </div>
 
           {canExportExcel && (
-          <Button 
-            variant="outline" 
-            className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900 dark:hover:to-blue-800 shadow-md ml-auto"
-            onClick={() => exportToExcel('today')}
-          >
-            <Download className="h-4 w-4" />
-            Export Excel
-          </Button>
+            <Button
+              variant="outline"
+              className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900 dark:hover:to-blue-800 shadow-md ml-auto"
+              onClick={() => exportToExcel('today')}
+            >
+              <Download className="h-4 w-4" />
+              Export Excel
+            </Button>
           )}
         </div>
 
@@ -1439,7 +1555,7 @@ function AttendancePageContent() {
 
         {/* Today's Activity Chart */}
         {canViewTodaysActivity && (
-          <AttendanceTodayChart 
+          <AttendanceTodayChart
             data={recentLogs}
             loading={todayLoading}
           />
@@ -1449,127 +1565,110 @@ function AttendancePageContent() {
         {canViewTodaysActivity && (
           <Card className="shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
             <div className="p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200">
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight">Today's Recent Activity</h2>
-                  <p className="text-sm text-muted-foreground font-medium">Latest punch activities from today</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground font-medium">{activePunches} activities today</span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="gap-2 font-semibold bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 shadow-md"
-                  onClick={() => fetchTodayData()}
-                  disabled={todayLoading}
-                >
-                  <RefreshCw className={`h-4 w-4 ${todayLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-            </div>
-
-            {todayError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-red-900">Failed to Load Today's Data</h3>
-                    <p className="text-sm text-red-700 mt-1">{todayError}</p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                   </div>
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Today's Recent Activity</h2>
+                    <p className="text-sm text-muted-foreground font-medium">Latest punch activities from today</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground font-medium">{activePunches} activities today</span>
                   <Button
-                    size="sm"
                     variant="outline"
-                    onClick={() => {
-                      setTodayError(null)
-                      fetchTodayData()
-                    }}
-                    className="border-red-300 text-red-700 hover:bg-red-100"
+                    size="sm"
+                    className="gap-2 font-semibold bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 shadow-md"
+                    onClick={() => fetchTodayData()}
+                    disabled={todayLoading}
                   >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry
+                    <RefreshCw className={`h-4 w-4 ${todayLoading ? 'animate-spin' : ''}`} />
+                    Refresh
                   </Button>
                 </div>
               </div>
-            )}
 
-            {todayLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-5">
-                <RefreshCw className="h-12 w-12 text-primary animate-spin" />
-                <p className="text-muted-foreground">Loading attendance data...</p>
-              </div>
-            ) : recentLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-5">
-                <div className="h-24 w-24 rounded-2xl bg-muted/50 flex items-center justify-center border border-border/50">
-                  <Clock className="h-12 w-12 text-muted-foreground" />
+              {todayError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-red-900">Failed to Load Today's Data</h3>
+                      <p className="text-sm text-red-700 mt-1">{todayError}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setTodayError(null)
+                        fetchTodayData()
+                      }}
+                      className="border-red-300 text-red-700 hover:bg-red-100"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry
+                    </Button>
+                  </div>
                 </div>
-                <div className="text-center space-y-2">
-                  <h3 className="text-xl font-bold">No Activity Today</h3>
-                  <p className="text-sm text-muted-foreground font-medium">No punch records found for today</p>
+              )}
+
+              {todayLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 space-y-5">
+                  <RefreshCw className="h-12 w-12 text-primary animate-spin" />
+                  <p className="text-muted-foreground">Loading attendance data...</p>
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm bg-card">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30 border-b border-border/100">
-                      <TableHead className="font-bold text-foreground py-4">Employee Code</TableHead>
-                      <TableHead className="font-bold text-foreground">Employee Name</TableHead>
-                      <TableHead className="font-bold text-foreground">Status</TableHead>
-                      <TableHead className="font-bold text-foreground">Time</TableHead>
-                      <TableHead className="font-bold text-foreground">Ago</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentLogs.map((log, index) => {
-                      const logTime = new Date(log.log_date)
-                      const now = new Date()
-                      const diffMs = now.getTime() - logTime.getTime()
-                      const diffMins = Math.floor(diffMs / 60000)
-                      const diffHours = Math.floor(diffMins / 60)
-                      const diffDays = Math.floor(diffHours / 24)
-                      
-                      let timeAgo = ''
-                      if (diffDays > 0) {
-                        timeAgo = `${diffDays}d ago`
-                      } else if (diffHours > 0) {
-                        timeAgo = `${diffHours}h ago`
-                      } else if (diffMins > 0) {
-                        timeAgo = `${diffMins}m ago`
-                      } else {
-                        timeAgo = 'Just now'
-                      }
-                      
-                      return (
-                      <TableRow 
-                        key={index} 
-                        className="hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
-                      >
-                        <TableCell className="font-semibold py-4">{log.employee_code}</TableCell>
-                        <TableCell className="font-medium">{log.employee_name}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={log.punch_direction as any} />
-                        </TableCell>
-                        <TableCell className="text-muted-foreground font-mono text-sm">
-                          {logTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm font-medium">
-                          {timeAgo}
-                        </TableCell>
+              ) : recentLogs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 space-y-5">
+                  <div className="h-24 w-24 rounded-2xl bg-muted/50 flex items-center justify-center border border-border/50">
+                    <Clock className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold">No Activity Today</h3>
+                    <p className="text-sm text-muted-foreground font-medium">No punch records found for today</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm bg-card">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30 border-b border-border/100">
+                        <TableHead className="font-bold text-foreground py-4">Employee Code</TableHead>
+                        <TableHead className="font-bold text-foreground">Employee Name</TableHead>
+                        <TableHead className="font-bold text-foreground">Status</TableHead>
+                        <TableHead className="font-bold text-foreground">Time</TableHead>
+                        <TableHead className="font-bold text-foreground">Ago</TableHead>
                       </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {recentLogs.map((log, index) => {
+                        const logTime = new Date(log.log_date)
+                        return (
+                          <TableRow
+                            key={index}
+                            className="hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
+                          >
+                            <TableCell className="font-semibold py-4">{log.employee_code}</TableCell>
+                            <TableCell className="font-medium">{log.employee_name}</TableCell>
+                            <TableCell>
+                              <StatusBadge status={log.punch_direction as any} />
+                            </TableCell>
+                            <TableCell className="text-muted-foreground font-mono text-sm">
+                              {logTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm font-medium">
+                              <TimeAgo date={log.log_date} />
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </Card>
         )}
 
         {/* All Track Records */}
@@ -1607,7 +1706,7 @@ function AttendancePageContent() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {dateRange === 'custom' && (
                 <>
                   <div className="space-y-2">
@@ -1630,7 +1729,7 @@ function AttendancePageContent() {
                   </div>
                 </>
               )}
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Employee</label>
                 {employeeError && (
@@ -1651,8 +1750,8 @@ function AttendancePageContent() {
                   {showEmployeeDropdown && (
                     <>
                       {/* Backdrop to close dropdown when clicking outside */}
-                      <div 
-                        className="fixed inset-0 z-[5]" 
+                      <div
+                        className="fixed inset-0 z-[5]"
                         onClick={() => setShowEmployeeDropdown(false)}
                       />
                       <div className="absolute top-full mt-2 left-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
@@ -1685,36 +1784,38 @@ function AttendancePageContent() {
                   )}
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Records per page</label>
-                <Select value={recordsPerPage} onValueChange={setRecordsPerPage}>
-                  <SelectTrigger className="bg-card">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">No Limit</SelectItem>
-                    <SelectItem value="10">10 records</SelectItem>
-                    <SelectItem value="25">25 records</SelectItem>
-                    <SelectItem value="50">50 records</SelectItem>
-                    <SelectItem value="100">100 records</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-                {recordsPerPage === 'custom' && (
-                  <Input
-                    type="number"
-                    placeholder="Enter limit"
-                    value={customLimit}
-                    onChange={(e) => setCustomLimit(e.target.value)}
-                    className="bg-card mt-2"
-                  />
-                )}
+                <div className="flex items-center gap-2">
+                  <Select value={recordsPerPage} onValueChange={setRecordsPerPage}>
+                    <SelectTrigger className="bg-card">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">No Limit</SelectItem>
+                      <SelectItem value="10">10 records</SelectItem>
+                      <SelectItem value="25">25 records</SelectItem>
+                      <SelectItem value="50">50 records</SelectItem>
+                      <SelectItem value="100">100 records</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {recordsPerPage === 'custom' && (
+                    <Input
+                      type="number"
+                      placeholder="Enter limit"
+                      value={customLimit}
+                      onChange={(e) => setCustomLimit(e.target.value)}
+                      className="bg-card mt-2"
+                    />
+                  )}
+                </div>
               </div>
-              
+
               <div className="flex items-end gap-2">
                 {canExportRecords && (
-                  <Button 
+                  <Button
                     variant="outline"
                     className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900 dark:hover:to-blue-800 shadow-md"
                     onClick={() => exportToExcel('allTrack')}
@@ -1723,7 +1824,7 @@ function AttendancePageContent() {
                     Export Excel
                   </Button>
                 )}
-                <Button 
+                <Button
                   className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
                   onClick={() => {
                     setShowAllTrackRecords(true)
@@ -1765,49 +1866,49 @@ function AttendancePageContent() {
                 <p className="text-muted-foreground">Loading records...</p>
               </div>
             )}
-            
+
             {showAllTrackRecords && !allTrackLoading && !allTrackError && (
               <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm bg-card">
                 <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 border-b border-border/50">
-                    <TableHead className="font-bold text-foreground py-4">Employee Code</TableHead>
-                    <TableHead className="font-bold text-foreground">Employee Name</TableHead>
-                    <TableHead className="font-bold text-foreground">Status</TableHead>
-                    <TableHead className="font-bold text-foreground">Date</TableHead>
-                    <TableHead className="font-bold text-foreground">Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(() => {
-                    const logs = allTrackData?.allLogs || []
-                    const limit = recordsPerPage === 'all' ? logs.length : 
-                                  recordsPerPage === 'custom' ? parseInt(customLimit) || logs.length :
-                                  parseInt(recordsPerPage)
-                    return logs.slice(0, limit).map((record: any, index: number) => (
-                    <TableRow 
-                      key={index} 
-                      className="hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
-                    >
-                      <TableCell className="font-semibold py-4">{record.employee_code}</TableCell>
-                      <TableCell className="font-medium">{record.employee_name}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={record.punch_direction} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(record.log_date).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-sm">
-                        {new Date(record.log_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                      </TableCell>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 border-b border-border/50">
+                      <TableHead className="font-bold text-foreground py-4">Employee Code</TableHead>
+                      <TableHead className="font-bold text-foreground">Employee Name</TableHead>
+                      <TableHead className="font-bold text-foreground">Status</TableHead>
+                      <TableHead className="font-bold text-foreground">Date</TableHead>
+                      <TableHead className="font-bold text-foreground">Time</TableHead>
                     </TableRow>
-                    ))
-                  })()}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {(() => {
+                      const logs = allTrackData?.allLogs || []
+                      const limit = recordsPerPage === 'all' ? logs.length :
+                        recordsPerPage === 'custom' ? parseInt(customLimit) || logs.length :
+                          parseInt(recordsPerPage)
+                      return logs.slice(0, limit).map((record: any, index: number) => (
+                        <TableRow
+                          key={index}
+                          className="hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
+                        >
+                          <TableCell className="font-semibold py-4">{record.employee_code}</TableCell>
+                          <TableCell className="font-medium">{record.employee_name}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={record.punch_direction} />
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(record.log_date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-sm">
+                            {new Date(record.log_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    })()}
+                  </TableBody>
+                </Table>
+              </div>
             )}
-            
+
             {!showAllTrackRecords && (
               <div className="flex flex-col items-center justify-center py-20 space-y-5">
                 <div className="h-24 w-24 rounded-2xl bg-muted/50 dark:bg-gray-800 flex items-center justify-center border border-border/50 dark:border-gray-700">
@@ -1824,6 +1925,7 @@ function AttendancePageContent() {
           </div>
         </Card>
       </div>
+      {showAnimation && <PunchStream newPunch={lastPunch} />}
     </ZohoLayout>
   )
 }

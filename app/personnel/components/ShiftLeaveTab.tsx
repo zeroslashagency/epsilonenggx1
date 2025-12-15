@@ -117,7 +117,7 @@ export default function ShiftLeaveTab({ employeeCode, employeeName }: ShiftLeave
       <div className="flex items-center gap-3">
         <Clock className="w-8 h-8 text-blue-600" />
         <div>
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Shift & Leave Management</h3>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Shift & Leave</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">Manage your shifts, leaves, and overtime</p>
         </div>
       </div>

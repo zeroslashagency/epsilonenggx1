@@ -50,7 +50,8 @@ export const updateRoleSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   description: z.string().optional(),
   is_manufacturing_role: z.boolean().optional(),
-  permissions: z.array(z.string()).optional()
+  permissions: z.array(z.string()).optional(),
+  permissions_json: z.any().optional()
 })
 
 export const roleIdSchema = z.object({

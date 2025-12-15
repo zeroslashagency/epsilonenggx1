@@ -25,6 +25,7 @@ interface Employee {
   department?: string
   designation?: string
   status?: string
+  hasUserAccount?: boolean
 }
 
 interface AttendanceStats {
@@ -56,12 +57,12 @@ function PersonnelPageContent() {
 
   useEffect(() => {
     let isMounted = true
-    
+
     const loadPersonnel = async () => {
       setLoading(true)
       try {
         const data = await apiGet('/api/admin/raw-attendance')
-        
+
         if (isMounted && data.success) {
           const employees = data.data || []
           const uniqueEmployees = Array.from(new Map(
@@ -78,9 +79,9 @@ function PersonnelPageContent() {
         }
       }
     }
-    
+
     loadPersonnel()
-    
+
     return () => {
       isMounted = false
     }
@@ -93,20 +94,20 @@ function PersonnelPageContent() {
   const fetchEmployees = async () => {
     try {
       setLoading(true)
-      
+
       // Fetch both employees and users to merge data
       const [employeesResponse, usersResponse] = await Promise.all([
         fetch('/api/get-employees'),
         fetch('/api/admin/users')
       ])
-      
+
       const employeesData = await employeesResponse.json()
       const usersData = await usersResponse.json()
-      
+
       if (employeesData.success) {
         // Create a map of users by employee_code for quick lookup
         const usersByEmployeeCode = new Map()
-        
+
         // Add users from database
         if (usersData.success && usersData.data?.users) {
           usersData.data.users.forEach((user: any) => {
@@ -115,20 +116,20 @@ function PersonnelPageContent() {
             }
           })
         }
-        
+
         // Also check localStorage for created users (workaround for RLS issue)
         const createdUsers = JSON.parse(localStorage.getItem('createdUsers') || '[]')
-        
+
         // Get list of deleted user IDs to filter them out
         const deletedUserIds = JSON.parse(localStorage.getItem('deletedUsers') || '[]')
-        
+
         createdUsers.forEach((user: any) => {
           // Only add if not deleted
           if (user.employee_code && !deletedUserIds.includes(user.id)) {
             usersByEmployeeCode.set(user.employee_code, user)
           }
         })
-        
+
         // Also filter out deleted users from database users
         if (usersData.success && usersData.data?.users) {
           // Remove deleted users from the map
@@ -141,11 +142,11 @@ function PersonnelPageContent() {
             }
           })
         }
-        
+
         // Transform employee data, merging with user data where available
         const employeeData = employeesData.employees.map((emp: any) => {
           const matchingUser = usersByEmployeeCode.get(emp.employee_code)
-          
+
           return {
             id: emp.employee_code,
             full_name: emp.employee_name || `Employee ${emp.employee_code}`,
@@ -158,9 +159,18 @@ function PersonnelPageContent() {
             hasUserAccount: !!matchingUser
           }
         })
-        
+
+        // Sort: Active users (with account) first, then inactive. Secondary sort by ID.
+        employeeData.sort((a: Employee, b: Employee) => {
+          if (a.hasUserAccount === b.hasUserAccount) {
+            // Secondary sort by employee code (or name)
+            return (parseInt(a.employee_code || '0') - parseInt(b.employee_code || '0'))
+          }
+          return a.hasUserAccount ? -1 : 1
+        })
+
         setEmployees(employeeData)
-        
+
         // Fetch attendance for all employees
         fetchAllEmployeeAttendance(employeeData)
       }
@@ -176,7 +186,7 @@ function PersonnelPageContent() {
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
     const fromDate = firstDayOfMonth.toISOString().split('T')[0]
     const toDate = lastDayOfMonth.toISOString().split('T')[0]
-    
+
     // Calculate working days elapsed in the month (excluding weekends)
     const today = new Date()
     let workingDaysElapsed = 0
@@ -190,11 +200,11 @@ function PersonnelPageContent() {
     try {
       // Fetch all attendance data in a single API call
       const data = await apiGet(`/api/get-attendance?fromDate=${fromDate}&toDate=${toDate}`)
-      
+
       if (data.success && data.data?.allLogs) {
         const attendanceData: Record<string, any> = {}
         const allLogs = data.data.allLogs
-        
+
         // Group logs by employee code
         const logsByEmployee: Record<string, any[]> = {}
         allLogs.forEach((log: any) => {
@@ -205,7 +215,7 @@ function PersonnelPageContent() {
             logsByEmployee[log.employee_code].push(log)
           }
         })
-        
+
         // Calculate stats for each employee
         Object.entries(logsByEmployee).forEach(([employeeCode, logs]) => {
           if (logs.length > 0) {
@@ -214,7 +224,7 @@ function PersonnelPageContent() {
               const logDate = new Date(log.log_date)
               return logDate >= firstDayOfMonth && logDate <= lastDayOfMonth
             })
-            
+
             // Count only working days (Mon-Fri) from the logs
             const workingDaysPresent = monthLogs.reduce((count: number, log: any) => {
               const logDate = new Date(log.log_date)
@@ -226,7 +236,7 @@ function PersonnelPageContent() {
               }
               return count
             }, 0)
-            
+
             const uniqueDates = new Set(
               monthLogs
                 .filter((log: any) => {
@@ -237,25 +247,25 @@ function PersonnelPageContent() {
                 .map((log: any) => log.log_date?.split('T')[0])
             )
             const presentDays = uniqueDates.size
-            
+
             const lateArrivals = monthLogs.filter((log: any) => {
               const punchTime = new Date(log.log_date)
               const hour = punchTime.getHours()
               return log.punch_direction?.toLowerCase() === 'in' && hour >= 9
             }).length
-            
+
             // Check if employee came today
             const today = new Date().toISOString().split('T')[0]
             const todayPresent = monthLogs.some((log: any) => {
               const logDate = log.log_date?.split('T')[0]
               return logDate === today
             })
-            
+
             // Calculate attendance rate based on working days elapsed
-            const attendanceRate = workingDaysElapsed > 0 
+            const attendanceRate = workingDaysElapsed > 0
               ? Math.min(Math.round((presentDays / workingDaysElapsed) * 100), 100)
               : 0
-            
+
             attendanceData[employeeCode] = {
               presentDays,
               lateArrivals,
@@ -265,7 +275,7 @@ function PersonnelPageContent() {
             }
           }
         })
-        
+
         setEmployeeAttendance(attendanceData)
       }
     } catch (error) {
@@ -311,29 +321,29 @@ function PersonnelPageContent() {
 
       if (data.success && data.data?.allLogs) {
         const logs = data.data.allLogs
-        
+
         // Calculate weekly activity (last 7 days)
         const today = new Date()
         const weekActivity = [0, 0, 0, 0, 0, 0, 0] // Mon-Sun
-        
+
         logs.forEach((log: any) => {
           const logDate = new Date(log.log_date)
           const daysDiff = Math.floor((today.getTime() - logDate.getTime()) / (1000 * 60 * 60 * 24))
-          
+
           if (daysDiff >= 0 && daysDiff < 7) {
             const dayOfWeek = logDate.getDay() // 0=Sun, 1=Mon, etc
             const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Convert to Mon=0, Sun=6
             weekActivity[adjustedDay]++
           }
         })
-        
+
         setWeeklyActivity(weekActivity)
-        
+
         // Calculate stats
         const uniqueDates = new Set(logs.map((log: any) => log.log_date?.split('T')[0]))
         const presentDays = uniqueDates.size
         const totalPunches = logs.length
-        
+
         // Count late arrivals (punch IN after 9 AM)
         const lateArrivals = logs.filter((log: any) => {
           const punchTime = new Date(log.log_date)
@@ -410,22 +420,22 @@ function PersonnelPageContent() {
 
         // Create sheet data
         const sheetData: any[] = []
-        
+
         // Add employee name header
         sheetData.push([selectedEmployee.full_name.toUpperCase()])
         sheetData.push([]) // Empty row
 
         // Calculate if multi-month
-        const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 
-                            'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
+        const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+          'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
         const firstDate = new Date(startDate)
         const lastDate = new Date(endDate)
-        const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + 
-                           (lastDate.getMonth() - firstDate.getMonth())
+        const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 +
+          (lastDate.getMonth() - firstDate.getMonth())
         const isMultiMonth = monthsDiff >= 2
 
         let calendarRows: any[] = []
-        
+
         if (!isMultiMonth) {
           const monthName = monthNames[firstDate.getMonth()]
           const year = firstDate.getFullYear()
@@ -433,13 +443,13 @@ function PersonnelPageContent() {
           const lastDayOfMonth = new Date(firstDate.getFullYear(), firstDate.getMonth() + 1, 0)
           const daysInMonth = lastDayOfMonth.getDate()
           const startDayOfWeek = firstDayOfMonth.getDay()
-          
+
           calendarRows.push(['', '', `${monthName} ${year} CALENDAR`])
           calendarRows.push(['', '', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
-          
+
           let dayCounter = 1
           const weeksNeeded = Math.ceil((startDayOfWeek + daysInMonth) / 7)
-          
+
           for (let week = 0; week < weeksNeeded; week++) {
             const weekRow = ['', '']
             for (let day = 0; day < 7; day++) {
@@ -501,7 +511,7 @@ function PersonnelPageContent() {
             return logDate === date.toDateString()
           })
 
-          const sortedDateLogs = dateLogs.sort((a: any, b: any) => 
+          const sortedDateLogs = dateLogs.sort((a: any, b: any) =>
             new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
           )
 
@@ -805,131 +815,147 @@ function PersonnelPageContent() {
 
             {/* Employee Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {loading ? (
-              <div className="col-span-3 text-center py-12 text-[#95AAC9]">Loading employees...</div>
-            ) : employees.length === 0 ? (
-              <div className="col-span-3 text-center py-12 text-[#95AAC9]">No employees found</div>
-            ) : (
-              employees
-                .filter(emp => {
-                  const matchesSearch = searchQuery === '' || 
-                    emp.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    emp.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    emp.employee_code?.includes(searchQuery)
-                  const matchesDept = departmentFilter === 'all' || emp.department === departmentFilter
-                  const matchesRole = roleFilter === 'all' || emp.role === roleFilter
-                  return matchesSearch && matchesDept && matchesRole
-                })
-                .map((employee, index) => {
-                const attendance = employeeAttendance[employee.employee_code || ''] || {}
-                const attendanceRate = attendance.attendanceRate || 0
-                const statusColor = attendanceRate >= 95 ? 'text-green-600' : attendanceRate >= 85 ? 'text-yellow-600' : 'text-red-600'
-                const statusBg = attendanceRate >= 95 ? 'bg-green-50 dark:bg-green-900/20' : attendanceRate >= 85 ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-red-50 dark:bg-red-900/20'
-                
-                return (
-                <div
-                  key={employee.id}
-                  onClick={() => setSelectedEmployee(employee)}
-                  className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer"
-                >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className={`w-16 h-16 bg-gradient-to-br ${getAvatarColor(index)} rounded-full flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 shadow-md`}>
-                      {getInitials(employee.full_name)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-[#12263F] dark:text-white truncate">
-                        {employee.full_name}
-                      </h3>
-                      {employee.email ? (
-                        <p className="text-sm text-[#95AAC9] truncate">{employee.email}</p>
-                      ) : (
-                        <p className="text-sm text-[#95AAC9] italic">No user account</p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded font-medium">
-                          {employee.role || 'Employee'}
-                        </span>
-                        {employee.employee_code && (
-                          <span className="text-xs px-2 py-1 bg-gray-800 dark:bg-gray-700 text-white rounded font-medium">
-                            #{employee.employee_code}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2 pt-4 border-t border-[#E3E6F0] dark:border-gray-700">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Department:</span>
-                      <span className="text-gray-900 dark:text-white font-semibold">
-                        {employee.department || 'Not Set'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Designation:</span>
-                      <span className="text-gray-900 dark:text-white font-semibold">
-                        {employee.designation || 'Not Set'}
-                      </span>
-                    </div>
-                  </div>
+              {loading ? (
+                <div className="col-span-3 text-center py-12 text-[#95AAC9]">Loading employees...</div>
+              ) : employees.length === 0 ? (
+                <div className="col-span-3 text-center py-12 text-[#95AAC9]">No employees found</div>
+              ) : (
+                employees
+                  .filter(emp => {
+                    const matchesSearch = searchQuery === '' ||
+                      emp.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      emp.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      emp.employee_code?.includes(searchQuery)
+                    const matchesDept = departmentFilter === 'all' || emp.department === departmentFilter
+                    const matchesRole = roleFilter === 'all' || emp.role === roleFilter
+                    return matchesSearch && matchesDept && matchesRole
+                  })
+                  .sort((a, b) => {
+                    const attendanceA = employeeAttendance[a.employee_code || '']?.presentDays || 0
+                    const attendanceB = employeeAttendance[b.employee_code || '']?.presentDays || 0
 
-                  {/* Attendance Summary - This Month */}
-                  <div className="mt-4 pt-4 border-t border-[#E3E6F0] dark:border-gray-700">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wide">This Month:</div>
-                    {attendance.presentDays ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            <span className="text-gray-700 dark:text-gray-300">Present</span>
-                          </div>
-                          <span className="font-bold text-gray-900 dark:text-white">{attendance.presentDays} days</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-yellow-600" />
-                            <span className="text-gray-700 dark:text-gray-300">Late</span>
-                          </div>
-                          <span className="font-bold text-gray-900 dark:text-white">{attendance.lateArrivals} times</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-blue-600" />
-                            <span className="text-gray-700 dark:text-gray-300">Rate</span>
-                          </div>
-                          <span className={`font-bold ${statusColor}`}>{attendanceRate}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
-                          <div 
-                            className={`h-2 rounded-full transition-all ${
-                              attendanceRate >= 95 ? 'bg-gradient-to-r from-green-500 to-green-600' :
-                              attendanceRate >= 85 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
-                              'bg-gradient-to-r from-red-500 to-red-600'
-                            }`}
-                            style={{ width: `${Math.min(attendanceRate, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-2">
-                        <AlertCircle className="w-6 h-6 text-gray-400 dark:text-gray-500 mx-auto mb-1" />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">No data</p>
-                      </div>
-                    )}
-                  </div>
+                    // 1. Sort by Active This Month (has attendance)
+                    if (attendanceA > 0 && attendanceB === 0) return -1
+                    if (attendanceA === 0 && attendanceB > 0) return 1
 
-                  {/* View Details Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedEmployee(employee)
-                    }}
-                    className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-                  >
-                    View Details
-                  </button>
-                </div>
-              )})
-            )}
+                    // 2. Sort by Has User Account
+                    if (a.hasUserAccount !== b.hasUserAccount) {
+                      return a.hasUserAccount ? -1 : 1
+                    }
+
+                    // 3. Sort by ID/Code
+                    return parseInt(a.employee_code || '0') - parseInt(b.employee_code || '0')
+                  })
+                  .map((employee, index) => {
+                    const attendance = employeeAttendance[employee.employee_code || ''] || {}
+                    const attendanceRate = attendance.attendanceRate || 0
+                    const statusColor = attendanceRate >= 95 ? 'text-green-600' : attendanceRate >= 85 ? 'text-yellow-600' : 'text-red-600'
+                    const statusBg = attendanceRate >= 95 ? 'bg-green-50 dark:bg-green-900/20' : attendanceRate >= 85 ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-red-50 dark:bg-red-900/20'
+
+                    return (
+                      <div
+                        key={employee.id}
+                        onClick={() => setSelectedEmployee(employee)}
+                        className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className={`w-16 h-16 bg-gradient-to-br ${getAvatarColor(index)} rounded-full flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 shadow-md`}>
+                            {getInitials(employee.full_name)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-[#12263F] dark:text-white truncate">
+                              {employee.full_name}
+                            </h3>
+                            {employee.email ? (
+                              <p className="text-sm text-[#95AAC9] truncate">{employee.email}</p>
+                            ) : (
+                              <p className="text-sm text-[#95AAC9] italic">No user account</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded font-medium">
+                                {employee.role || 'Employee'}
+                              </span>
+                              {employee.employee_code && (
+                                <span className="text-xs px-2 py-1 bg-gray-800 dark:bg-gray-700 text-white rounded font-medium">
+                                  #{employee.employee_code}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2 pt-4 border-t border-[#E3E6F0] dark:border-gray-700">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">Department:</span>
+                            <span className="text-gray-900 dark:text-white font-semibold">
+                              {employee.department || 'Not Set'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">Designation:</span>
+                            <span className="text-gray-900 dark:text-white font-semibold">
+                              {employee.designation || 'Not Set'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Attendance Summary - This Month */}
+                        <div className="mt-4 pt-4 border-t border-[#E3E6F0] dark:border-gray-700">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wide">This Month:</div>
+                          {attendance.presentDays ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                  <span className="text-gray-700 dark:text-gray-300">Present</span>
+                                </div>
+                                <span className="font-bold text-gray-900 dark:text-white">{attendance.presentDays} days</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-yellow-600" />
+                                  <span className="text-gray-700 dark:text-gray-300">Late</span>
+                                </div>
+                                <span className="font-bold text-gray-900 dark:text-white">{attendance.lateArrivals} times</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <TrendingUp className="w-4 h-4 text-blue-600" />
+                                  <span className="text-gray-700 dark:text-gray-300">Rate</span>
+                                </div>
+                                <span className={`font-bold ${statusColor}`}>{attendanceRate}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                                <div
+                                  className={`h-2 rounded-full transition-all ${attendanceRate >= 95 ? 'bg-gradient-to-r from-green-500 to-green-600' :
+                                    attendanceRate >= 85 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                                      'bg-gradient-to-r from-red-500 to-red-600'
+                                    }`}
+                                  style={{ width: `${Math.min(attendanceRate, 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-2">
+                              <AlertCircle className="w-6 h-6 text-gray-400 dark:text-gray-500 mx-auto mb-1" />
+                              <p className="text-xs text-gray-500 dark:text-gray-400">No data</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* View Details Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedEmployee(employee)
+                          }}
+                          className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    )
+                  })
+              )}
             </div>
           </>
         ) : (
@@ -951,7 +977,7 @@ function PersonnelPageContent() {
                   Export Excel
                 </button>
               </div>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-8">
                 {/* Left: Employee Info */}
                 <div className="lg:col-span-7 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
@@ -992,22 +1018,22 @@ function PersonnelPageContent() {
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* Weekly Chart - Only show days with data */}
                   <div className="flex items-end justify-center gap-2 sm:gap-3 h-20 sm:h-24">
                     {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => {
                       const punchCount = weeklyActivity[index] || 0
-                      
+
                       // Skip days with no data
                       if (punchCount === 0) return null
-                      
+
                       const maxPunches = Math.max(...weeklyActivity, 1)
                       const height = (punchCount / maxPunches) * 100
-                      
+
                       return (
                         <div key={`${day}-${index}`} className="flex flex-col items-center gap-1 sm:gap-1.5">
                           <div className="relative w-8 sm:w-10 flex items-end" style={{ height: '60px' }}>
-                            <div 
+                            <div
                               className="w-full bg-gradient-to-t from-gray-600 to-gray-500 rounded-t relative group cursor-pointer hover:from-blue-600 hover:to-blue-500 transition-all"
                               style={{ height: `${Math.max(height, 25)}%` }}
                             >
@@ -1044,11 +1070,10 @@ function PersonnelPageContent() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap transition-colors relative ${
-                      activeTab === tab.id
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
+                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap transition-colors relative ${activeTab === tab.id
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
                   >
                     {tab.label}
                     {activeTab === tab.id && (
@@ -1066,184 +1091,184 @@ function PersonnelPageContent() {
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 rounded-xl p-3 sm:p-4 md:p-6 border border-gray-200 dark:border-gray-700">
                       <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 text-center">NOVEMBER 2025 ATTENDANCE</h3>
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-                {/* Days Present Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700">
-                  <div className="text-center">
-                    <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-blue-600 dark:text-blue-400 mb-1 sm:mb-2">
-                      {loadingStats ? '...' : attendanceStats.presentDays}
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Days</div>
-                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">Present</div>
-                  </div>
-                </div>
+                        {/* Days Present Card */}
+                        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700">
+                          <div className="text-center">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-blue-600 dark:text-blue-400 mb-1 sm:mb-2">
+                              {loadingStats ? '...' : attendanceStats.presentDays}
+                            </div>
+                            <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Days</div>
+                            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">Present</div>
+                          </div>
+                        </div>
 
-                {/* Attendance Rate Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700">
-                  <div className="text-center">
-                    <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-green-600 dark:text-green-400 mb-1 sm:mb-2">
-                      {loadingStats ? '...' : employeeAttendance[selectedEmployee.employee_code || '']?.attendanceRate || 0}%
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Rate</div>
-                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">Attendance</div>
-                  </div>
-                </div>
+                        {/* Attendance Rate Card */}
+                        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700">
+                          <div className="text-center">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-green-600 dark:text-green-400 mb-1 sm:mb-2">
+                              {loadingStats ? '...' : employeeAttendance[selectedEmployee.employee_code || '']?.attendanceRate || 0}%
+                            </div>
+                            <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Rate</div>
+                            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">Attendance</div>
+                          </div>
+                        </div>
 
-                {/* Late Arrivals Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700">
-                  <div className="text-center">
-                    <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-orange-600 dark:text-orange-400 mb-1 sm:mb-2">
-                      {loadingStats ? '...' : attendanceStats.lateArrivals}
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Late</div>
-                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">Arrivals</div>
-                  </div>
-                </div>
+                        {/* Late Arrivals Card */}
+                        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700">
+                          <div className="text-center">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-orange-600 dark:text-orange-400 mb-1 sm:mb-2">
+                              {loadingStats ? '...' : attendanceStats.lateArrivals}
+                            </div>
+                            <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Late</div>
+                            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">Arrivals</div>
+                          </div>
+                        </div>
 
-                {/* Total Punches Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700">
-                  <div className="text-center">
-                    <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-purple-600 dark:text-purple-400 mb-1 sm:mb-2">
-                      {loadingStats ? '...' : attendanceStats.totalPunches}
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Punches</div>
-                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">Total</div>
-                  </div>
-                </div>
+                        {/* Total Punches Card */}
+                        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700">
+                          <div className="text-center">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-purple-600 dark:text-purple-400 mb-1 sm:mb-2">
+                              {loadingStats ? '...' : attendanceStats.totalPunches}
+                            </div>
+                            <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Punches</div>
+                            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">Total</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
                     {/* Attendance Chart */}
-              <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg p-3 sm:p-4 md:p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold text-[#12263F] dark:text-white">Attendance Summary</h3>
-                    <p className="text-xs sm:text-sm text-[#95AAC9]">Monthly attendance tracking and performance</p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowDateDropdown(!showDateDropdown)}
-                        className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm text-[#12263F] dark:text-white w-full sm:w-auto"
-                      >
-                        <Calendar className="w-4 h-4" />
-                        {getDateRangeLabel()}
-                      </button>
-                      {showDateDropdown && (
-                        <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg shadow-lg z-10 w-48">
-                          {['today', 'yesterday', 'week', 'prev-week', 'month', 'prev-month', 'quarter', 'prev-quarter', 'year', 'prev-year'].map((range) => (
+                    <div className="bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg p-3 sm:p-4 md:p-6">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                        <div>
+                          <h3 className="text-base sm:text-lg font-semibold text-[#12263F] dark:text-white">Attendance Summary</h3>
+                          <p className="text-xs sm:text-sm text-[#95AAC9]">Monthly attendance tracking and performance</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                          <div className="relative">
                             <button
-                              key={range}
-                              onClick={() => {
-                                setExportDateRange(range)
-                                setShowDateDropdown(false)
-                              }}
-                              className="w-full text-left px-4 py-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 text-sm text-[#12263F] dark:text-white"
+                              onClick={() => setShowDateDropdown(!showDateDropdown)}
+                              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded hover:bg-[#F8F9FC] dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm text-[#12263F] dark:text-white w-full sm:w-auto"
                             >
-                              {getDateRangeLabel().replace(getDateRangeLabel(), 
-                                range === 'today' ? 'Today' :
-                                range === 'yesterday' ? 'Yesterday' :
-                                range === 'week' ? 'This Week' :
-                                range === 'prev-week' ? 'Previous Week' :
-                                range === 'month' ? 'This Month' :
-                                range === 'prev-month' ? 'Previous Month' :
-                                range === 'quarter' ? 'This Quarter' :
-                                range === 'prev-quarter' ? 'Previous Quarter' :
-                                range === 'year' ? 'This Year' :
-                                'Previous Year'
-                              )}
+                              <Calendar className="w-4 h-4" />
+                              {getDateRangeLabel()}
                             </button>
-                          ))}
+                            {showDateDropdown && (
+                              <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded-lg shadow-lg z-10 w-48">
+                                {['today', 'yesterday', 'week', 'prev-week', 'month', 'prev-month', 'quarter', 'prev-quarter', 'year', 'prev-year'].map((range) => (
+                                  <button
+                                    key={range}
+                                    onClick={() => {
+                                      setExportDateRange(range)
+                                      setShowDateDropdown(false)
+                                    }}
+                                    className="w-full text-left px-4 py-2 hover:bg-[#F8F9FC] dark:hover:bg-gray-800 text-sm text-[#12263F] dark:text-white"
+                                  >
+                                    {getDateRangeLabel().replace(getDateRangeLabel(),
+                                      range === 'today' ? 'Today' :
+                                        range === 'yesterday' ? 'Yesterday' :
+                                          range === 'week' ? 'This Week' :
+                                            range === 'prev-week' ? 'Previous Week' :
+                                              range === 'month' ? 'This Month' :
+                                                range === 'prev-month' ? 'Previous Month' :
+                                                  range === 'quarter' ? 'This Quarter' :
+                                                    range === 'prev-quarter' ? 'Previous Quarter' :
+                                                      range === 'year' ? 'This Year' :
+                                                        'Previous Year'
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={downloadAttendanceExcel}
+                            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs sm:text-sm w-full sm:w-auto"
+                          >
+                            <Download className="w-4 h-4" />
+                            Export Excel
+                          </button>
+                        </div>
+                      </div>
+
+                      {loadingStats ? (
+                        <div className="flex items-center justify-center h-64">
+                          <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2C7BE5] mx-auto mb-4"></div>
+                            <p className="text-[#95AAC9]">Loading attendance data...</p>
+                          </div>
+                        </div>
+                      ) : attendanceStats.totalPunches > 0 ? (
+                        <div className="space-y-4 sm:space-y-6">
+                          {/* Visual Progress Bars */}
+                          <div className="space-y-3 sm:space-y-4">
+                            <div>
+                              <div className="flex justify-between text-xs sm:text-sm mb-1.5 sm:mb-2">
+                                <span className="text-[#12263F] dark:text-white font-medium">Attendance Rate</span>
+                                <span className="text-green-600 font-bold">
+                                  {Math.round((attendanceStats.presentDays / 30) * 100)}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                                <div
+                                  className="bg-gradient-to-r from-green-500 to-green-600 h-2 sm:h-3 rounded-full transition-all"
+                                  style={{ width: `${Math.min((attendanceStats.presentDays / 30) * 100, 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between text-xs sm:text-sm mb-1.5 sm:mb-2">
+                                <span className="text-[#12263F] dark:text-white font-medium">Punctuality Score</span>
+                                <span className="text-blue-600 font-bold">
+                                  {attendanceStats.presentDays > 0
+                                    ? Math.round(((attendanceStats.presentDays - attendanceStats.lateArrivals) / attendanceStats.presentDays) * 100)
+                                    : 0
+                                  }%
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 sm:h-3">
+                                <div
+                                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 sm:h-3 rounded-full transition-all"
+                                  style={{
+                                    width: `${attendanceStats.presentDays > 0
+                                      ? ((attendanceStats.presentDays - attendanceStats.lateArrivals) / attendanceStats.presentDays) * 100
+                                      : 0
+                                      }%`
+                                  }}
+                                ></div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Summary Stats Grid */}
+                          <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 pt-3 sm:pt-4 border-t border-[#E3E6F0] dark:border-gray-700">
+                            <div className="text-center p-2 sm:p-3 md:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                              <div className="text-xl sm:text-2xl font-bold text-green-600">{attendanceStats.presentDays}</div>
+                              <div className="text-[10px] sm:text-xs text-[#95AAC9] mt-0.5 sm:mt-1">Days Worked</div>
+                            </div>
+                            <div className="text-center p-2 sm:p-3 md:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                              <div className="text-xl sm:text-2xl font-bold text-yellow-600">{attendanceStats.lateArrivals}</div>
+                              <div className="text-[10px] sm:text-xs text-[#95AAC9] mt-0.5 sm:mt-1">Late Days</div>
+                            </div>
+                            <div className="text-center p-2 sm:p-3 md:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                              <div className="text-xl sm:text-2xl font-bold text-blue-600">
+                                {attendanceStats.presentDays - attendanceStats.lateArrivals}
+                              </div>
+                              <div className="text-[10px] sm:text-xs text-[#95AAC9] mt-0.5 sm:mt-1">On-Time Days</div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-64">
+                          <div className="text-center">
+                            <User className="w-16 h-16 text-[#95AAC9] mx-auto mb-4" />
+                            <h4 className="text-lg font-medium text-[#12263F] dark:text-white">No Attendance Data</h4>
+                            <p className="text-sm text-[#95AAC9]">No attendance records found for this month</p>
+                          </div>
                         </div>
                       )}
                     </div>
-                    <button
-                      onClick={downloadAttendanceExcel}
-                      className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs sm:text-sm w-full sm:w-auto"
-                    >
-                      <Download className="w-4 h-4" />
-                      Export Excel
-                    </button>
-                  </div>
-                </div>
-                
-                {loadingStats ? (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2C7BE5] mx-auto mb-4"></div>
-                      <p className="text-[#95AAC9]">Loading attendance data...</p>
-                    </div>
-                  </div>
-                ) : attendanceStats.totalPunches > 0 ? (
-                  <div className="space-y-4 sm:space-y-6">
-                    {/* Visual Progress Bars */}
-                    <div className="space-y-3 sm:space-y-4">
-                      <div>
-                        <div className="flex justify-between text-xs sm:text-sm mb-1.5 sm:mb-2">
-                          <span className="text-[#12263F] dark:text-white font-medium">Attendance Rate</span>
-                          <span className="text-green-600 font-bold">
-                            {Math.round((attendanceStats.presentDays / 30) * 100)}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                          <div 
-                            className="bg-gradient-to-r from-green-500 to-green-600 h-2 sm:h-3 rounded-full transition-all"
-                            style={{ width: `${Math.min((attendanceStats.presentDays / 30) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between text-xs sm:text-sm mb-1.5 sm:mb-2">
-                          <span className="text-[#12263F] dark:text-white font-medium">Punctuality Score</span>
-                          <span className="text-blue-600 font-bold">
-                            {attendanceStats.presentDays > 0 
-                              ? Math.round(((attendanceStats.presentDays - attendanceStats.lateArrivals) / attendanceStats.presentDays) * 100)
-                              : 0
-                            }%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 sm:h-3">
-                          <div 
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 sm:h-3 rounded-full transition-all"
-                            style={{ 
-                              width: `${attendanceStats.presentDays > 0 
-                                ? ((attendanceStats.presentDays - attendanceStats.lateArrivals) / attendanceStats.presentDays) * 100
-                                : 0
-                              }%` 
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Summary Stats Grid */}
-                    <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 pt-3 sm:pt-4 border-t border-[#E3E6F0] dark:border-gray-700">
-                      <div className="text-center p-2 sm:p-3 md:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                        <div className="text-xl sm:text-2xl font-bold text-green-600">{attendanceStats.presentDays}</div>
-                        <div className="text-[10px] sm:text-xs text-[#95AAC9] mt-0.5 sm:mt-1">Days Worked</div>
-                      </div>
-                      <div className="text-center p-2 sm:p-3 md:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                        <div className="text-xl sm:text-2xl font-bold text-yellow-600">{attendanceStats.lateArrivals}</div>
-                        <div className="text-[10px] sm:text-xs text-[#95AAC9] mt-0.5 sm:mt-1">Late Days</div>
-                      </div>
-                      <div className="text-center p-2 sm:p-3 md:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                          {attendanceStats.presentDays - attendanceStats.lateArrivals}
-                        </div>
-                        <div className="text-[10px] sm:text-xs text-[#95AAC9] mt-0.5 sm:mt-1">On-Time Days</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                      <User className="w-16 h-16 text-[#95AAC9] mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-[#12263F] dark:text-white">No Attendance Data</h4>
-                      <p className="text-sm text-[#95AAC9]">No attendance records found for this month</p>
-                    </div>
-                  </div>
-                )}
-              </div>
 
                   </div>
                 )}
@@ -1251,7 +1276,7 @@ function PersonnelPageContent() {
                 {activeTab === 'activity' && (
                   <div>
                     {/* Recent Attendance Records */}
-                    <RecentAttendanceRecords 
+                    <RecentAttendanceRecords
                       employeeCode={selectedEmployee.employee_code || ''}
                       employeeName={selectedEmployee.full_name}
                       dateRange={exportDateRange}
@@ -1261,42 +1286,42 @@ function PersonnelPageContent() {
                 )}
 
                 {activeTab === 'calendar' && (
-                  <CalendarTab 
+                  <CalendarTab
                     employeeCode={selectedEmployee.employee_code || ''}
                     employeeName={selectedEmployee.full_name}
                   />
                 )}
 
                 {activeTab === 'gamification' && (
-                  <GamificationTab 
+                  <GamificationTab
                     employeeCode={selectedEmployee.employee_code || ''}
                     employeeName={selectedEmployee.full_name}
                   />
                 )}
 
                 {activeTab === 'celebrations' && (
-                  <CelebrationsTab 
+                  <CelebrationsTab
                     employeeCode={selectedEmployee.employee_code || ''}
                     employeeName={selectedEmployee.full_name}
                   />
                 )}
 
                 {activeTab === 'shift-leave' && (
-                  <ShiftLeaveTab 
+                  <ShiftLeaveTab
                     employeeCode={selectedEmployee.employee_code || ''}
                     employeeName={selectedEmployee.full_name}
                   />
                 )}
 
                 {activeTab === 'analytics' && (
-                  <AnalyticsTab 
+                  <AnalyticsTab
                     employeeCode={selectedEmployee.employee_code || ''}
                     employeeName={selectedEmployee.full_name}
                   />
                 )}
 
                 {activeTab === 'security' && (
-                  <AuditSecurityTab 
+                  <AuditSecurityTab
                     employeeCode={selectedEmployee.employee_code || ''}
                     employeeName={selectedEmployee.full_name}
                   />
@@ -1311,7 +1336,7 @@ function PersonnelPageContent() {
                 )}
 
                 {activeTab === 'reports' && (
-                  <ReportsTab 
+                  <ReportsTab
                     employeeCode={selectedEmployee.employee_code || ''}
                     employeeName={selectedEmployee.full_name}
                   />

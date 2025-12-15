@@ -16,7 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   userEmail: string | null
   userRole: string | null
-  user: { role: string | null; email: string | null } | null
+  user: { id: string | null; role: string | null; email: string | null } | null
   userPermissions: Record<string, PermissionModule>
   hasPermission: (moduleKey: string, itemKey: string, action?: string) => boolean
   hasPermissionCode: (permissionCode: string) => boolean
@@ -32,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userPermissions, setUserPermissions] = useState<Record<string, PermissionModule>>({})
   const [isLoading, setIsLoading] = useState(true)
@@ -46,70 +47,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('role, standalone_attendance')
         .eq('id', userId)
         .single()
-      
+
       if (profileError || !profile) {
         // Don't block - set defaults and continue
         setUserRole('User')
         setUserPermissions({})
         return
       }
-      
+
       setUserRole(profile.role)
-      
+
       // Super Admin gets all permissions
       if (profile.role === 'Super Admin' || profile.role === 'super_admin') {
         setUserPermissions({}) // Empty object = all permissions for Super Admin
         return
       }
-      
+
       // Fetch role's permissions_json from roles table
       const { data: roleData, error: roleError } = await supabase
         .from('roles')
         .select('permissions_json')
         .eq('name', profile.role)
         .single()
-      
+
       if (roleError) {
         // Don't block - set empty permissions and continue
         setUserPermissions({})
         return
       }
-      
+
       if (roleData?.permissions_json) {
         setUserPermissions(roleData.permissions_json)
       } else {
         setUserPermissions({})
       }
-      
+
     } catch (error) {
       setUserPermissions({})
     }
   }
-  
+
   // Helper function to check if user has a permission (legacy format)
   const hasPermission = (moduleKey: string, itemKey: string, action: string = 'view'): boolean => {
     // Super Admin has ALL permissions
     if (userRole === 'Super Admin' || userRole === 'super_admin') {
       return true
     }
-    
+
     // Check if module exists
     if (!userPermissions || !userPermissions[moduleKey]) {
       return false
     }
-    
+
     const module = userPermissions[moduleKey]
     const item = module.items?.[itemKey]
-    
+
     if (!item) {
       return false
     }
-    
+
     // Full permission grants all actions
     if (item.full === true) {
       return true
     }
-    
+
     // Check specific action
     return item[action] === true
   }
@@ -142,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Function to refresh user permissions (for real-time updates)
   const refreshPermissions = async () => {
     if (!isAuthenticated) return
-    
+
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user?.id) {
@@ -161,17 +162,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        
+
         if (session?.user) {
           setIsAuthenticated(true)
           setUserEmail(session.user.email || "")
+          setUserId(session.user.id)
           localStorage.setItem('isAuthenticated', 'true')
           localStorage.setItem('userEmail', session.user.email || "")
-          
-          // Fetch user profile and permissions (don't await - load in background)
-          fetchUserProfile(session.user.id).catch(err => {
-            console.error('Background profile fetch failed:', err)
-          })
+          localStorage.setItem('userId', session.user.id)
+          localStorage.setItem('userId', session.user.id)
+
+          // Fetch user profile and permissions
+          await fetchUserProfile(session.user.id)
         } else {
           // Clear any stale local storage if no valid session
           localStorage.removeItem('isAuthenticated')
@@ -179,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('sb-sxnaopzgaddvziplrlbe-auth-token')
           setIsAuthenticated(false)
           setUserEmail(null)
+          setUserId(null)
         }
       } catch (error) {
         // Clear everything on error
@@ -197,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT' || !session) {
         setIsAuthenticated(false)
         setUserEmail(null)
+        setUserId(null)
         setUserRole(null)
         setUserPermissions({})
         localStorage.removeItem('isAuthenticated')
@@ -205,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (event === 'SIGNED_IN' && session) {
         setIsAuthenticated(true)
         setUserEmail(session.user?.email || null)
+        setUserId(session.user?.id || null)
         localStorage.setItem('isAuthenticated', 'true')
         localStorage.setItem('userEmail', session.user?.email || '')
         // Fetch user profile and permissions on sign in (don't await)
@@ -231,13 +236,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.user) {
         setIsAuthenticated(true)
         setUserEmail(data.user.email || "")
+        setUserId(data.user.id)
         localStorage.setItem('isAuthenticated', 'true')
         localStorage.setItem('userEmail', data.user.email || email)
-        
-        // Fetch user profile and permissions (don't await - load in background)
-        fetchUserProfile(data.user.id).catch(err => {
-          console.error('Background profile fetch failed:', err)
-        })
+        localStorage.setItem('userId', data.user.id)
+
+        // Fetch user profile and permissions
+        await fetchUserProfile(data.user.id)
       }
     } catch (error: any) {
       throw error
@@ -248,21 +253,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Clear Supabase session
       await supabase.auth.signOut()
-      
+
       // Clear all localStorage
       localStorage.removeItem('isAuthenticated')
       localStorage.removeItem('userEmail')
       localStorage.removeItem('sb-sxnaopzgaddvziplrlbe-auth-token') // Clear Supabase token
-      
+
       // Clear session storage
       sessionStorage.clear()
-      
+
       // Reset state
       setIsAuthenticated(false)
       setUserEmail(null)
       setUserRole(null)
       setUserPermissions({})
-      
+
       // Force redirect to auth page
       router.push('/auth')
       router.refresh() // Force refresh to clear any cached data
@@ -297,7 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated,
       userEmail,
       userRole,
-      user: { role: userRole, email: userEmail },
+      user: { id: userId, role: userRole, email: userEmail },
       userPermissions,
       hasPermission,
       hasPermissionCode,

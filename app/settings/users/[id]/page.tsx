@@ -34,7 +34,10 @@ const SYSTEM_FUNCTIONS = [
   { id: 'standalone_attendance', label: 'Standalone Attendance', description: 'Access the dedicated attendance website with same credentials.' },
   { id: 'production', label: 'Production (Coming Soon)', description: 'Early toggle for upcoming production workflow screens.' },
   { id: 'monitoring', label: 'Monitoring (Coming Soon)', description: 'Early toggle for upcoming monitoring dashboards.' },
-  { id: 'manage_users', label: 'Manage Users & Security', description: 'Create users, assign roles, view audit logs, and impersonate accounts.' }
+  { id: 'manage_users', label: 'Manage Users & Security', description: 'Create users, assign roles, view audit logs, and impersonate accounts.' },
+  { id: 'shift_management', label: 'Shift Management', description: 'Manage shifts, assign employees, and view rosters.' },
+  { id: 'leave_management', label: 'Leave Management', description: 'Manage employee leave requests and approvals.' },
+  { id: 'device_monitor', label: 'Device Monitor', description: 'Monitor production device status and health.' }
 ]
 
 export default function UserDetailPage() {
@@ -60,14 +63,14 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     let isMounted = true
-    
+
     const loadUser = async () => {
       if (!userId || !isMounted) return
-      
+
       setLoading(true)
       try {
         const data = await apiGet(`/api/admin/users/${userId}`)
-        
+
         if (isMounted && data.success) {
           setUser(data.data)
           setSelectedRole(data.data.role)
@@ -82,11 +85,11 @@ export default function UserDetailPage() {
         }
       }
     }
-    
+
     if (userId) {
       loadUser()
     }
-    
+
     return () => {
       isMounted = false
     }
@@ -102,7 +105,7 @@ export default function UserDetailPage() {
     setLoadingActivity(true)
     try {
       const data = await apiGet(`/api/admin/user-activity-logs/${userId}`)
-      
+
       if (data.success) {
         setActivityLogs(data.logs || [])
       }
@@ -115,7 +118,7 @@ export default function UserDetailPage() {
   const fetchUser = async () => {
     try {
       const data = await apiGet('/api/admin/users')
-      
+
       if (data.success) {
         const foundUser = data.data.users.find((u: any) => u.id === userId)
         if (foundUser) {
@@ -125,28 +128,28 @@ export default function UserDetailPage() {
           setEditedEmployeeCode(foundUser.employee_code || '')
           setEditedDepartment(foundUser.department || '')
           setEditedDesignation(foundUser.designation || '')
-          
+
           // Load actual permissions from user data
           // Permissions are role-based, but we can show what they have access to
           const userPermissions: string[] = []
-          
+
           // All users get dashboard
           userPermissions.push('dashboard')
-          
+
           // Role-based permissions
           if (foundUser.role === 'Admin') {
-            userPermissions.push('schedule_generator', 'schedule_generator_dashboard', 'chart', 'analytics', 'attendance', 'manage_users')
+            userPermissions.push('schedule_generator', 'schedule_generator_dashboard', 'chart', 'analytics', 'attendance', 'manage_users', 'shift_management', 'leave_management', 'device_monitor')
           } else if (foundUser.role === 'Operator') {
             userPermissions.push('schedule_generator', 'attendance')
           } else if (foundUser.role === 'Test User') {
             userPermissions.push('chart', 'analytics', 'attendance')
           }
-          
+
           // Add standalone attendance if enabled
           if (foundUser.standalone_attendance === 'YES') {
             userPermissions.push('standalone_attendance')
           }
-          
+
           setPermissions(userPermissions)
         }
       }
@@ -157,8 +160,8 @@ export default function UserDetailPage() {
   }
 
   const togglePermission = (permId: string) => {
-    setPermissions(prev => 
-      prev.includes(permId) 
+    setPermissions(prev =>
+      prev.includes(permId)
         ? prev.filter(p => p !== permId)
         : [...prev, permId]
     )
@@ -166,10 +169,10 @@ export default function UserDetailPage() {
 
   const handleSaveChanges = async () => {
     try {
-      
+
       // Determine standalone_attendance based on permissions
       const standalone_attendance = permissions.includes('standalone_attendance') ? 'YES' : 'NO'
-      
+
       const data = await apiPost('/api/admin/update-user-permissions', {
         userId: user?.id,
         permissions,
@@ -344,11 +347,10 @@ export default function UserDetailPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
-                className={`px-4 py-3 text-sm font-medium capitalize ${
-                  activeTab === tab
-                    ? 'text-[#2C7BE5] border-b-2 border-[#2C7BE5]'
-                    : 'text-[#95AAC9] hover:text-[#12263F] dark:hover:text-white'
-                }`}
+                className={`px-4 py-3 text-sm font-medium capitalize ${activeTab === tab
+                  ? 'text-[#2C7BE5] border-b-2 border-[#2C7BE5]'
+                  : 'text-[#95AAC9] hover:text-[#12263F] dark:hover:text-white'
+                  }`}
               >
                 {tab}
               </button>
@@ -500,7 +502,7 @@ export default function UserDetailPage() {
                 }}
                 onSave={handleSaveChanges}
               />
-              
+
               <PermissionsDisplay
                 role={selectedRole || user?.role || 'Operator'}
                 standaloneAttendance={permissions.includes('standalone_attendance')}
@@ -521,7 +523,7 @@ export default function UserDetailPage() {
             <div className="col-span-12 bg-white dark:bg-gray-900 border border-[#E3E6F0] dark:border-gray-700 rounded p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-[#12263F] dark:text-white">Recent Activity</h3>
-                <button 
+                <button
                   onClick={fetchActivityLogs}
                   disabled={loadingActivity}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#2C7BE5] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors disabled:opacity-50"
@@ -539,13 +541,12 @@ export default function UserDetailPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-1 text-xs font-medium rounded ${
-                              log.action === 'user_deletion' ? 'bg-red-100 text-red-700' :
+                            <span className={`px-2 py-1 text-xs font-medium rounded ${log.action === 'user_deletion' ? 'bg-red-100 text-red-700' :
                               log.action === 'permission_grant' ? 'bg-green-100 text-green-700' :
-                              log.action === 'permission_revoke' ? 'bg-orange-100 text-orange-700' :
-                              log.action === 'role_change' ? 'bg-blue-100 text-blue-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
+                                log.action === 'permission_revoke' ? 'bg-orange-100 text-orange-700' :
+                                  log.action === 'role_change' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-gray-100 text-gray-700'
+                              }`}>
                               {log.action.replace('_', ' ')}
                             </span>
                             <span className="text-xs text-[#95AAC9]">
