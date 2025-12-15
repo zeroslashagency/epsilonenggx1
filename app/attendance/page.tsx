@@ -51,7 +51,7 @@ function AttendancePageContent() {
   const [manualSyncing, setManualSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [showDateDropdown, setShowDateDropdown] = useState(false)
-  const [allEmployees, setAllEmployees] = useState<Array<{ code: string, name: string }>>([])
+  const [allEmployees, setAllEmployees] = useState<Array<{ code: string, name: string, status?: string }>>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false)
   const [todayError, setTodayError] = useState<string | null>(null)
@@ -265,7 +265,8 @@ function AttendancePageContent() {
             .filter((emp: any) => emp.employee_code)
             .map((emp: any) => ({
               code: emp.employee_code,
-              name: emp.employee_name || `Employee ${emp.employee_code}`
+              name: emp.employee_name || `Employee ${emp.employee_code}`,
+              status: emp.status // Capture status
             }))
           setAllEmployees(employees)
           setSelectedEmployees(employees.map((e: any) => e.code))
@@ -280,6 +281,9 @@ function AttendancePageContent() {
     await loadEmployees()
     return () => { isMounted = false }
   }
+
+  // Export filter state
+  const [exportFilter, setExportFilter] = useState<'active' | 'all'>('active')
 
   // Load today's data on mount and set up auto-refresh
   useEffect(() => {
@@ -416,7 +420,21 @@ function AttendancePageContent() {
       const startDate = new Date(fromDateStr)
       const endDate = new Date(toDateStr)
 
-      const filteredLogs = dataSource.allLogs
+      // Filter by Active Status if needed
+      let filteredLogs = dataSource.allLogs
+
+      if (exportFilter === 'active') {
+        filteredLogs = filteredLogs.filter((log: any) => {
+          const emp = allEmployees.find(e => e.code === log.employee_code)
+          return emp?.status?.toLowerCase() === 'active'
+        })
+      }
+
+      if (filteredLogs.length === 0) {
+        alert('No logs found for Active employees.')
+        return
+      }
+
       generateExcelFile(filteredLogs, startDate, endDate)
       return
     }
@@ -435,13 +453,21 @@ function AttendancePageContent() {
     const endDate = new Date(toDateStr)
 
     // Filter logs by selected employees (if all employees selected, show all)
-    const filteredLogs = dataSource.allLogs.filter((log: any) =>
+    let filteredLogs = dataSource.allLogs.filter((log: any) =>
       selectedEmployees.length === 0 || selectedEmployees.length === allEmployees.length || selectedEmployees.includes(log.employee_code)
     )
 
+    // Apply Active Status filter
+    if (exportFilter === 'active') {
+      filteredLogs = filteredLogs.filter((log: any) => {
+        const emp = allEmployees.find(e => e.code === log.employee_code)
+        return emp?.status?.toLowerCase() === 'active'
+      })
+    }
+
     // Check if we have any logs after filtering
     if (filteredLogs.length === 0) {
-      alert('No attendance data found for the selected date range and employees.')
+      alert('No attendance data found matching criteria.')
       return
     }
 
@@ -1503,14 +1529,26 @@ function AttendancePageContent() {
           </div>
 
           {canExportExcel && (
-            <Button
-              variant="outline"
-              className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900 dark:hover:to-blue-800 shadow-md ml-auto"
-              onClick={() => exportToExcel('today')}
-            >
-              <Download className="h-4 w-4" />
-              Export Excel
-            </Button>
+            <div className="flex items-center gap-2 ml-auto">
+              <Select value={exportFilter} onValueChange={(val: any) => setExportFilter(val)}>
+                <SelectTrigger className="w-[180px] bg-background border-border/50 font-medium shadow-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Export: Active Only</SelectItem>
+                  <SelectItem value="all">Export: All Employees</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="outline"
+                className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900 dark:hover:to-blue-800 shadow-md"
+                onClick={() => exportToExcel('today')}
+              >
+                <Download className="h-4 w-4" />
+                Export Excel
+              </Button>
+            </div>
           )}
         </div>
 
@@ -1815,14 +1853,26 @@ function AttendancePageContent() {
 
               <div className="flex items-end gap-2">
                 {canExportRecords && (
-                  <Button
-                    variant="outline"
-                    className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900 dark:hover:to-blue-800 shadow-md"
-                    onClick={() => exportToExcel('allTrack')}
-                  >
-                    <Download className="h-4 w-4" />
-                    Export Excel
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Select value={exportFilter} onValueChange={(val: any) => setExportFilter(val)}>
+                      <SelectTrigger className="w-[180px] bg-background border-border/50 font-medium shadow-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Export: Active Only</SelectItem>
+                        <SelectItem value="all">Export: All Employees</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      variant="outline"
+                      className="gap-2 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900 dark:hover:to-blue-800 shadow-md"
+                      onClick={() => exportToExcel('allTrack')}
+                    >
+                      <Download className="h-4 w-4" />
+                      Export Excel
+                    </Button>
+                  </div>
                 )}
                 <Button
                   className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
