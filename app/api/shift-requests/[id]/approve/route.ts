@@ -30,14 +30,14 @@ export async function POST(
     }
 
     // Get the shift change request
-    const { data: request, error: requestError } = await supabase
+    const { data: shiftRequest, error: requestError } = await supabase
       .from('shift_change_requests')
       .select('*')
       .eq('id', id)
       .eq('status', 'pending')
       .single()
 
-    if (requestError || !request) {
+    if (requestError || !shiftRequest) {
       return NextResponse.json(
         { success: false, error: 'Shift change request not found or already processed' },
         { status: 404 }
@@ -67,10 +67,10 @@ export async function POST(
     const { error: closeError } = await supabase
       .from('employee_shift_assignments')
       .update({ 
-        end_date: new Date(new Date(request.effective_date).getTime() - 24 * 60 * 60 * 1000)
+        end_date: new Date(new Date(shiftRequest.effective_date).getTime() - 24 * 60 * 60 * 1000)
           .toISOString().split('T')[0] 
       })
-      .eq('employee_code', request.employee_code)
+      .eq('employee_code', shiftRequest.employee_code)
       .is('end_date', null)
 
     if (closeError) {
@@ -79,12 +79,12 @@ export async function POST(
 
     // Create new assignment based on approved request
     const newAssignment = {
-      employee_code: request.employee_code,
-      assignment_type: request.assignment_type,
-      shift_template_id: request.assignment_type === 'fixed' ? request.requested_shift_id : null,
-      rotation_profile_id: request.assignment_type === 'rotation' ? request.requested_rotation_id : null,
-      start_date: request.effective_date,
-      end_date: request.end_date,
+      employee_code: shiftRequest.employee_code,
+      assignment_type: shiftRequest.assignment_type,
+      shift_template_id: shiftRequest.assignment_type === 'fixed' ? shiftRequest.requested_shift_id : null,
+      rotation_profile_id: shiftRequest.assignment_type === 'rotation' ? shiftRequest.requested_rotation_id : null,
+      start_date: shiftRequest.effective_date,
+      end_date: shiftRequest.end_date,
       created_by: user.id
     }
 
@@ -115,9 +115,9 @@ export async function POST(
         action: 'shift_change_approved',
         target_id: id,
         meta_json: {
-          employee_code: request.employee_code,
-          assignment_type: request.assignment_type,
-          effective_date: request.effective_date,
+          employee_code: shiftRequest.employee_code,
+          assignment_type: shiftRequest.assignment_type,
+          effective_date: shiftRequest.effective_date,
           comments: comments
         }
       }),
@@ -126,8 +126,8 @@ export async function POST(
         action: 'shift_assignment_created',
         target_id: assignment.id,
         meta_json: {
-          employee_code: request.employee_code,
-          assignment_type: request.assignment_type,
+          employee_code: shiftRequest.employee_code,
+          assignment_type: shiftRequest.assignment_type,
           from_request_id: id
         }
       })
@@ -137,7 +137,7 @@ export async function POST(
       success: true,
       message: 'Shift change request approved successfully',
       data: {
-        request: { ...request, status: 'approved', approved_by: user.id, approved_at: new Date().toISOString() },
+        request: { ...shiftRequest, status: 'approved', approved_by: user.id, approved_at: new Date().toISOString() },
         assignment: assignment
       }
     })
