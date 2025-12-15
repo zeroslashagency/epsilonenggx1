@@ -1,8 +1,0 @@
-{
-  "name": "Mistake Reporting System",
-  "description": "Employee error reporting, workflow approval, and remediation tracking system.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
-}
