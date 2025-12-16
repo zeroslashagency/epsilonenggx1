@@ -84,31 +84,83 @@ export async function GET(request: NextRequest) {
       
       // Find the assignment that is ACTIVE for this date
       // If multiple overlap, pick the one with the LATEST start_date, then LATEST created_at
+      // 0. FETCH HOLIDAYS (Global)
+      // Heuristic: Get the most recent active "Advanced Settings" from dashboard_data
+      // This allows the Employee View to respect the "Holiday Calendar" set by Admins.
+      const { data: settingsData } = await supabase
+        .from('dashboard_data')
+        .select('machine_data')
+        .eq('timeline_view', 'advanced_settings')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const holidays = settingsData?.[0]?.machine_data?.holidays || []
+    
+    // ... existing activeAssignment logic ...
+
       const activeAssignment = (assignments || [])
         .filter((a: any) => dateStr >= a.start_date && (!a.end_date || dateStr <= a.end_date))
         .sort((a: any, b: any) => {
-             // Priority 1: Most recently created (The "Correction" or "New Plan" principle)
+             // Priority 1: Most recently created
              if (b.created_at !== a.created_at) {
                  return b.created_at > a.created_at ? 1 : -1
              }
-             // Priority 2: Later start date (if created same time)
+             // Priority 2: Later start date
              return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
         })[0]
 
       if (!activeAssignment) continue
 
+      // 1. CHECK PUBLIC HOLIDAYS
+      // Check if current date falls within any defined public holiday
+      // Holidays are stored as ISO strings with times, we compare local dates roughly or exact overlaps
+      const isPublicHoliday = holidays.some((h: any) => {
+          const hStart = new Date(h.startDateTime).toISOString().split('T')[0]
+          const hEnd = new Date(h.endDateTime).toISOString().split('T')[0]
+          return dateStr >= hStart && dateStr <= hEnd
+      })
+
+      if (isPublicHoliday) {
+           schedule.push({
+               date: dateStr,
+               shift_name: 'Public Holiday',
+               is_off: true,
+               color: '#EF4444', // Red for holiday
+               reason: 'Holiday'
+           })
+           continue
+      }
+
       const assignment = activeAssignment
       let shiftInfo = null
 
       if (assignment.assignment_type === 'fixed' && assignment.shift_template) {
+         // FIXED SHIFT: Check Working Days
+         // Fixed patterns store work_days in pattern object: pattern: { work_days: [1,2,3,4,5] }
+         const t = assignment.shift_template
+         const workDays = t.pattern?.work_days || t.work_days || [0, 1, 2, 3, 4, 5, 6] // Default all days if missing
+         const currentDayOfWeek = new Date(dateStr).getDay() // 0 = Sunday
+
+         if (!workDays.includes(currentDayOfWeek)) {
+             // Weekly Off
+             schedule.push({
+               date: dateStr,
+               shift_name: 'Weekly Off',
+               is_off: true,
+               color: '#9CA3AF' // Gray
+             })
+             continue
+         }
+
         shiftInfo = {
           date: dateStr,
-          shift_name: assignment.shift_template.name,
-          start_time: assignment.shift_template.start_time,
-          end_time: assignment.shift_template.end_time,
-          overnight: assignment.shift_template.overnight,
-          color: assignment.shift_template.color,
-          grace_minutes: assignment.shift_template.grace_minutes
+          shift_name: t.name,
+          start_time: t.start_time,
+          end_time: t.end_time,
+          overnight: t.overnight,
+          color: t.color,
+          grace_minutes: t.grace_minutes
         }
       } else if (assignment.assignment_type === 'rotation' && assignment.shift_template) {
          const pattern = Array.isArray(assignment.shift_template.pattern) ? assignment.shift_template.pattern : []
@@ -126,6 +178,23 @@ export async function GET(request: NextRequest) {
           const source = baseShift || (weekPattern.start_time && weekPattern.end_time ? weekPattern : null)
 
           if (source) {
+               // ROTATION SHIFT: Check Working Days
+               // Rotation steps store work_days inline: { work_days: [1,2,3,4,5], ... }
+               // Use weekPattern.work_days if ad-hoc, or baseShift might NOT have it (usually ad-hoc stores it)
+               // The UI (Shift Manager) stores work_days in text for Rotations.
+               const workDays = weekPattern.work_days || [0, 1, 2, 3, 4, 5, 6]
+               const currentDayOfWeek = new Date(dateStr).getDay()
+
+               if (!workDays.includes(currentDayOfWeek)) {
+                    schedule.push({
+                       date: dateStr,
+                       shift_name: 'Weekly Off',
+                       is_off: true,
+                       color: '#9CA3AF'
+                    })
+                    continue
+               }
+
                shiftInfo = {
                 date: dateStr,
                 // For ad-hoc, use query-friendly text or the label
