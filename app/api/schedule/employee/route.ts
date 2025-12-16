@@ -119,21 +119,26 @@ export async function GET(request: NextRequest) {
          const weekIndex = Math.floor(daysDiff / 7) % weeks
          const weekPattern = pattern[weekIndex]
 
-         if (weekPattern?.shift_name) {
-            const baseShift = rotationShiftMap.get(weekPattern.shift_name)
-            if (baseShift) {
-                 shiftInfo = {
-                  date: dateStr,
-                  shift_name: baseShift.name,
-                  start_time: baseShift.start_time,
-                  end_time: baseShift.end_time,
-                  overnight: baseShift.overnight,
-                  color: baseShift.color,
-                  grace_minutes: baseShift.grace_minutes,
-                  rotation_week: weekIndex + 1
-                }
-            }
-         }
+          // Logic: Try to find a linked Base Shift first. If not found, check if the pattern itself has time data (Ad-hoc).
+          const baseShift = weekPattern.shift_name ? rotationShiftMap.get(weekPattern.shift_name) : null
+          
+          // Determine source of truth: Base Template > Ad-hoc Pattern
+          const source = baseShift || (weekPattern.start_time && weekPattern.end_time ? weekPattern : null)
+
+          if (source) {
+               shiftInfo = {
+                date: dateStr,
+                // For ad-hoc, use query-friendly text or the label
+                shift_name: baseShift ? baseShift.name : (weekPattern.shift_name || 'Shift'),
+                start_time: source.start_time,
+                end_time: source.end_time,
+                // Ad-hoc usually lacks advanced fields, use defaults
+                overnight: source.overnight || false,
+                color: source.color || '#8B5CF6', // Purple-ish default for rotations
+                grace_minutes: source.grace_minutes || 0,
+                rotation_week: weekIndex + 1
+              }
+          }
       }
 
       if (shiftInfo) schedule.push(shiftInfo)
