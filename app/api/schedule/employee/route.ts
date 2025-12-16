@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get current shift assignment for employee
-    const { data: assignment, error: assignmentError } = await supabase
+    // Fetch ALL matching assignments to handle transitions correctly
+    const { data: assignments, error: assignmentError } = await supabase
       .from('employee_shift_assignments')
       .select(`
         *,
@@ -44,78 +44,62 @@ export async function GET(request: NextRequest) {
       .eq('employee_code', employeeCode)
       .lte('start_date', toDate)
       .or(`end_date.is.null,end_date.gte.${fromDate}`)
-      .order('start_date', { ascending: false })
-      .limit(1)
-      .single()
+      .order('start_date', { ascending: true }) // Oldest first, so we can layer them if needed
 
-    if (assignmentError && assignmentError.code !== 'PGRST116') {
-      console.error('Error fetching assignment:', assignmentError)
+    if (assignmentError) {
+      console.error('Error fetching assignments:', assignmentError)
       return NextResponse.json(
-        { success: false, error: 'Failed to fetch shift assignment' },
+        { success: false, error: 'Failed to fetch shift assignments' },
         { status: 500 }
       )
     }
 
-    // If no assignment found, return empty schedule
-    if (!assignment) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          employee_code: employeeCode,
-          assignment: null,
-          schedule: []
-        }
-      })
-    }
+    // Pre-fetch rotation base shifts for ALL assignments to be safe
+    const allRotationPatterns = assignments
+      ?.filter((a: any) => a.assignment_type === 'rotation' && a.shift_template)
+      .map((a: any) => a.shift_template.pattern || [])
+      .flat() || []
+      
+    const shiftNames = Array.from(new Set(
+        allRotationPatterns.map((p: any) => p?.shift_name).filter((n: any) => !!n)
+    )) as string[]
 
-    // Prepare rotation metadata if needed
-    let rotationPattern: any[] = []
-    let rotationWeeks = 0
-    let rotationShiftMap = new Map<string, any>()
-
-    if (assignment.assignment_type === 'rotation' && assignment.shift_template) {
-      const pattern = Array.isArray(assignment.shift_template.pattern) ? assignment.shift_template.pattern : []
-      rotationPattern = pattern
-      rotationWeeks = assignment.shift_template.weeks_pattern || pattern.length || 1
-
-      const shiftNames = Array.from(new Set(
-        pattern.map((p: any) => p?.shift_name).filter((n: any) => !!n)
-      ))
-
-      if (shiftNames.length > 0) {
-        const { data: baseShifts, error: baseError } = await supabase
+    const rotationShiftMap = new Map<string, any>()
+    if (shiftNames.length > 0) {
+        const { data: baseShifts } = await supabase
           .from('shift_templates')
           .select('*')
           .in('name', shiftNames)
-
-        if (baseError) {
-          console.error('Error fetching base shifts for rotation:', baseError)
+        if (baseShifts) {
+             baseShifts.forEach((s: any) => rotationShiftMap.set(s.name, s))
         }
-
-        rotationShiftMap = new Map(
-          (baseShifts || []).map((t: any) => [t.name, t])
-        )
-      }
     }
 
-    // Generate daily schedule based on assignment type
-    const schedule = []
+    const schedule: any[] = []
     const start = new Date(fromDate)
     const end = new Date(toDate)
 
     for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
       const dateStr = date.toISOString().split('T')[0]
       
-      // Skip if before assignment start date
-      if (dateStr < assignment.start_date) continue
-      
-      // Skip if after assignment end date (if set)
-      if (assignment.end_date && dateStr > assignment.end_date) continue
+      // Find the assignment that is ACTIVE for this date
+      // If multiple overlap, pick the one with the LATEST start_date, then LATEST created_at
+      const activeAssignment = (assignments || [])
+        .filter((a: any) => dateStr >= a.start_date && (!a.end_date || dateStr <= a.end_date))
+        .sort((a: any, b: any) => {
+             // Prefer later start_date
+             const startDiff = new Date(b.start_date).getTime() - new Date(a.start_date).getTime() 
+             if (startDiff !== 0) return startDiff
+             // Prefer later created_at (id roughly)
+             return b.created_at > a.created_at ? 1 : -1
+        })[0]
 
+      if (!activeAssignment) continue
+
+      const assignment = activeAssignment
       let shiftInfo = null
 
       if (assignment.assignment_type === 'fixed' && assignment.shift_template) {
-        // Fixed shift - same every day
         shiftInfo = {
           date: dateStr,
           shift_name: assignment.shift_template.name,
@@ -125,51 +109,50 @@ export async function GET(request: NextRequest) {
           color: assignment.shift_template.color,
           grace_minutes: assignment.shift_template.grace_minutes
         }
-      } else if (assignment.assignment_type === 'rotation' && rotationPattern.length > 0 && rotationWeeks > 0) {
-        // Rotation - calculate which week we're in using rotation template pattern
-        const assignmentStart = new Date(assignment.start_date)
-        const daysDiff = Math.floor((date.getTime() - assignmentStart.getTime()) / (1000 * 60 * 60 * 24))
-        const weekIndex = Math.floor(daysDiff / 7) % rotationWeeks
-        const weekPattern = rotationPattern[weekIndex]
+      } else if (assignment.assignment_type === 'rotation' && assignment.shift_template) {
+         const pattern = Array.isArray(assignment.shift_template.pattern) ? assignment.shift_template.pattern : []
+         const weeks = assignment.shift_template.weeks_pattern || pattern.length || 1
+         
+         const assignmentStart = new Date(assignment.start_date)
+         const daysDiff = Math.floor((date.getTime() - assignmentStart.getTime()) / (1000 * 60 * 60 * 24))
+         const weekIndex = Math.floor(daysDiff / 7) % weeks
+         const weekPattern = pattern[weekIndex]
 
-        if (weekPattern && weekPattern.shift_name) {
-          const shiftTemplate = rotationShiftMap.get(weekPattern.shift_name)
-
-          if (shiftTemplate) {
-            shiftInfo = {
-              date: dateStr,
-              shift_name: shiftTemplate.name,
-              start_time: shiftTemplate.start_time,
-              end_time: shiftTemplate.end_time,
-              overnight: shiftTemplate.overnight,
-              color: shiftTemplate.color,
-              grace_minutes: shiftTemplate.grace_minutes,
-              rotation_week: weekIndex + 1
+         if (weekPattern?.shift_name) {
+            const baseShift = rotationShiftMap.get(weekPattern.shift_name)
+            if (baseShift) {
+                 shiftInfo = {
+                  date: dateStr,
+                  shift_name: baseShift.name,
+                  start_time: baseShift.start_time,
+                  end_time: baseShift.end_time,
+                  overnight: baseShift.overnight,
+                  color: baseShift.color,
+                  grace_minutes: baseShift.grace_minutes,
+                  rotation_week: weekIndex + 1
+                }
             }
-          }
-        }
+         }
       }
 
-      if (shiftInfo) {
-        schedule.push(shiftInfo)
-      }
+      if (shiftInfo) schedule.push(shiftInfo)
     }
 
     return NextResponse.json({
       success: true,
       data: {
         employee_code: employeeCode,
-        assignment: {
-          id: assignment.id,
-          type: assignment.assignment_type,
-          start_date: assignment.start_date,
-          end_date: assignment.end_date,
-          shift_template: assignment.shift_template,
-          rotation_profile: assignment.assignment_type === 'rotation' ? assignment.shift_template : null
-        },
+        // Assignment metadata is ambiguous with multiple assignments, return null or safest one
+        assignment: assignments && assignments.length > 0 ? {
+            id: assignments[0].id,
+            type: assignments[0].assignment_type,
+            start_date: assignments[0].start_date,
+            end_date: assignments[0].end_date
+        } : null,
         schedule: schedule
       }
     })
+
 
   } catch (error: any) {
     console.error('Error in employee schedule API:', error)

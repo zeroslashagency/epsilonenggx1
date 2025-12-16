@@ -184,7 +184,8 @@ export async function POST(request: NextRequest) {
               shift_end: shiftEnd,
               color: color,
               overnight: overnight,
-              grace_minutes: graceMinutes
+              grace_minutes: graceMinutes,
+              shift_id: currentShiftId
             })
           })
         }
