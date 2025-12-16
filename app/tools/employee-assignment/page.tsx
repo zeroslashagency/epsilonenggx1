@@ -464,7 +464,7 @@ function AssignmentModal({ employees, onClose, onSave }: {
 }) {
   const [selectedShift, setSelectedShift] = useState('')
   const [shiftType, setShiftType] = useState<'fixed' | 'rotation'>('fixed')
-  const [startDate, setStartDate] = useState('')
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
 
   const [shifts, setShifts] = useState<any[]>([])
   const [rotations, setRotations] = useState<any[]>([])
