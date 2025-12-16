@@ -142,12 +142,13 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         employee_code: employeeCode,
-        // Assignment metadata is ambiguous with multiple assignments, return null or safest one
+        // Return the latest assignment metadata (last in the sorted list)
         assignment: assignments && assignments.length > 0 ? {
-            id: assignments[0].id,
-            type: assignments[0].assignment_type,
-            start_date: assignments[0].start_date,
-            end_date: assignments[0].end_date
+            id: assignments[assignments.length - 1].id,
+            type: assignments[assignments.length - 1].assignment_type,
+            start_date: assignments[assignments.length - 1].start_date,
+            end_date: assignments[assignments.length - 1].end_date,
+            shift_template: assignments[assignments.length - 1].shift_template
         } : null,
         schedule: schedule
       }
