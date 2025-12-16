@@ -113,7 +113,8 @@ export default function EmployeeAssignmentPage() {
               shiftName: todayShift.shift_name,
               timeRange: `${todayShift.shift_start?.slice(0, 5)} - ${todayShift.shift_end?.slice(0, 5)}`,
               color: todayShift.color || '#3B82F6',
-              overnight: todayShift.overnight
+              overnight: todayShift.overnight,
+              shiftId: todayShift.shift_id
             }
           }
           // Priority 2: Active Assignment Template (Fallback)
@@ -124,7 +125,8 @@ export default function EmployeeAssignmentPage() {
               shiftName: t.name,
               timeRange: t.type === 'rotation' ? 'Rotating Pattern' : `${t.start_time?.slice(0, 5)} - ${t.end_time?.slice(0, 5)}`,
               color: t.color,
-              overnight: t.overnight
+              overnight: t.overnight,
+              shiftId: t.id
             }
           }
 
@@ -481,7 +483,20 @@ function AssignmentModal({ employees, onClose, onSave }: {
       setLoading(false)
     }
     fetchShifts()
+    fetchShifts()
   }, [])
+
+  // Pre-select current assignment
+  useEffect(() => {
+    if (employees.length === 1 && employees[0].currentAssignment?.shiftId) {
+      const current = employees[0].currentAssignment
+      // Only set if we haven't manually selected something yet (initial load)
+      if (!selectedShift && current.shiftId) {
+        setShiftType(current.type)
+        setSelectedShift(current.shiftId)
+      }
+    }
+  }, [employees, shifts, rotations]) // Re-run when shifts load so we can match IDs if needed
 
   const handleSave = async () => {
     try {
@@ -533,34 +548,6 @@ function AssignmentModal({ employees, onClose, onSave }: {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
-
-          {/* Current Assignment Display */}
-          {employees.length === 1 && employees[0].currentAssignment && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-              <h3 className="text-xs font-bold uppercase text-blue-600 dark:text-blue-400 tracking-wider mb-3 flex items-center gap-2">
-                <Clock className="w-3 h-3" />
-                Current Schedule
-              </h3>
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm ring-2 ring-white dark:ring-gray-900"
-                  style={{ backgroundColor: employees[0].currentAssignment.color }}
-                >
-                  <Calendar className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="font-bold text-gray-900 dark:text-white text-lg">
-                    {employees[0].currentAssignment.shiftName}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium flex items-center gap-2">
-                    <span className="font-mono">{employees[0].currentAssignment.timeRange}</span>
-                    <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-                    <span className="capitalize">{employees[0].currentAssignment.type === 'rotation' ? 'Rotating Pattern' : 'Fixed Shift'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Step 1: Shift Type */}
           <div className="space-y-3">
