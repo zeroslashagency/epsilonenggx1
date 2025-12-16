@@ -324,7 +324,10 @@ export default function EmployeeAssignmentPage() {
                     </div>
 
                     {/* Card 2: Upcoming Schedule (Real Data) */}
-                    <UpcomingScheduleWidget employeeId={selectedEmployee.code} />
+                    <UpcomingScheduleWidget
+                      employeeId={selectedEmployee.code}
+                      onViewAll={() => setShowScheduleModal(true)}
+                    />
 
                     {/* Card 3: Stats / Attendance (Simple Visual) */}
                     <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
@@ -377,7 +380,8 @@ export default function EmployeeAssignmentPage() {
   )
 }
 
-function UpcomingScheduleWidget({ employeeId }: { employeeId: string }) {
+// Update Widget definition to accept onViewAll
+function UpcomingScheduleWidget({ employeeId, onViewAll }: { employeeId: string, onViewAll: () => void }) {
   const [schedule, setSchedule] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = getSupabaseBrowserClient()
@@ -412,7 +416,7 @@ function UpcomingScheduleWidget({ employeeId }: { employeeId: string }) {
     <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Upcoming Schedule</h3>
-        <button className="text-xs text-blue-500 hover:text-blue-400 font-medium">View All</button>
+        <button onClick={onViewAll} className="text-xs text-blue-500 hover:text-blue-400 font-medium">View All</button>
       </div>
 
       <div className="space-y-4 flex-1">
@@ -424,18 +428,18 @@ function UpcomingScheduleWidget({ employeeId }: { employeeId: string }) {
           schedule.slice(0, 3).map((day, i) => {
             const date = new Date(day.date)
             return (
-              <div key={i} className="flex items-center gap-4">
+              <div key={i} onClick={onViewAll} className="flex items-center gap-4 cursor-pointer group">
                 <div className="flex flex-col items-center min-w-[3rem]">
                   <span className="text-xs text-gray-400 font-medium">{date.toLocaleDateString('en-US', { month: 'short' })}</span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">{date.getDate()}</span>
                 </div>
                 <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
-                <div className="flex-1 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
+                <div className="flex-1 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-transparent group-hover:border-gray-200 dark:group-hover:border-gray-700 transition-colors">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm text-gray-800 dark:text-gray-200 truncate pr-2">
                       {day.shift_name}
                     </span>
-                    <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                    <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0 group-hover:text-blue-500 transition-colors" />
                   </div>
                   <div className="text-xs text-gray-500">
                     {day.start_time?.slice(0, 5)} - {day.end_time?.slice(0, 5)}
