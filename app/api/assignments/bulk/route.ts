@@ -47,13 +47,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Close any existing open-ended assignments for these employees
+    // Aggressively close/invalidate ANY existing assignment that would overlap with the new one
+    // Strategy:
+    // 1. If an assignment STARTS on or after the new Start Date, DELETE it (it's entirely replaced).
+    // 2. If an assignment STARTS before but ENDS after (or is open), CLIP it to end the day before new Start Date.
+    
+    // Step 1: Delete completely overshadowed future assignments
+    const { error: deleteError } = await supabase
+      .from('employee_shift_assignments')
+      .delete()
+      .in('employee_code', employees)
+      .gte('start_date', startDate)
+    
+    if (deleteError) {
+       console.error('Error deleting future conflicting assignments:', deleteError)
+    }
+
+    // Step 2: Close overlapping open/long assignments
+    // Set End Date to (StartDate - 1 Day)
+    const yesterday = new Date(new Date(startDate).setDate(new Date(startDate).getDate() - 1)).toISOString().split('T')[0]
+    
     const { error: closeError } = await supabase
       .from('employee_shift_assignments')
-      .update({ end_date: new Date(startDate).toISOString().split('T')[0] })
+      .update({ end_date: yesterday })
       .in('employee_code', employees)
-      .is('end_date', null)
-
+      .lt('start_date', startDate) // Started before new assignment
+      .or(`end_date.is.null,end_date.gte.${startDate}`) // Intersects new assignment
+    
     if (closeError) {
       console.error('Error closing previous assignments:', closeError)
     }
