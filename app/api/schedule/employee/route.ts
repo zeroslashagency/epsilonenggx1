@@ -87,11 +87,12 @@ export async function GET(request: NextRequest) {
       const activeAssignment = (assignments || [])
         .filter((a: any) => dateStr >= a.start_date && (!a.end_date || dateStr <= a.end_date))
         .sort((a: any, b: any) => {
-             // Prefer later start_date
-             const startDiff = new Date(b.start_date).getTime() - new Date(a.start_date).getTime() 
-             if (startDiff !== 0) return startDiff
-             // Prefer later created_at (id roughly)
-             return b.created_at > a.created_at ? 1 : -1
+             // Priority 1: Most recently created (The "Correction" or "New Plan" principle)
+             if (b.created_at !== a.created_at) {
+                 return b.created_at > a.created_at ? 1 : -1
+             }
+             // Priority 2: Later start date (if created same time)
+             return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
         })[0]
 
       if (!activeAssignment) continue
