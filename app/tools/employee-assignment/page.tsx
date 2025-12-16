@@ -109,7 +109,7 @@ export default function EmployeeAssignmentPage() {
           // Priority 1: Today's Daily Schedule (Most Accurate)
           if (todayShift) {
             currentAssignment = {
-              type: 'fixed',
+              type: activeAssignment?.assignment_type || 'fixed',
               shiftName: todayShift.shift_name,
               timeRange: `${todayShift.shift_start?.slice(0, 5)} - ${todayShift.shift_end?.slice(0, 5)}`,
               color: todayShift.color || '#3B82F6',
