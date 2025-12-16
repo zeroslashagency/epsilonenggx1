@@ -465,7 +465,6 @@ function AssignmentModal({ employees, onClose, onSave }: {
   const [selectedShift, setSelectedShift] = useState('')
   const [shiftType, setShiftType] = useState<'fixed' | 'rotation'>('fixed')
   const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
 
   const [shifts, setShifts] = useState<any[]>([])
   const [rotations, setRotations] = useState<any[]>([])
@@ -513,8 +512,7 @@ function AssignmentModal({ employees, onClose, onSave }: {
           employees: employees.map(e => e.code),
           shiftType,
           shiftId: selectedShift,
-          startDate,
-          endDate
+          startDate
         })
       })
 
@@ -601,33 +599,18 @@ function AssignmentModal({ employees, onClose, onSave }: {
             </div>
           </div>
 
-          {/* Step 3: Duration */}
           <div className="space-y-3">
             <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">3. Duration</label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-500 ml-1">Start Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={e => setStartDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-500 ml-1">End Date (Optional)</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  />
-                </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-500 ml-1">Start Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
               </div>
             </div>
           </div>
