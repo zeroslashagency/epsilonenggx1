@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
     const uniqueEmployeeCodes = attendanceLogs ? 
       [...new Set(attendanceLogs.map(log => log.employee_code))] : []
     
+    // ⚡ PERFORMANCE: Employee data is mostly static, cache for 2 minutes
     return NextResponse.json({
       success: true,
       employeeMaster: employeeMaster || [],
@@ -74,6 +75,10 @@ export async function GET(request: NextRequest) {
       attendanceLogsSample: attendanceLogs?.slice(0, 10) || [],
       lastSyncTime: attendanceLogs?.[0]?.sync_timestamp || 'No data',
       timestamp: new Date().toISOString()
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300'
+      }
     })
     
   } catch (error) {

@@ -66,7 +66,13 @@ export async function GET() {
       )
     }
     
-    return NextResponse.json({ data }, { status: 200 })
+    // ⚡ PERFORMANCE: Shift templates rarely change, cache for 5 minutes
+    return NextResponse.json({ data }, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600'
+      }
+    })
     
   } catch (error) {
     console.error('API error:', error)
