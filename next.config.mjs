@@ -6,8 +6,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false, // ✅ SECURITY: Enable TypeScript checks
   },
+  // ⚡ PERFORMANCE: Enable image optimization
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      { protocol: 'https', hostname: '*.supabase.co' },
+      { protocol: 'https', hostname: 'supabase.co' },
+    ],
+    formats: ['image/avif', 'image/webp'],
   },
 
   // Disable all caching for real-time attendance data
