@@ -3,10 +3,12 @@ import { Suspense } from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css"
 import { ThemeProvider } from "./lib/contexts/theme-context"
 import { ToastProvider } from "./lib/contexts/toast-context"
 import { AuthProvider } from "./lib/contexts/auth-context"
+import { QueryProvider } from "./lib/providers/query-provider"
 import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({
@@ -44,9 +46,14 @@ export default function RootLayout({
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>
-              <Suspense fallback={null}>{children}</Suspense>
+              {/* ⚡ PERFORMANCE: React Query for caching and deduplication */}
+              <QueryProvider>
+                <Suspense fallback={null}>{children}</Suspense>
+              </QueryProvider>
               <Toaster />
               <Analytics />
+              {/* ⚡ PERFORMANCE: Speed Insights for Web Vitals monitoring */}
+              <SpeedInsights />
             </AuthProvider>
           </ToastProvider>
         </ThemeProvider>
@@ -54,3 +61,4 @@ export default function RootLayout({
     </html>
   )
 }
+
