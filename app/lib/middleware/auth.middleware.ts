@@ -185,9 +185,7 @@ export async function hasPermission(user: User, permission: string): Promise<boo
 
     if (userRoles && userRoles.length > 0) {
       roleIds = userRoles.map(ur => ur.role_id)
-      console.log(`[Auth] Found role IDs in user_roles: ${roleIds.join(', ')}`)
     } else {
-      console.log(`[Auth] No roles in user_roles for user ${user.id}. Checking profile role: ${user.role}`)
       // Fallback: Get role ID from roles table using user.role from profile
       const { data: roleData } = await supabase
         .from('roles')
@@ -197,9 +195,7 @@ export async function hasPermission(user: User, permission: string): Promise<boo
       
       if (roleData) {
         roleIds = [roleData.id]
-        console.log(`[Auth] Found fallback role ID for ${user.role}: ${roleData.id}`)
       } else {
-        console.log(`[Auth] No fallback role found for ${user.role}`)
         return false
       }
     }
@@ -225,14 +221,10 @@ export async function hasPermission(user: User, permission: string): Promise<boo
       })
     }
     
-    console.log(`[Auth] User ${user.id} has permissions: ${allPermissions.join(', ')}`)
-    console.log(`[Auth] Checking for permission: ${permission}. Result: ${allPermissions.includes(permission)}`)
-
     // Check if user has the required permission
     return allPermissions.includes(permission)
     
-  } catch (error) {
-    console.error('[Auth] Error in hasPermission:', error)
+  } catch {
     return false
   }
 }
@@ -354,7 +346,6 @@ export async function requireGranularPermission(
   const user = await getUserFromRequest(request)
   
   if (!user) {
-    console.log('❌ No authenticated user')
     return NextResponse.json(
       {
         success: false,
@@ -369,7 +360,6 @@ export async function requireGranularPermission(
   
   // Step 2: Super Admin bypass
   if (user.role === 'Super Admin' || user.role === 'super_admin' || user.role_badge === 'super_admin') {
-    console.log('✅ Super Admin - granting access')
     return user
   }
   
@@ -382,7 +372,6 @@ export async function requireGranularPermission(
     .single()
   
   if (roleError || !roleData) {
-    console.error('❌ Error fetching role permissions:', roleError)
     return NextResponse.json(
       {
         success: false,
@@ -399,7 +388,6 @@ export async function requireGranularPermission(
   const itemPerms = modulePerms?.items?.[item]
   
   if (!itemPerms) {
-    console.log(`❌ No permissions found for ${module}.${item}`)
     return NextResponse.json(
       {
         success: false,
@@ -415,7 +403,6 @@ export async function requireGranularPermission(
   const hasSpecificPermission = itemPerms[permission] === true
   
   if (!hasFullAccess && !hasSpecificPermission) {
-    console.log(`❌ Missing permission: ${module}.${item}.${permission} (full: ${itemPerms.full}, ${permission}: ${itemPerms[permission]})`)
     return NextResponse.json(
       {
         success: false,
@@ -426,7 +413,6 @@ export async function requireGranularPermission(
     )
   }
   
-  console.log(`✅ Permission granted: ${module}.${item}.${permission}`)
   return user
 }
 

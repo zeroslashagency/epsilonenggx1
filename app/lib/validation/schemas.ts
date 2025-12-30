@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod'
+import zxcvbn from 'zxcvbn'
 
 // ============================================
 // COMMON SCHEMAS
@@ -19,6 +20,47 @@ export const paginationSchema = z.object({
 })
 
 // ============================================
+// PASSWORD VALIDATION (zxcvbn)
+// ============================================
+
+/**
+ * Strong password schema with zxcvbn validation
+ * Requires minimum score of 3 (good) on scale of 0-4
+ */
+export const strongPasswordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(128, 'Password must be at most 128 characters')
+  .refine(
+    (password) => {
+      const result = zxcvbn(password)
+      return result.score >= 3 // 0=weak, 1=fair, 2=weak, 3=good, 4=strong
+    },
+    {
+      message: 'Password is too weak. Use a mix of uppercase, lowercase, numbers, and symbols.',
+    }
+  )
+
+/**
+ * Get password strength feedback for UI
+ */
+export function getPasswordStrength(password: string): {
+  score: number
+  feedback: string[]
+  isStrong: boolean
+} {
+  const result = zxcvbn(password)
+  return {
+    score: result.score,
+    feedback: [
+      ...(result.feedback.warning ? [result.feedback.warning] : []),
+      ...result.feedback.suggestions,
+    ],
+    isStrong: result.score >= 3,
+  }
+}
+
+// ============================================
 // AUTH SCHEMAS
 // ============================================
 
@@ -29,7 +71,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: emailSchema,
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: strongPasswordSchema, // ✅ SECURITY FIX: Now uses strong password validation
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   role: z.string().optional()
 })
@@ -64,7 +106,7 @@ export const roleIdSchema = z.object({
 
 export const createUserSchema = z.object({
   email: emailSchema,
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: strongPasswordSchema, // ✅ SECURITY FIX: Now uses strong password validation
   full_name: z.string().min(2, 'Full name required'),
   role: z.string().optional(),
   roleId: uuidSchema.optional(),

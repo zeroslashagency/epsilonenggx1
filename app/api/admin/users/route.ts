@@ -8,6 +8,10 @@ import { requirePermission } from '@/app/lib/middleware/auth.middleware'
 // Admin API for user management - FIXED VERSION
 export async function GET(request: NextRequest) {
   try {
+    // ✅ SECURITY FIX: Require authentication before anything else
+    const authResult = await requirePermission(request, 'manage_users')
+    if (authResult instanceof NextResponse) return authResult
+
     // RATE LIMITING: Check if user is making too many requests
     const clientIP = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitKey = `user-list:${clientIP}`
@@ -15,11 +19,6 @@ export async function GET(request: NextRequest) {
     const rateLimitResult = await userListLimiter.check(rateLimitKey)
     
     if (!rateLimitResult.success) {
-      console.warn('🚨 Rate limit exceeded for user list:', { 
-        ip: clientIP, 
-        limit: rateLimitResult.limit
-      })
-      
       return NextResponse.json({
         error: 'Too many user list requests. Please try again later.',
         rateLimitInfo: {
@@ -38,6 +37,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdminClient()
+
     
     // Get all users from auth.users (the real authenticated users)
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
@@ -187,21 +187,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Log audit trail
-    const { error: auditError } = await supabase
+    await supabase
       .from('audit_logs')
       .insert({
-        actor_id: null, // You can get this from JWT
+        actor_id: user.id, // ✅ SECURITY FIX: Properly track who performed the action
         target_id: authUser.user.id,
         action: 'user_created',
         meta_json: {
           email,
           role,
           roles,
-          created_by: 'admin_panel'
+          created_by: user.email
         }
       })
-
-    if (auditError) console.warn('Audit log failed:', auditError)
 
     return NextResponse.json({
       success: true,
@@ -294,12 +292,12 @@ export async function PATCH(request: NextRequest) {
     await supabase
       .from('audit_logs')
       .insert({
-        actor_id: null, // Get from JWT
+        actor_id: user.id, // ✅ SECURITY FIX: Properly track who performed the action
         target_id: userId,
         action: 'user_updated',
         meta_json: {
           changes: { email, full_name, role, roles, status },
-          updated_by: 'admin_panel'
+          updated_by: user.email
         }
       })
 
@@ -357,11 +355,11 @@ export async function DELETE(request: NextRequest) {
     await supabase
       .from('audit_logs')
       .insert({
-        actor_id: null, // Get from JWT
+        actor_id: user.id, // ✅ SECURITY FIX: Properly track who performed the action
         target_id: userId,
         action: 'user_deactivated',
         meta_json: {
-          deactivated_by: 'admin_panel'
+          deactivated_by: user.email
         }
       })
 

@@ -8,7 +8,7 @@ import {
   User, Search, MapPin, Clock, Calendar,
   MoreVertical, Edit, Eye, Plane, Moon, Sun,
   CheckCircle2, AlertCircle, ChevronRight, LayoutGrid,
-  X, Check, Loader2
+  X, Check, Loader2, Trash2, ChevronLeft
 } from 'lucide-react'
 
 // Types
@@ -28,6 +28,7 @@ interface Employee {
     overnight?: boolean
     currentWeek?: number
     shiftId?: string
+    startDate?: string
   }
 }
 
@@ -41,6 +42,7 @@ export default function EmployeeAssignmentPage() {
   // Modals state
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const supabase = getSupabaseBrowserClient()
 
@@ -114,7 +116,8 @@ export default function EmployeeAssignmentPage() {
               timeRange: `${todayShift.shift_start?.slice(0, 5)} - ${todayShift.shift_end?.slice(0, 5)}`,
               color: todayShift.color || '#3B82F6',
               overnight: todayShift.overnight,
-              shiftId: todayShift.shift_id
+              shiftId: activeAssignment?.shift_template?.id || todayShift.shift_id,
+              startDate: activeAssignment?.start_date
             }
           }
           // Priority 2: Active Assignment Template (Fallback)
@@ -126,7 +129,8 @@ export default function EmployeeAssignmentPage() {
               timeRange: t.type === 'rotation' ? 'Rotating Pattern' : `${t.start_time?.slice(0, 5)} - ${t.end_time?.slice(0, 5)}`,
               color: t.color,
               overnight: t.overnight,
-              shiftId: t.id
+              shiftId: t.id,
+              startDate: activeAssignment.start_date
             }
           }
 
@@ -146,6 +150,14 @@ export default function EmployeeAssignmentPage() {
       const empList = Array.from(uniqueEmployees.values())
       setEmployees(empList)
       setFilteredEmployees(empList)
+
+      // Sync selected employee if one is active
+      if (selectedEmployeeId) {
+        const refreshed = empList.find(e => e.id === selectedEmployeeId)
+        if (!refreshed) { // If the previously selected employee is no longer in the list, clear selection
+          setSelectedEmployeeId(null)
+        }
+      }
 
       // Select first employee by default if none selected
       if (empList.length > 0 && !selectedEmployeeId) {
@@ -250,10 +262,20 @@ export default function EmployeeAssignmentPage() {
                   </div>
 
                   {/* Quick Actions */}
-                  <div className="flex items-center gap-4 mt-8">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setRefreshKey(prev => prev + 1)
+                        fetchEmployees()
+                      }}
+                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                      title="Refresh Data"
+                    >
+                      <Clock className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
                     <button
                       onClick={() => setShowAssignModal(true)}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-sm shadow-blue-200 dark:shadow-none transition-all active:scale-95"
                     >
                       <Edit className="w-4 h-4" />
                       Edit Assignment
@@ -264,13 +286,6 @@ export default function EmployeeAssignmentPage() {
                     >
                       <Calendar className="w-4 h-4" />
                       View Schedule
-                    </button>
-                    <button
-                      onClick={() => alert("Leave Management module coming soon!")}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl font-medium transition-all active:scale-95"
-                    >
-                      <Plane className="w-4 h-4" />
-                      Request Leave
                     </button>
                   </div>
                 </div>
@@ -304,16 +319,6 @@ export default function EmployeeAssignmentPage() {
                             {selectedEmployee.currentAssignment.overnight && <Moon className="w-4 h-4 text-indigo-400" />}
                           </p>
 
-                          {/* Visual Progress Bar (Mock) */}
-                          <div className="mt-6">
-                            <div className="flex justifies-between text-xs text-gray-400 mb-1">
-                              <span>Shift Progress</span>
-                              <span>65%</span>
-                            </div>
-                            <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 w-[65%] rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                            </div>
-                          </div>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center py-8 text-gray-400">
@@ -325,26 +330,11 @@ export default function EmployeeAssignmentPage() {
 
                     {/* Card 2: Upcoming Schedule (Real Data) */}
                     <UpcomingScheduleWidget
+                      key={`widget-${selectedEmployee.code}-${refreshKey}`}
                       employeeId={selectedEmployee.code}
+                      refreshKey={refreshKey}
                       onViewAll={() => setShowScheduleModal(true)}
                     />
-
-                    {/* Card 3: Stats / Attendance (Simple Visual) */}
-                    <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
-                      <div className="absolute top-0 right-0 p-8 opacity-10">
-                        <CheckCircle2 className="w-32 h-32" />
-                      </div>
-                      <div className="relative z-10 flex items-center justify-between">
-                        <div>
-                          <h3 className="text-indigo-100 text-sm font-medium mb-1">Weekly Attendance Score</h3>
-                          <div className="text-4xl font-bold mb-2">98%</div>
-                          <p className="text-indigo-100 text-sm opacity-80">Excellent punctuality this week. Keep it up!</p>
-                        </div>
-                        <div className="w-20 h-20 rounded-full border-4 border-white/30 flex items-center justify-center">
-                          <span className="font-bold text-xl">A+</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </>
@@ -363,6 +353,7 @@ export default function EmployeeAssignmentPage() {
             onClose={() => setShowAssignModal(false)}
             onSave={() => {
               setShowAssignModal(false)
+              setRefreshKey(prev => prev + 1)
               fetchEmployees()
             }}
           />
@@ -381,7 +372,11 @@ export default function EmployeeAssignmentPage() {
 }
 
 // Update Widget definition to accept onViewAll
-function UpcomingScheduleWidget({ employeeId, onViewAll }: { employeeId: string, onViewAll: () => void }) {
+function UpcomingScheduleWidget({ employeeId, refreshKey, onViewAll }: {
+  employeeId: string,
+  refreshKey: number,
+  onViewAll: () => void
+}) {
   const [schedule, setSchedule] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = getSupabaseBrowserClient()
@@ -397,8 +392,11 @@ function UpcomingScheduleWidget({ employeeId, onViewAll }: { employeeId: string,
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
-          const res = await fetch(`/api/schedule/employee?employee_code=${employeeId}&from=${from.toISOString().split('T')[0]}&to=${to.toISOString().split('T')[0]}`, {
-            headers: { 'Authorization': `Bearer ${session.access_token}` }
+          const res = await fetch(`/api/schedule/employee?employee_code=${employeeId}&from=${from.toISOString().split('T')[0]}&to=${to.toISOString().split('T')[0]}&t=${Date.now()}`, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            cache: 'no-store'
           })
           const result = await res.json()
           if (result.success) setSchedule(result.data.schedule)
@@ -410,7 +408,7 @@ function UpcomingScheduleWidget({ employeeId, onViewAll }: { employeeId: string,
       }
     }
     if (employeeId) fetchUpcoming()
-  }, [employeeId])
+  }, [employeeId, refreshKey])
 
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col h-full">
@@ -499,7 +497,7 @@ function AssignmentModal({ employees, onClose, onSave }: {
         setSelectedShift(current.shiftId)
       }
     }
-  }, [employees, shifts, rotations]) // Re-run when shifts load so we can match IDs if needed
+  }, [employees, shifts, rotations, selectedShift]) // Re-run when shifts load so we can match IDs if needed
 
   const handleSave = async () => {
     try {
@@ -526,6 +524,35 @@ function AssignmentModal({ employees, onClose, onSave }: {
     } catch (error) {
       console.error(error)
       alert('Error saving assignment')
+    }
+  }
+
+  const handleUnassign = async () => {
+    if (!confirm("Are you sure you want to unassign this employee? This will clear all future schedules.")) return
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return alert('Please login first')
+
+      const response = await fetch('/api/assignments/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          employees: employees.map(e => e.code),
+          mode: 'unassign',
+          startDate: new Date().toISOString().split('T')[0]
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) onSave(result.data)
+      else alert(`Failed: ${result.error}`)
+    } catch (error) {
+      console.error(error)
+      alert('Error unassigning')
     }
   }
 
@@ -597,6 +624,11 @@ function AssignmentModal({ employees, onClose, onSave }: {
                       <Clock className="w-3 h-3" />
                       {shiftType === 'rotation' ? `${shift.pattern?.length || '?'} Week Cycle` : `${shift.start_time?.slice(0, 5)} - ${shift.end_time?.slice(0, 5)}`}
                     </div>
+                    {employees[0]?.currentAssignment?.shiftId === shift.id && employees[0]?.currentAssignment?.startDate && (
+                      <div className="mt-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tighter">
+                        Assigned since {new Date(employees[0].currentAssignment.startDate).toLocaleDateString()}
+                      </div>
+                    )}
                   </button>
                 ))
               )}
@@ -626,6 +658,17 @@ function AssignmentModal({ employees, onClose, onSave }: {
           <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             Cancel
           </button>
+
+          {employees.length === 1 && employees[0].currentAssignment && (
+            <button
+              onClick={handleUnassign}
+              className="px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 transition-all active:scale-95 flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Remove Shift
+            </button>
+          )}
+
           <button
             onClick={handleSave}
             disabled={!selectedShift || !startDate}
@@ -642,23 +685,23 @@ function AssignmentModal({ employees, onClose, onSave }: {
 function ScheduleViewModal({ employee, onClose }: { employee: Employee; onClose: () => void }) {
   const [schedule, setSchedule] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
   const supabase = getSupabaseBrowserClient()
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-      // Look 2 weeks ahead
-      const from = new Date();
-      const to = new Date(); to.setDate(to.getDate() + 14);
+      // Look 1 month around current month
+      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+
+      const from = startOfMonth.toISOString().split('T')[0]
+      const to = endOfMonth.toISOString().split('T')[0]
 
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        const token = session?.access_token
-
-        const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {}
-
-        const res = await fetch(`/api/schedule/employee?employee_code=${employee.code}&from=${from.toISOString().split('T')[0]}&to=${to.toISOString().split('T')[0]}`, {
-          headers
+        const res = await fetch(`/api/schedule/employee?employee_code=${employee.code}&from=${from}&to=${to}`, {
+          headers: session ? { 'Authorization': `Bearer ${session.access_token}` } : {}
         })
         const data = await res.json()
         if (data.success) setSchedule(data.data.schedule)
@@ -666,40 +709,144 @@ function ScheduleViewModal({ employee, onClose }: { employee: Employee; onClose:
       finally { setLoading(false) }
     }
     load()
-  }, [employee])
+  }, [employee, currentMonth])
+
+  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()
+  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay()
+
+  const days = []
+  // Padding for first week
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    days.push(null)
+  }
+  // Days of month
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i)
+  }
+
+  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-4xl w-full h-[80vh] flex flex-col border border-gray-200 dark:border-gray-800" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold">Schedule Viewer</h2>
-            <p className="text-sm text-gray-500">{employee.name} ({employee.code})</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4 transition-all duration-500" onClick={onClose}>
+      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-[1.5rem] shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-white/20 dark:border-gray-800/50 overflow-hidden animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+
+        {/* Compact Header */}
+        <div className="px-5 py-4 border-b border-gray-100/50 dark:border-gray-800/30 flex justify-between items-center bg-white/50 dark:bg-gray-900/50">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl ${employee.avatarColor} flex items-center justify-center text-white font-black text-base shadow-sm ring-2 ring-white dark:ring-gray-800`}>
+              {employee.name.charAt(0)}
+            </div>
+            <div>
+              <h2 className="text-base font-black text-gray-900 dark:text-white tracking-tight leading-none">{employee.name}</h2>
+              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-1">
+                {currentMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+              </p>
+            </div>
           </div>
-          <button onClick={onClose}><X className="w-6 h-6 text-gray-500" /></button>
+
+          <div className="flex items-center gap-2">
+            <div className="flex bg-gray-50/50 dark:bg-gray-950/50 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-lg overflow-hidden shadow-sm mr-2">
+              <button onClick={prevMonth} className="p-1.5 hover:bg-white dark:hover:bg-gray-800 transition-all border-r border-gray-200/50 dark:border-gray-700/50 group active:scale-90">
+                <ChevronLeft className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500" />
+              </button>
+              <div className="px-3 py-1 text-[10px] font-black min-w-[5rem] text-center flex items-center justify-center uppercase tracking-tighter">
+                {currentMonth.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+              </div>
+              <button onClick={nextMonth} className="p-1.5 hover:bg-white dark:hover:bg-gray-800 transition-all group active:scale-90">
+                <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500" />
+              </button>
+            </div>
+            <button onClick={onClose} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all group active:scale-95">
+              <X className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50 dark:bg-gray-950/30">
-          {loading ? <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {schedule.map(day => (
-                <div key={day.date} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <div className="text-sm text-gray-500 font-medium mb-1">{new Date(day.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</div>
-                  <div className="font-bold text-lg mb-2" style={{ color: day.color }}>{day.shift_name}</div>
-                  <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-900 p-2 rounded-lg">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <span>{day.start_time?.slice(0, 5)} - {day.end_time?.slice(0, 5)}</span>
-                  </div>
+        {/* Compact Calendar Body */}
+        <div className="flex-1 p-5 pt-2 relative bg-transparent overflow-y-auto custom-scrollbar">
+          {loading && (
+            <div className="absolute inset-0 bg-white/30 dark:bg-gray-900/30 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            </div>
+          )}
+
+          {/* Week Header */}
+          <div className="grid grid-cols-7 mb-3">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
+              <div key={d} className="text-center text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest py-1">{d}</div>
+            ))}
+          </div>
+
+          {/* Tight Grid */}
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+            {days.map((day, idx) => {
+              if (day === null) return <div key={`empty-${idx}`} className="aspect-square opacity-0" />
+
+              const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+              const shift = schedule.find(s => s.date === dateStr)
+              const isToday = new Date().toISOString().split('T')[0] === dateStr
+
+              return (
+                <div
+                  key={day}
+                  className={`aspect-square p-1.5 rounded-2xl border flex flex-col relative transition-all duration-300 group ${isToday
+                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/10'
+                    : 'border-transparent bg-white dark:bg-gray-800/40 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+                    }`}
+                >
+                  {/* Compact Day Number */}
+                  <span className={`text-[10px] font-black absolute top-1.5 right-2 ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-200 dark:text-gray-700 group-hover:text-blue-300'} transition-colors`}>
+                    {day}
+                  </span>
+
+                  {shift ? (
+                    <div className="flex-1 flex flex-col justify-end gap-1">
+                      <div
+                        className="w-full h-1.5 rounded-full shadow-sm transform transition-all group-hover:scale-y-125"
+                        style={{
+                          backgroundColor: shift.color,
+                          boxShadow: `0 2px 6px ${shift.color}33`
+                        }}
+                        title={`${shift.shift_name}\n${shift.start_time?.slice(0, 5)} - ${shift.end_time?.slice(0, 5)}`}
+                      />
+                      <div className="text-[8px] font-black text-gray-400 dark:text-gray-500 font-mono text-center truncate uppercase tracking-tighter">
+                        {shift.shift_name?.split(' ')[0]}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-1 h-1 rounded-full bg-blue-100 dark:bg-blue-900/30" />
+                    </div>
+                  )}
+
+                  {isToday && (
+                    <div className="absolute top-1.5 left-1.5 w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
+              )
+            })}
+          </div>
+
           {!loading && schedule.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <Calendar className="w-12 h-12 mb-2 opacity-20" />
-              <p>No schedule found for the next 14 days</p>
+            <div className="mt-4 flex flex-col items-center justify-center text-gray-300 dark:text-gray-700 py-10 border-2 border-dashed border-gray-50 dark:border-gray-800 rounded-2xl">
+              <p className="text-xs font-black tracking-widest opacity-40 uppercase">No Shifts</p>
             </div>
           )}
+        </div>
+
+        {/* Minimized Legend */}
+        <div className="px-5 py-3 bg-white/30 dark:bg-gray-950/30 backdrop-blur-md border-t border-gray-100/50 dark:border-gray-800/30 flex justify-center gap-5">
+          {[
+            { label: 'Off', color: 'bg-gray-200' },
+            { label: 'Work', color: 'bg-blue-500' },
+            { label: 'Today', color: 'ring-1 ring-blue-500' }
+          ].map(item => (
+            <div key={item.label} className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500">
+              <div className={`w-1.5 h-1.5 rounded-full ${item.color}`} />
+              {item.label}
+            </div>
+          ))}
         </div>
       </div>
     </div>

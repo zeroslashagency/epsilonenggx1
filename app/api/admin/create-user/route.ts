@@ -6,9 +6,14 @@ import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middle
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
 import { createUserSchema } from '@/app/lib/validation/schemas'
 import { checkRateLimit, strictRateLimit } from '@/app/lib/middleware/rate-limit.middleware'
+import { requireCSRFToken } from '@/app/lib/middleware/csrf-protection'
 
 export async function POST(request: NextRequest) {
-  // Check rate limit first (10 per minute to prevent mass user creation)
+  // ✅ SECURITY FIX: Check CSRF token first
+  const csrfResult = await requireCSRFToken(request)
+  if (csrfResult) return csrfResult
+
+  // Check rate limit (10 per minute to prevent mass user creation)
   const rateLimitResult = await checkRateLimit(request, strictRateLimit)
   if (!rateLimitResult.success) return rateLimitResult.response
 

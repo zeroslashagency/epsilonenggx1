@@ -1,8 +1,14 @@
 export const dynamic = 'force-dynamic'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireRole } from '@/app/lib/middleware/auth.middleware'
 
-export async function GET() {
+// ✅ SECURITY FIX: Diagnostic route now requires Super Admin
+export async function GET(request: NextRequest) {
+  // Require Super Admin for diagnostic endpoints
+  const authResult = await requireRole(request, ['Super Admin'])
+  if (authResult instanceof NextResponse) return authResult
+
   const checks: any = {
     env: {
       NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -31,3 +37,4 @@ export async function GET() {
 
   return NextResponse.json(checks)
 }
+

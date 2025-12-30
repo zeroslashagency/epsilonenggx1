@@ -68,16 +68,24 @@ export function TimelineView({ employees, currentDate, onDateChange, isLoading }
   const [daysInView, setDaysInView] = useState<Date[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Generate the days for the timeline (current month)
+  // Generate the days for the timeline (Prev month + Current month + Next month)
   useEffect(() => {
     const year = currentDate.getFullYear()
-    const month = currentDate.getMonth()
-    const days = new Date(year, month + 1, 0).getDate()
+    const month = currentDate.getMonth() // 0-indexed
+
+    // Range: Start of Prev Month to End of Next Month
+    const start = new Date(year, month - 1, 1)
+    const end = new Date(year, month + 2, 0) // Day 0 of month+2 is last day of month+1
 
     const dates: Date[] = []
-    for (let i = 1; i <= days; i++) {
-      dates.push(new Date(year, month, i))
+
+    // Iterate day by day
+    const loop = new Date(start)
+    while (loop <= end) {
+      dates.push(new Date(loop))
+      loop.setDate(loop.getDate() + 1)
     }
+
     setDaysInView(dates)
   }, [currentDate])
 
@@ -89,8 +97,15 @@ export function TimelineView({ employees, currentDate, onDateChange, isLoading }
       date.getFullYear() === today.getFullYear()
   }
 
+  const formatDate = (date: Date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
   const getShiftForDate = (employee: TimelineEmployee, date: Date) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDate(date)
     return employee.shifts.find(s => s.date === dateStr)
   }
 
@@ -113,6 +128,18 @@ export function TimelineView({ employees, currentDate, onDateChange, isLoading }
   }
 
   const CELL_WIDTH = 140 // px width for each day column
+
+  // Sort employees: Those with shift on currentDate first, then by name
+  const sortedEmployees = [...employees].sort((a, b) => {
+    const hasShiftA = !!getShiftForDate(a, currentDate)
+    const hasShiftB = !!getShiftForDate(b, currentDate)
+
+    if (hasShiftA && !hasShiftB) return -1
+    if (!hasShiftA && hasShiftB) return 1
+
+    // Stable sort by name if shift status is same
+    return a.name.localeCompare(b.name)
+  })
 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden shadow-2xl flex flex-col h-[calc(100vh-200px)]">
@@ -156,110 +183,127 @@ export function TimelineView({ employees, currentDate, onDateChange, isLoading }
         </div>
       </div>
 
-      {/* Timeline Content */}
-      <div className="flex flex-1 overflow-hidden relative">
+      {/* Unified Scrollable Timeline Grid */}
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto bg-gray-900 border-t border-gray-800"
+      >
+        <div className="min-w-max flex flex-col">
 
-        {/* Left Sidebar (Employees) - Sticky */}
-        <div className="w-64 flex-shrink-0 border-r border-gray-800 bg-gray-900 z-10 flex flex-col">
-          {/* Header Spacer */}
-          <div className="h-14 border-b border-gray-800 bg-gray-900 sticky top-0 z-20 flex items-center px-4 font-semibold text-gray-400 text-sm">
-            Employee
+          {/* 1. Header Row (Sticky Top) */}
+          <div className="flex sticky top-0 z-40 bg-gray-900 border-b border-gray-800 h-14 shadow-sm">
+            {/* Top-Left Corner (Sticky Left + Top) */}
+            <div
+              className="sticky left-0 z-50 w-64 bg-gray-900 border-r border-gray-800 flex items-center px-4 font-semibold text-gray-400 text-sm shadow-[4px_0_24px_rgba(0,0,0,0.5)]"
+              style={{ backgroundColor: '#111827' }} // Force opaque dark mode color
+            >
+              Staff Member
+            </div>
+
+            {/* Connected Date Columns */}
+            {daysInView.map((date, i) => {
+              const isT = isToday(date)
+              // Show month label if it's the 1st of the month OR the very first visible day
+              const showMonthLabel = date.getDate() === 1 || i === 0
+
+              return (
+                <div
+                  key={formatDate(date)}
+                  data-is-today={isT}
+                  className={`flex-shrink-0 border-r border-gray-800 flex flex-col items-center justify-center relative ${isT ? 'bg-blue-900/10' : ''}`}
+                  style={{ width: CELL_WIDTH }}
+                >
+                  {/* Month Label (e.g. "Oct") */}
+                  {showMonthLabel && (
+                    <div className="absolute top-1 left-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-gray-900 px-1 rounded z-10">
+                      {date.toLocaleDateString('en-US', { month: 'short' })}
+                    </div>
+                  )}
+
+                  {isT && <div className="absolute inset-y-0 left-1/2 w-px bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] z-20" />}
+                  <span className={`text-xs font-medium uppercase mb-1 ${isT ? 'text-blue-400' : 'text-gray-500'}`}>
+                    {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                  </span>
+                  <span className={`text-sm font-bold ${isT ? 'text-white bg-blue-600 px-2 rounded-full' : 'text-gray-300'}`}>
+                    {date.getDate()}
+                  </span>
+                </div>
+              )
+            })}
           </div>
 
-          {/* Employee List */}
-          <div className="overflow-hidden">
-            {employees.map(emp => (
-              <div key={emp.id} className="h-20 flex items-center px-4 border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+          {/* 2. Employee Rows */}
+          {sortedEmployees.map((emp, index) => (
+            <div
+              key={emp.id}
+              className={`flex h-20 border-b border-gray-200 dark:border-gray-800 relative group transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'
+                } hover:bg-blue-50 dark:hover:bg-gray-800`}
+            >
+
+              {/* Employee Name (Sticky Left) */}
+              <div
+                className={`sticky left-0 z-30 w-64 border-r border-gray-200 dark:border-gray-800 flex items-center px-4 shadow-[4px_0_24px_rgba(0,0,0,0.05)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.5)] transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-gray-900 group-hover:bg-blue-50 dark:group-hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800 group-hover:bg-blue-50 dark:group-hover:bg-gray-800'
+                  }`}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 font-bold border border-gray-700">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border border-gray-200 dark:border-gray-700 shadow-sm ${['bg-blue-100/50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200',
+                    'bg-purple-100/50 text-purple-700 dark:bg-purple-900/50 dark:text-purple-200',
+                    'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200',
+                    'bg-amber-100/50 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200'][index % 4]
+                    }`}>
                     {emp.name.charAt(0)}
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-white truncate w-32">{emp.name}</div>
-                    <div className="text-xs text-gray-500 truncate w-32">{emp.department}</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate w-36">{emp.name}</div>
+                    <div className="text-xs text-gray-500 truncate w-36">{emp.department}</div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Scrollable Timeline Grid */}
-        <div
-          ref={containerRef}
-          className="flex-1 overflow-auto bg-gray-900/50"
-        >
-          <div className="flex flex-col min-w-max">
-
-            {/* Date Header */}
-            <div className="flex sticky top-0 z-10 bg-gray-900 border-b border-gray-800 h-14">
+              {/* Shift Cells */}
               {daysInView.map(date => {
+                const shift = getShiftForDate(emp, date)
                 const isT = isToday(date)
+
                 return (
                   <div
-                    key={date.toISOString()}
-                    data-is-today={isT}
-                    className={`flex-shrink-0 border-r border-gray-800 flex flex-col items-center justify-center relative ${isT ? 'bg-blue-900/10' : ''}`}
+                    key={formatDate(date)}
+                    className={`flex-shrink-0 border-r border-gray-200 dark:border-gray-800 relative flex items-center justify-center px-2 py-3 ${isT ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
                     style={{ width: CELL_WIDTH }}
                   >
-                    {isT && <div className="absolute inset-y-0 left-1/2 w-px bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] z-20" />}
-                    <span className={`text-xs font-medium uppercase mb-1 ${isT ? 'text-blue-400' : 'text-gray-500'}`}>
-                      {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                    </span>
-                    <span className={`text-sm font-bold ${isT ? 'text-white bg-blue-600 px-2 rounded-full' : 'text-gray-300'}`}>
-                      {date.getDate()}
-                    </span>
+                    {isT && <div className="absolute inset-y-0 left-1/2 w-px bg-blue-500/20 pointer-events-none" />}
+
+                    {shift ? (
+                      (() => {
+                        const type = getShiftType(shift.startTime)
+                        const style = SHIFT_STYLES[type] || SHIFT_STYLES.default
+                        const Icon = style.icon
+
+                        return (
+                          <div
+                            className={`w-full h-full rounded-md flex flex-col justify-center px-3 text-xs relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-md cursor-pointer ${style.bg} ${style.text}`}
+                            title={`${shift.shiftName} (${shift.startTime} - ${shift.endTime})`}
+                          >
+                            <div className="font-bold truncate flex items-center gap-1.5">
+                              <Icon className="w-3.5 h-3.5 flex-shrink-0 opacity-75" />
+                              {shift.shiftName}
+                            </div>
+                            <div className="opacity-90 text-[10px] font-medium truncate mt-0.5">
+                              {shift.startTime} - {shift.endTime}
+                            </div>
+                          </div>
+                        )
+                      })()
+                    ) : (
+                      // Empty state with subtle pattern or clear interactivity
+                      <div className="w-full h-full rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/30 transition-colors group-hover/cell:border-2 border-dashed border-transparent hover:border-gray-300 dark:hover:border-gray-600" />
+                    )}
                   </div>
                 )
               })}
             </div>
+          ))}
 
-            {/* Employee Rows */}
-            {employees.map(emp => (
-              <div key={emp.id} className="flex h-20 border-b border-gray-800 relative">
-                {daysInView.map(date => {
-                  const shift = getShiftForDate(emp, date)
-                  const isT = isToday(date)
-
-                  return (
-                    <div
-                      key={date.toISOString()}
-                      className={`flex-shrink-0 border-r border-gray-800 relative group flex items-center justify-center px-2 py-3 ${isT ? 'bg-blue-900/5' : ''}`}
-                      style={{ width: CELL_WIDTH }}
-                    >
-                      {isT && <div className="absolute inset-y-0 left-1/2 w-px bg-blue-500/20 pointer-events-none" />}
-
-                      {shift ? (
-                        (() => {
-                          const type = getShiftType(shift.startTime)
-                          const style = SHIFT_STYLES[type] || SHIFT_STYLES.default
-                          const Icon = style.icon
-
-                          return (
-                            <div
-                              className={`w-full h-full rounded-md flex flex-col justify-center px-3 text-xs relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-lg cursor-pointer ${style.bg} ${style.text}`}
-                              title={`${shift.shiftName} (${shift.startTime} - ${shift.endTime})`}
-                            >
-                              <div className="font-bold truncate flex items-center gap-1">
-                                <Icon className="w-3 h-3 flex-shrink-0" />
-                                {shift.shiftName}
-                              </div>
-                              <div className="opacity-90 text-[10px] truncate">
-                                {shift.startTime}-{shift.endTime}
-                              </div>
-                            </div>
-                          )
-                        })()
-                      ) : (
-                        <div className="w-full h-full rounded-md hover:bg-gray-800/30 transition-colors" /> // Empty slot placeholder
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            ))}
-
-          </div>
         </div>
       </div>
     </div>

@@ -17,7 +17,7 @@ import {
     AlertCircle,
     CheckCircle2
 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import { toast } from 'sonner'
 
 interface DeviceStatus {
@@ -309,22 +309,39 @@ export default function DeviceMonitorPage() {
                                     {syncHistory.length > 0 ? (
                                         syncHistory.map((req) => (
                                             <div key={req.id} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
-                                                <div className={`mt-1 h-2 w-2 rounded-full ${req.status === 'completed' ? 'bg-green-500' :
+                                                <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${req.status === 'completed' ? 'bg-green-500' :
                                                     req.status === 'pending' ? 'bg-yellow-500' :
                                                         'bg-red-500'
                                                     }`} />
                                                 <div className="flex-1 space-y-1">
-                                                    <div className="flex justify-between items-center">
-                                                        <p className="text-sm font-medium capitalize">{req.sync_type}</p>
-                                                        <span className="text-xs text-muted-foreground">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="text-sm font-bold tracking-tight">
+                                                                {req.sync_type === 'historical' ? 'Human Request' :
+                                                                    req.sync_type === 'manual' ? 'Automatic' :
+                                                                        req.sync_type}
+                                                            </p>
+                                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                                <Clock className="h-3 w-3 text-muted-foreground/60" />
+                                                                <span className="text-[10px] font-medium text-muted-foreground">
+                                                                    {format(new Date(req.requested_at), 'MMM dd, yyyy • HH:mm:ss')}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase text-blue-500/70 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded">
                                                             {formatDistanceToNow(new Date(req.requested_at), { addSuffix: true })}
                                                         </span>
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground capitalize">
-                                                        Status: {req.status}
-                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${req.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                                req.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                            }`}>
+                                                            {req.status.toUpperCase()}
+                                                        </div>
+                                                    </div>
                                                     {req.result && (
-                                                        <p className="text-xs text-muted-foreground line-clamp-2">
+                                                        <p className="text-[11px] text-muted-foreground leading-relaxed bg-muted/30 p-2 rounded-md mt-1 italic border-l-2 border-muted">
                                                             {req.result}
                                                         </p>
                                                     )}

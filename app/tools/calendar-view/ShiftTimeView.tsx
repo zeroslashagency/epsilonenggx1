@@ -87,17 +87,17 @@ export function ShiftTimeView({ employees, currentDate, onDateChange, isLoading 
         const Icon = config.icon
 
         return (
-            <div className={`flex flex-col h-full bg-gray-900/40 rounded-2xl border ${config.borderColor} overflow-hidden backdrop-blur-sm shadow-xl`}>
+            <div className={`flex flex-col h-full bg-white dark:bg-gray-900/40 rounded-2xl border border-gray-200 dark:border-gray-800 ${config.borderColor} overflow-hidden backdrop-blur-sm shadow-sm dark:shadow-xl`}>
                 {/* Column Header */}
-                <div className={`p-5 border-b ${config.borderColor} bg-gradient-to-b ${config.headerGradient}`}>
+                <div className={`p-5 border-b border-gray-100 dark:border-gray-800 ${config.borderColor} bg-gradient-to-b ${config.headerGradient}`}>
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg bg-gray-950/50 border border-${config.primary}-500/20`}>
+                            <div className={`p-2 rounded-lg bg-gray-50 dark:bg-gray-950/50 border border-gray-200 dark:border-${config.primary}-500/20`}>
                                 <Icon className={`w-5 h-5 ${config.titleColor}`} />
                             </div>
                             <h3 className={`text-lg font-bold tracking-tight ${config.titleColor}`}>{config.title}</h3>
                         </div>
-                        <span className="text-xs font-mono px-2 py-1 rounded bg-gray-950/50 text-gray-400 border border-gray-800">
+                        <span className="text-xs font-mono px-2 py-1 rounded bg-gray-50 dark:bg-gray-950/50 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-800">
                             {items.length} Active
                         </span>
                     </div>
@@ -106,8 +106,8 @@ export function ShiftTimeView({ employees, currentDate, onDateChange, isLoading 
                 {/* Scrollable List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                     {items.length === 0 ? (
-                        <div className="h-32 flex flex-col items-center justify-center text-gray-600 space-y-2 border-2 border-dashed border-gray-800/50 rounded-xl m-2">
-                            <div className="p-3 rounded-full bg-gray-800/20">
+                        <div className="h-32 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 space-y-2 border-2 border-dashed border-gray-200 dark:border-gray-800/50 rounded-xl m-2">
+                            <div className="p-3 rounded-full bg-gray-100 dark:bg-gray-800/20">
                                 <Icon className="w-5 h-5 opacity-20" />
                             </div>
                             <span className="text-sm">No shifts scheduled</span>
@@ -123,45 +123,45 @@ export function ShiftTimeView({ employees, currentDate, onDateChange, isLoading 
     }
 
     if (isLoading) {
-        return <div className="flex h-full items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
+        return <div className="flex h-full items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-white"></div></div>
     }
 
     return (
-        <div className="flex flex-col h-full bg-black/95 p-6 space-y-6">
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-black/95 p-6 space-y-6">
 
             {/* Top Navigation Bar */}
             <div className="flex items-center justify-between sticky top-0 z-10 p-1">
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
-                        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
                                 Daily Overview
                             </span>
                         </h2>
-                        <p className="text-sm text-gray-400 font-medium ml-0.5">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium ml-0.5">
                             {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 bg-gray-900/80 p-1.5 rounded-xl border border-gray-800 shadow-lg backdrop-blur-md">
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-900/80 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-lg backdrop-blur-md">
                     <button
                         onClick={() => { const d = new Date(currentDate); d.setDate(d.getDate() - 1); onDateChange(d) }}
-                        className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-all active:scale-95"
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95"
                     >
                         <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <div className="h-6 w-px bg-gray-700 mx-1"></div>
+                    <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
                     <button
                         onClick={() => onDateChange(new Date())}
-                        className="px-4 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 text-sm font-semibold rounded-md border border-blue-500/30 transition-all uppercase tracking-wide"
+                        className="px-4 py-1.5 bg-blue-600/10 dark:bg-blue-600/20 hover:bg-blue-600/20 dark:hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold rounded-md border border-blue-200 dark:border-blue-500/30 transition-all uppercase tracking-wide"
                     >
                         Today
                     </button>
-                    <div className="h-6 w-px bg-gray-700 mx-1"></div>
+                    <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
                     <button
                         onClick={() => { const d = new Date(currentDate); d.setDate(d.getDate() + 1); onDateChange(d) }}
-                        className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-all active:scale-95"
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95"
                     >
                         <ChevronRight className="w-5 h-5" />
                     </button>
@@ -195,7 +195,7 @@ function ShiftCard({ emp, shift, config }: { emp: TimelineEmployee, shift: Timel
     const progress = calculateProgress()
 
     return (
-        <div className={`group relative p-4 rounded-xl bg-gray-800/40 border border-gray-700/50 hover:bg-gray-800/80 hover:border-${config.primary}-500/50 transition-all duration-300 hover:shadow-lg ${config.glowColor}`}>
+        <div className={`group relative p-4 rounded-xl bg-white dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-800/80 hover:border-${config.primary}-600/50 dark:hover:border-${config.primary}-500/50 transition-all duration-300 shadow-sm hover:shadow-md dark:hover:shadow-lg ${config.glowColor}`}>
 
             {/* Glow Effect on Hover */}
             <div className={`absolute inset-0 rounded-xl bg-gradient-to-r from-${config.primary}-500/0 via-${config.primary}-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`} />
@@ -203,38 +203,38 @@ function ShiftCard({ emp, shift, config }: { emp: TimelineEmployee, shift: Timel
             <div className="relative flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
                     {/* Avatar */}
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 p-0.5 border border-gray-600 group-hover:border-${config.primary}-500/50 transition-colors`}>
-                        <div className="w-full h-full rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-300">
+                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 p-0.5 border border-gray-200 dark:border-gray-600 group-hover:border-${config.primary}-500/50 transition-colors shadow-sm`}>
+                        <div className="w-full h-full rounded-full bg-white dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300">
                             {emp.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
                     </div>
 
                     <div>
-                        <h4 className="text-white font-semibold tracking-wide">{emp.name}</h4>
-                        <p className="text-xs text-gray-400 font-medium">{emp.department || 'Staff Member'}</p>
+                        <h4 className="text-gray-900 dark:text-white font-semibold tracking-wide">{emp.name}</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{emp.department || 'Staff Member'}</p>
                     </div>
                 </div>
 
                 {/* Status Badge */}
-                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border bg-gray-900/50 ${config.titleColor} border-${config.primary}-500/20`}>
+                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border bg-gray-50/50 dark:bg-gray-900/50 ${config.titleColor} border-gray-200 dark:border-${config.primary}-500/20`}>
                     Active
                 </div>
             </div>
 
             <div className="relative space-y-3">
                 {/* Time Info */}
-                <div className="flex items-center justify-between text-xs text-gray-400 bg-gray-950/30 p-2 rounded-lg border border-white/5">
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-950/30 p-2 rounded-lg border border-gray-100 dark:border-white/5">
                     <div className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 opacity-70" />
-                        <span className="font-mono text-gray-300">{shift.startTime} - {shift.endTime}</span>
+                        <span className="font-mono text-gray-700 dark:text-gray-300">{shift.startTime} - {shift.endTime}</span>
                     </div>
-                    <span className={`text-${config.primary}-400/80 font-medium`}>{progress}% Elapsed</span>
+                    <span className={`text-${config.primary}-600 dark:text-${config.primary}-400/80 font-medium shrink-0`}>{progress}% Elapsed</span>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="h-1.5 w-full bg-gray-700/50 rounded-full overflow-hidden">
+                <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-700/50 rounded-full overflow-hidden">
                     <div
-                        className={`h-full rounded-full ${config.progressBar} shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-all duration-1000 ease-out`}
+                        className={`h-full rounded-full ${config.progressBar} shadow-[0_0_10px_rgba(34,197,94,0.1)] dark:shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-all duration-1000 ease-out`}
                         style={{ width: `${progress}%` }}
                     />
                 </div>

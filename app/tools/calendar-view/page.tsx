@@ -34,10 +34,10 @@ export default function CalendarViewPage() {
             const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
             const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
 
-            // Pad fetching to ensure we see adjacent days if needed, but standard month is fine
-            // Adding a few days buffer for scrolling context
-            const fetchStart = new Date(startDate); fetchStart.setDate(fetchStart.getDate() - 5);
-            const fetchEnd = new Date(endDate); fetchEnd.setDate(fetchEnd.getDate() + 5);
+            // Fetch range: Start of Previous Month -> End of Next Month (3-month window)
+            // This enables "Continuous Scrolling" sensation without needing infinite loader immediately
+            const fetchStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+            const fetchEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
 
             const { data: scheduleData, error } = await supabase
                 .from('employee_daily_schedule')

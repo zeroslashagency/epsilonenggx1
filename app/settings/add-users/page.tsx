@@ -45,8 +45,13 @@ export default function AddUsersPage() {
     roleId: '',
     department: '',
     designation: '',
-    standaloneAttendance: false
+    standaloneAttendance: false,
+    forcePasswordReset: false,
+    avatarUrl: ''
   })
+
+  const [manualSendEmail, setManualSendEmail] = useState(false)
+  const [manualFormErrors, setManualFormErrors] = useState<Record<string, string>>({})
 
   const [employeeFormData, setEmployeeFormData] = useState({
     email: '',
@@ -371,6 +376,73 @@ export default function AddUsersPage() {
     }
   }
 
+  const handleCreateManual = async () => {
+    const errors: Record<string, string> = {}
+
+    // Validation
+    if (!formData.fullName) errors.fullName = 'Full Name is required'
+    const emailValidation = validateEmail(formData.email)
+    if (!emailValidation.valid) errors.email = emailValidation.error!
+    const passwordValidation = validatePassword(formData.password)
+    if (!passwordValidation.valid) errors.password = passwordValidation.error!
+    if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match'
+    if (!formData.roleId) errors.roleId = 'Please select a role'
+
+    if (Object.keys(errors).length > 0) {
+      setManualFormErrors(errors)
+      toast({ title: "Validation Error", description: "Please fix the errors in the form", variant: "destructive" })
+      return
+    }
+
+    setManualFormErrors({})
+    setIsCreating(true)
+
+    try {
+      const selectedRole = roles.find(r => r.id === formData.roleId)
+      const roleName = selectedRole?.name || 'Operator'
+
+      const result = await apiPost('/api/admin/create-user-from-employee', {
+        employee_code: formData.employeeCode || `MAN-${Date.now().toString().slice(-6)}`,
+        employee_name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        role: roleName,
+        department: formData.department || 'Default',
+        designation: formData.designation || 'Staff',
+        standalone_attendance: formData.standaloneAttendance ? 'YES' : 'NO',
+        send_email_invitation: manualSendEmail,
+        avatar_url: formData.avatarUrl || null,
+        force_password_reset: formData.forcePasswordReset
+      })
+
+      if (result.success) {
+        const empCode = formData.employeeCode || result.employee_code
+        if (showShiftAssignment && assignmentData.templateId && assignmentData.startDate) {
+          try {
+            await apiPost('/api/assignments/bulk', {
+              employees: [empCode],
+              shiftType: assignmentData.type,
+              shiftId: assignmentData.templateId,
+              startDate: assignmentData.startDate
+            })
+            toast({ title: "User & Shift Assigned", description: "User created and shift assigned successfully." })
+          } catch (e) {
+            toast({ title: "User Created, Assignment Failed", description: "User created but shift assignment failed.", variant: "destructive" })
+          }
+        } else {
+          toast({ title: "✅ User Created Successfully" })
+        }
+        router.push('/settings/users')
+      } else {
+        toast({ title: "❌ Failed", description: result.error || 'Failed to create user', variant: "destructive" })
+      }
+    } catch (error) {
+      toast({ title: "❌ Error", description: "Something went wrong.", variant: "destructive" })
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   return (
     <>
 
@@ -665,10 +737,19 @@ export default function AddUsersPage() {
                       <input
                         type="text"
                         value={formData.fullName}
-                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, fullName: e.target.value })
+                          if (manualFormErrors.fullName) {
+                            setManualFormErrors(prev => {
+                              const { fullName, ...rest } = prev
+                              return rest
+                            })
+                          }
+                        }}
                         placeholder="John Doe"
-                        className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
+                        className={`w-full px-3 py-2 border ${manualFormErrors.fullName ? 'border-red-500' : 'border-[#E3E6F0]'} dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                       />
+                      {manualFormErrors.fullName && <p className="text-xs text-red-500 mt-1">{manualFormErrors.fullName}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">
@@ -677,10 +758,19 @@ export default function AddUsersPage() {
                       <input
                         type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, email: e.target.value })
+                          if (manualFormErrors.email) {
+                            setManualFormErrors(prev => {
+                              const { email, ...rest } = prev
+                              return rest
+                            })
+                          }
+                        }}
                         placeholder="john.doe@company.com"
-                        className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
+                        className={`w-full px-3 py-2 border ${manualFormErrors.email ? 'border-red-500' : 'border-[#E3E6F0]'} dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                       />
+                      {manualFormErrors.email && <p className="text-xs text-red-500 mt-1">{manualFormErrors.email}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">
@@ -689,10 +779,19 @@ export default function AddUsersPage() {
                       <input
                         type="password"
                         value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, password: e.target.value })
+                          if (manualFormErrors.password) {
+                            setManualFormErrors(prev => {
+                              const { password, ...rest } = prev
+                              return rest
+                            })
+                          }
+                        }}
                         placeholder="Minimum 8 characters"
-                        className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
+                        className={`w-full px-3 py-2 border ${manualFormErrors.password ? 'border-red-500' : 'border-[#E3E6F0]'} dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                       />
+                      {manualFormErrors.password && <p className="text-xs text-red-500 mt-1">{manualFormErrors.password}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">
@@ -701,10 +800,19 @@ export default function AddUsersPage() {
                       <input
                         type="password"
                         value={formData.confirmPassword}
-                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, confirmPassword: e.target.value })
+                          if (manualFormErrors.confirmPassword) {
+                            setManualFormErrors(prev => {
+                              const { confirmPassword, ...rest } = prev
+                              return rest
+                            })
+                          }
+                        }}
                         placeholder="Re-enter password"
-                        className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
+                        className={`w-full px-3 py-2 border ${manualFormErrors.confirmPassword ? 'border-red-500' : 'border-[#E3E6F0]'} dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                       />
+                      {manualFormErrors.confirmPassword && <p className="text-xs text-red-500 mt-1">{manualFormErrors.confirmPassword}</p>}
                     </div>
                   </div>
                 </div>
@@ -719,13 +827,14 @@ export default function AddUsersPage() {
                     <select
                       value={formData.roleId}
                       onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
-                      className="w-full px-3 py-2 border border-[#E3E6F0] dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
+                      className={`w-full px-3 py-2 border ${manualFormErrors.roleId ? 'border-red-500' : 'border-[#E3E6F0]'} dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-[#12263F] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]`}
                     >
                       <option value="">Select a role</option>
                       {roles.map(role => (
                         <option key={role.id} value={role.id}>{role.name}</option>
                       ))}
                     </select>
+                    {manualFormErrors.roleId && <p className="text-xs text-red-500 mt-1">{manualFormErrors.roleId}</p>}
                   </div>
                 </div>
 
@@ -755,7 +864,7 @@ export default function AddUsersPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-3">
                     <label className="flex items-start gap-3 p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                       <input
                         type="checkbox"
@@ -768,6 +877,110 @@ export default function AddUsersPage() {
                         <p className="text-xs text-[#95AAC9] mt-1">Allow user to access dedicated attendance website</p>
                       </div>
                     </label>
+
+                    <label className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={manualSendEmail}
+                        onChange={(e) => setManualSendEmail(e.target.checked)}
+                        className="mt-1 w-4 h-4 text-[#2C7BE5] border-gray-300 rounded focus:ring-[#2C7BE5]"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-[#2C7BE5]" />
+                          <p className="text-sm font-medium text-[#12263F] dark:text-white">Send Email Invitation</p>
+                        </div>
+                        <p className="text-xs text-[#95AAC9] mt-1">Send login credentials to user's email address after account creation</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-3 p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.forcePasswordReset}
+                        onChange={(e) => setFormData({ ...formData, forcePasswordReset: e.target.checked })}
+                        className="mt-1 h-4 w-4 rounded border-[#E3E6F0] text-[#2C7BE5] focus:ring-[#2C7BE5]"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-[#2C7BE5]" />
+                          <p className="text-sm font-medium text-[#12263F] dark:text-white">Require Password Change</p>
+                        </div>
+                        <p className="text-xs text-[#95AAC9] mt-1">User will be forced to reset their password upon first login</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Shift Assignment Section - Modal (Synced to Manual) */}
+                  <div className="mt-6 pt-6 border-t border-[#E3E6F0] dark:border-gray-700">
+                    <Dialog onOpenChange={(open) => {
+                      if (open) fetchShiftTemplates()
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="p-0 h-auto text-sm font-medium text-[#2C7BE5] hover:text-[#2C7BE5] hover:bg-transparent flex items-center gap-2"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          {assignmentData.templateId ? 'Shift Assignment Configured' : 'Assign Shift (Optional)'}
+                          {assignmentData.templateId && <Check className="w-3 h-3 text-green-500 ml-1" />}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Assign Shift</DialogTitle>
+                          <DialogDescription>
+                            Select a shift template to assign to this user immediately.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Assignment Type</label>
+                            <select
+                              value={assignmentData.type}
+                              onChange={(e) => setAssignmentData({ ...assignmentData, type: e.target.value })}
+                              className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                            >
+                              <option value="fixed">Fixed Shift</option>
+                              <option value="rotation">Rotating Pattern</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Shift Template</label>
+                            <select
+                              value={assignmentData.templateId}
+                              onChange={(e) => setAssignmentData({ ...assignmentData, templateId: e.target.value })}
+                              className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                              {shiftTemplates.length === 0 ? (
+                                <option value="">No templates found</option>
+                              ) : (
+                                <>
+                                  <option value="">Select a template</option>
+                                  {shiftTemplates.map(t => (
+                                    <option key={t.id} value={t.id}>{t.name} ({t.start_time} - {t.end_time})</option>
+                                  ))}
+                                </>
+                              )}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Start Date</label>
+                            <input
+                              type="date"
+                              value={assignmentData.startDate}
+                              onChange={(e) => setAssignmentData({ ...assignmentData, startDate: e.target.value })}
+                              className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button type="button" onClick={() => setShowShiftAssignment(true)}>Save Assignment</Button>
+                          </DialogClose>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
 
@@ -780,9 +993,18 @@ export default function AddUsersPage() {
                     Cancel
                   </button>
                   <button
-                    className="flex-1 px-4 py-2 bg-[#00A651] text-white rounded text-sm font-medium hover:bg-[#008F46] transition-colors shadow-sm"
+                    onClick={handleCreateManual}
+                    disabled={isCreating}
+                    className={`flex-1 px-4 py-2 bg-[#00A651] text-white rounded text-sm font-medium hover:bg-[#008F46] transition-colors shadow-sm ${isCreating ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    Create User Account
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create User Account'
+                    )}
                   </button>
                 </div>
               </div>

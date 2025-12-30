@@ -1,13 +1,16 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { deleteUserSchema, validateRequest } from '@/app/lib/validation/security-schemas'
-import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireCSRFToken } from '@/app/lib/middleware/csrf-protection'
 
 // Handle both DELETE and POST methods for backwards compatibility
 async function handleDeleteUser(request: NextRequest) {
+  // ✅ SECURITY FIX: Check CSRF token first
+  const csrfResult = await requireCSRFToken(request)
+  if (csrfResult) return csrfResult
+
   // ✅ PERMISSION CHECK: Require manage_users permission
   const authResult = await requirePermission(request, 'manage_users')
   if (authResult instanceof NextResponse) return authResult
@@ -23,36 +26,19 @@ async function handleDeleteUser(request: NextRequest) {
     }
 
 
-    const supabase = getSupabaseClient()
 
-    // Try to delete from auth.users first using service role key
+    const supabaseAdmin = getSupabaseAdminClient()
+
+    // Delete from auth.users using admin client
     try {
-      const { createClient } = require('@supabase/supabase-js')
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      )
-
-      // Delete from auth.users
       const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
-      
-      if (authDeleteError) {
-        // Continue with profile deletion even if auth deletion fails
-      } else {
-      }
-
-    } catch (error) {
+      // Continue with profile deletion even if auth deletion fails
+    } catch {
       // Continue with profile deletion
     }
 
     // Delete from profiles table
-    const { error: profileDeleteError } = await supabase
+    const { error: profileDeleteError } = await supabaseAdmin
       .from('profiles')
       .delete()
       .eq('id', userId)
@@ -65,7 +51,7 @@ async function handleDeleteUser(request: NextRequest) {
 
     
     // Log audit trail
-    await supabase
+    await supabaseAdmin
       .from('audit_logs')
       .insert({
         actor_id: user.id, // ✅ FIXED: Get from authenticated user

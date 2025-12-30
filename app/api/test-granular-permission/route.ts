@@ -5,6 +5,7 @@ import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
 
 /**
  * TEST ROUTE: Verify requireGranularPermission middleware works
+ * ✅ SECURITY: Requires authentication via requireGranularPermission
  * 
  * Test cases:
  * 1. GET /api/test-granular-permission?module=production&item=Orders&permission=view
@@ -23,18 +24,14 @@ export async function GET(request: NextRequest) {
   const item = searchParams.get('item') || 'Orders'
   const permission = searchParams.get('permission') || 'view'
   
-  console.log(`\n🧪 TEST: Checking ${module}.${item}.${permission}`)
-  
-  // Test the middleware
+  // Test the middleware (also serves as auth check)
   const authResult = await requireGranularPermission(request, module, item, permission)
   
   if (authResult instanceof NextResponse) {
-    console.log('❌ TEST FAILED: Permission denied')
     return authResult
   }
   
   const user = authResult
-  console.log('✅ TEST PASSED: Permission granted')
   
   return NextResponse.json({
     success: true,
@@ -50,3 +47,4 @@ export async function GET(request: NextRequest) {
     }
   })
 }
+

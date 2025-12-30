@@ -103,8 +103,5 @@ setInterval(() => {
   activityLogLimiter.cleanup()
 }, 5 * 60 * 1000)
 
-console.log('✅ Rate limiters initialized:', {
-  permissionUpdates: '10/min',
-  userList: '60/min',
-  activityLogs: '30/min'
-})
+// ✅ SECURITY FIX: Removed console.log that exposed rate limit config
+

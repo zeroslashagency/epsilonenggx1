@@ -23,11 +23,21 @@ export function PunchStream({ newPunch }: PunchStreamProps) {
     // Play sound
     const playSound = () => {
         try {
-            const audio = new Audio('/sounds/receipt-print.mp3') // Placeholder path
+            // Check if audio file exists implicitly by only playing if not errored
+            const audio = new Audio('/sounds/receipt-print.mp3')
             audio.volume = 0.5
-            audio.play().catch(e => console.log('Audio play failed (user interaction needed first?)', e))
+            const playPromise = audio.play()
+
+            if (playPromise !== undefined) {
+                playPromise.catch(e => {
+                    // Silence "Not Allowed" errors which are common without user interaction
+                    if (e.name !== 'NotAllowedError') {
+                        console.log('Audio playback skipped (likely missing file or blocked)', e.message)
+                    }
+                })
+            }
         } catch (err) {
-            console.error('Audio error', err)
+            // Silently fail if audio system isn't available
         }
     }
 

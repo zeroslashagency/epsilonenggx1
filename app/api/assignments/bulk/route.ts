@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     const body = await request.json()
-    const { employees, shiftType, shiftId, startDate, endDate } = body
+    const { employees, shiftType, shiftId, startDate, endDate, mode } = body
 
     // Validate input
     if (!employees || !Array.isArray(employees) || employees.length === 0) {
@@ -26,18 +26,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!shiftType || !['fixed', 'rotation'].includes(shiftType)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid shift type. Must be "fixed" or "rotation"' },
-        { status: 400 }
-      )
-    }
+    if (mode !== 'unassign') {
+        if (!shiftType || !['fixed', 'rotation'].includes(shiftType)) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid shift type. Must be "fixed" or "rotation"' },
+            { status: 400 }
+          )
+        }
 
-    if (!shiftId) {
-      return NextResponse.json(
-        { success: false, error: 'Shift ID is required' },
-        { status: 400 }
-      )
+        if (!shiftId) {
+          return NextResponse.json(
+            { success: false, error: 'Shift ID is required' },
+            { status: 400 }
+          )
+        }
     }
 
     if (!startDate) {
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
     // 1. If an assignment STARTS on or after the new Start Date, DELETE it (it's entirely replaced).
     // 2. If an assignment STARTS before but ENDS after (or is open), CLIP it to end the day before new Start Date.
     
-    // Step 1: Delete completely overshadowed future assignments
+    // Step 1: Delete ALL future assignments that start on or after the unassign date
     const { error: deleteError } = await supabase
       .from('employee_shift_assignments')
       .delete()
@@ -60,22 +62,66 @@ export async function POST(request: NextRequest) {
       .gte('start_date', startDate)
     
     if (deleteError) {
-       console.error('Error deleting future conflicting assignments:', deleteError)
+       console.error(`[Unassign] Error deleting future assignments for ${employees}:`, deleteError)
+    } else {
+       console.log(`[Unassign] Deleted future assignments for ${employees} from ${startDate}`)
     }
 
     // Step 2: Close overlapping open/long assignments
     // Set End Date to (StartDate - 1 Day)
     const yesterday = new Date(new Date(startDate).setDate(new Date(startDate).getDate() - 1)).toISOString().split('T')[0]
     
-    const { error: closeError } = await supabase
+    // FETCH IDs first to be absolutely sure what we are updating
+    const { data: assignmentsToClose } = await supabase
       .from('employee_shift_assignments')
-      .update({ end_date: yesterday })
+      .select('id')
       .in('employee_code', employees)
-      .lt('start_date', startDate) // Started before new assignment
-      .or(`end_date.is.null,end_date.gte.${startDate}`) // Intersects new assignment
+      .lt('start_date', startDate)
+      .or(`end_date.is.null,end_date.gte.${startDate}`)
     
-    if (closeError) {
-      console.error('Error closing previous assignments:', closeError)
+    if (assignmentsToClose && assignmentsToClose.length > 0) {
+        const idsToClose = assignmentsToClose.map(a => a.id);
+        const { error: closeError } = await supabase
+          .from('employee_shift_assignments')
+          .update({ end_date: yesterday })
+          .in('id', idsToClose)
+        
+        if (closeError) {
+          console.error(`[Unassign] Error closing previous assignments for ${employees}:`, closeError)
+        } else {
+          console.log(`[Unassign] Closed ${idsToClose.length} active assignments for ${employees} ending on ${yesterday}`)
+        }
+    } else {
+        console.log(`[Unassign] No active assignments found to close for ${employees}`)
+    }
+
+    if (mode === 'unassign') {
+      // Step 3 (Optional): Delete any residual daily schedule from the assignment start date onwards
+      const { error: dailyDeleteError } = await supabase
+        .from('employee_daily_schedule')
+        .delete()
+        .in('employee_code', employees)
+        .gte('work_date', startDate)
+
+      if (dailyDeleteError) {
+        console.error('Error deleting daily schedule for unassignment:', dailyDeleteError)
+      }
+
+      // Create audit log for unassignment
+      await supabase.from('audit_logs').insert({
+        actor_id: user.id,
+        action: 'shift_assignment_unassign',
+        meta_json: {
+          employee_count: employees.length,
+          start_date: startDate
+        }
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully unassigned shifts from ${employees.length} employee(s)`,
+        count: employees.length
+      })
     }
 
     // Create new assignments - both fixed and rotation reference shift_templates
@@ -118,16 +164,32 @@ export async function POST(request: NextRequest) {
       } else {
         const dailyRecords: any[] = []
         const start = new Date(startDate)
-        const end = endDate ? new Date(endDate) : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000) // Default 30 days if no end
+        // Default window: 365 days (1 year) for all shifts if no end date provided
+        const defaultDays = 365
+        const end = endDate ? new Date(endDate) : new Date(start.getTime() + defaultDays * 24 * 60 * 60 * 1000)
         
         // Prepare rotation data if needed
         let rotationPattern: any[] = []
         let rotationWeeks = 1
         let rotationShiftMap = new Map<string, any>()
 
-        if (shiftType === 'rotation' && template.pattern) {
-          rotationPattern = Array.isArray(template.pattern) ? template.pattern : []
-          rotationWeeks = template.weeks_pattern || rotationPattern.length || 1
+        if (shiftType === 'rotation') {
+          // Attempt to fetch from new normalized table first
+          const { data: steps } = await supabase
+            .from('shift_rotation_steps')
+            .select('*')
+            .eq('template_id', shiftId)
+            .order('step_order', { ascending: true })
+
+          if (steps && steps.length > 0) {
+            console.log(`[Standardization] Using ${steps.length} normalized rotation steps for ${shiftId}`)
+            rotationPattern = steps
+            rotationWeeks = steps.length
+          } else {
+            console.log(`[Standardization] Falling back to JSON pattern for ${shiftId}`)
+            rotationPattern = Array.isArray(template.pattern) ? template.pattern : []
+            rotationWeeks = template.weeks_pattern || rotationPattern.length || 1
+          }
           
           // Fetch base shifts referenced in the pattern
           const shiftNames = Array.from(new Set(
@@ -161,7 +223,7 @@ export async function POST(request: NextRequest) {
           let overnight = template.overnight
           let graceMinutes = template.grace_minutes
           let currentActiveDays = globalActiveDays
-
+ 
           if (shiftType === 'rotation' && rotationPattern.length > 0) {
             // Apply Rotation Logic
             const daysDiff = Math.floor((d.getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
@@ -173,6 +235,7 @@ export async function POST(request: NextRequest) {
                currentActiveDays = weekPattern.work_days
             }
 
+            // Priority 1: Base Shift Lookup
             if (weekPattern?.shift_name) {
               const baseShift = rotationShiftMap.get(weekPattern.shift_name)
               if (baseShift) {
@@ -183,7 +246,28 @@ export async function POST(request: NextRequest) {
                 color = baseShift.color
                 overnight = baseShift.overnight
                 graceMinutes = baseShift.grace_minutes
+                console.log(`[RotationDecision] Assigned Base Shift: ${shiftName} for ${dateStr} (${employees.length} employees)`)
+              } else {
+                 console.warn(`[RotationDecision] Base shift '${weekPattern.shift_name}' not found for ${dateStr}. Checking inline times...`)
+                 // Fallback if name provided but not found in map (should unlikely happen if rotationShiftMap built correctly)
+                 // But if we have inline times, use them
+                 if (weekPattern?.start_time && weekPattern?.end_time) {
+                    shiftStart = weekPattern.start_time
+                    shiftEnd = weekPattern.end_time
+                    shiftName = weekPattern.shift_name || shiftName
+                    console.log(`[RotationDecision] Assigned Inline Shift: ${shiftName} (${shiftStart}-${shiftEnd}) for ${dateStr} (${employees.length} employees)`)
+                    // Keep default color/overnight from template unless specified? 
+                    // Usually ad-hoc patterns might verify this.
+                 } else {
+                    console.error(`[RotationDecision] FAILED to resolve shift for ${dateStr}. Defaulting to template metrics but this may be 00:00!`)
+                 }
               }
+            } else if (weekPattern?.start_time && weekPattern?.end_time) {
+                // Priority 2: Inline Ad-Hoc Times (No shift_name link)
+                shiftStart = weekPattern.start_time
+                shiftEnd = weekPattern.end_time
+                shiftName = weekPattern.custom_name || template.name // Or "Ad-hoc Shift"
+                console.log(`[RotationDecision] Assigned Ad-Hoc Shift: ${shiftName} (${shiftStart}-${shiftEnd}) for ${dateStr} (${employees.length} employees)`)
             }
           }
 
@@ -204,8 +288,7 @@ export async function POST(request: NextRequest) {
               shift_end: shiftEnd,
               color: color,
               overnight: overnight,
-              grace_minutes: graceMinutes,
-              shift_id: currentShiftId
+              grace_minutes: graceMinutes
             })
           })
         }

@@ -18,8 +18,6 @@ interface Shift {
   color: string
   grace_minutes: number
   overnight: boolean
-  role_tags: string[]
-  min_staffing: number
   active_count?: number // New field
   type?: 'fixed' | 'rotation'
   pattern?: any // Changed from any[] to any to support object storage for fixed shifts
@@ -138,8 +136,6 @@ export default function ShiftManagerPage() {
       color: '#3B82F6',
       grace_minutes: 10,
       overnight: false,
-      role_tags: [],
-      min_staffing: 1,
       type: mode,
       work_days: [1, 2, 3, 4, 5] // Default Mon-Fri for Fixed
     })
@@ -181,13 +177,13 @@ export default function ShiftManagerPage() {
         color: formData.color,
         grace_minutes: formData.grace_minutes,
         overnight: formData.overnight,
-        role_tags: formData.role_tags,
-        min_staffing: formData.min_staffing,
         type: isRotationMode ? 'rotation' : 'fixed',
         // STORE WORK_DAYS IN PATTERN (Zero-Migration Fix)
         pattern: isRotationMode
           ? rotationSteps
-          : { work_days: formData.work_days || [0, 1, 2, 3, 4, 5, 6] }
+          : { work_days: formData.work_days || [0, 1, 2, 3, 4, 5, 6] },
+        // Add direct work_days for the new schema
+        work_days: isRotationMode ? [0, 1, 2, 3, 4, 5, 6] : (formData.work_days || [0, 1, 2, 3, 4, 5, 6])
       }
 
       if (isCreating) {
@@ -222,16 +218,6 @@ export default function ShiftManagerPage() {
     finally { setSubmitting(false) }
   }
 
-  // Helper for Role Tags
-  const availableRoles = ['Admin', 'Security', 'Nurse', 'Doctor', 'Support', 'Sales', 'Cleaner']
-  function toggleRole(role: string) {
-    const current = formData.role_tags || []
-    if (current.includes(role)) {
-      setFormData({ ...formData, role_tags: current.filter(r => r !== role) })
-    } else {
-      setFormData({ ...formData, role_tags: [...current, role] })
-    }
-  }
 
   return (
     <PermissionGuard module="tools_shift" item="Shift Manager">
@@ -243,7 +229,7 @@ export default function ShiftManagerPage() {
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Shift Manager</h1>
-                <p className="text-gray-500 text-sm">Manage templates, roles, and capacity</p>
+                <p className="text-gray-500 text-sm">Manage shift templates and rotations</p>
               </div>
               <button
                 onClick={() => handleCreateNew('fixed')}
@@ -291,28 +277,11 @@ export default function ShiftManagerPage() {
                       </div>
                     </div>
 
-                    {/* Smart Tags Display */}
-                    <div className="flex items-center gap-8">
-                      {/* Role Tags */}
-                      <div className="hidden md:flex gap-2">
-                        {shift.role_tags?.length > 0 ? shift.role_tags.slice(0, 2).map(tag => (
-                          <span key={tag} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                            {tag}
-                          </span>
-                        )) : <span className="text-gray-300 text-xs italic">No roles</span>}
+                    <div className="flex items-center gap-8 text-sm min-w-[120px]">
+                      <div title="Currently Active" className="flex items-center gap-1.5 text-green-600 dark:text-green-400 font-bold bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                        <span>{shift.active_count} Active</span>
                       </div>
-
-                      {/* Active Count & Staffing Target */}
-                      <div className="flex items-center gap-4 text-sm min-w-[120px]">
-                        <div title="Currently Active" className="flex items-center gap-1.5 text-green-600 dark:text-green-400 font-bold bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                          <span>{shift.active_count} Active</span>
-                        </div>
-                        <div title="Target Capacity" className="hidden lg:flex items-center gap-1.5 text-gray-400">
-                          <span>/ {shift.min_staffing} Target</span>
-                        </div>
-                      </div>
-
                       <ChevronRight className={`w-5 h-5 text-gray-300 transition-transform ${selectedShift?.id === shift.id ? 'rotate-90' : ''}`} />
                     </div>
                   </div>
@@ -411,13 +380,41 @@ export default function ShiftManagerPage() {
                             <span className="text-xs font-bold text-gray-500">Week {idx + 1}</span>
                             <button onClick={() => removeRotationStep(idx)} className="text-red-400 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
                           </div>
-                          <input
-                            type="text"
-                            placeholder="Shift Name (e.g. Morning Shift)"
+                          <select
                             value={step.shift_name || ''}
-                            onChange={(e) => updateRotationStep(idx, 'shift_name', e.target.value)}
+                            onChange={(e) => {
+                              const selectedName = e.target.value;
+                              const baseShift = shifts.find(s => s.name === selectedName);
+                              if (baseShift) {
+                                const newSteps = [...rotationSteps];
+                                newSteps[idx] = {
+                                  ...newSteps[idx],
+                                  shift_name: baseShift.name,
+                                  start_time: baseShift.start_time.slice(0, 5),
+                                  end_time: baseShift.end_time.slice(0, 5)
+                                };
+                                setRotationSteps(newSteps);
+                              } else {
+                                updateRotationStep(idx, 'shift_name', selectedName);
+                              }
+                            }}
                             className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
-                          />
+                          >
+                            <option value="">Select Base Shift...</option>
+                            {shifts.filter(s => s.type !== 'rotation' || s.id !== selectedShift?.id).map(s => (
+                              <option key={s.id} value={s.name}>{s.name} ({s.start_time.slice(0, 5)}-{s.end_time.slice(0, 5)})</option>
+                            ))}
+                            <option value="CUSTOM">-- Custom Entry --</option>
+                          </select>
+                          {step.shift_name === 'CUSTOM' && (
+                            <input
+                              type="text"
+                              placeholder="Custom Shift Name"
+                              value={step.custom_name || ''}
+                              onChange={(e) => updateRotationStep(idx, 'custom_name', e.target.value)}
+                              className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 mt-2"
+                            />
+                          )}
                           <div className="grid grid-cols-2 gap-2">
                             <input type="time" value={step.start_time} onChange={e => updateRotationStep(idx, 'start_time', e.target.value)} className="w-full p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-xs" />
                             <input type="time" value={step.end_time} onChange={e => updateRotationStep(idx, 'end_time', e.target.value)} className="w-full p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-xs" />
@@ -454,27 +451,6 @@ export default function ShiftManagerPage() {
                   </div>
                 )}
 
-                {/* New Features: Smart Tags */}
-                <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="w-4 h-4 text-purple-500" />
-                    <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">Role Requirements</h3>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {availableRoles.map(role => (
-                      <button
-                        key={role}
-                        onClick={() => toggleRole(role)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${(formData.role_tags || []).includes(role)
-                          ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-300'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-500 hover:border-gray-400'
-                          }`}
-                      >
-                        {role}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 {/* Work Days (Fixed Shifts Only) */}
                 {!isRotationMode && (
@@ -504,26 +480,6 @@ export default function ShiftManagerPage() {
                   </div>
                 )}
 
-                <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-blue-500" />
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">Staffing Capacity</h3>
-                      <p className="text-xs text-gray-500">Min. employees required</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="range" min="1" max="20"
-                      value={formData.min_staffing || 1}
-                      onChange={e => setFormData({ ...formData, min_staffing: parseInt(e.target.value) })}
-                      className="w-24 accent-blue-600"
-                    />
-                    <span className="w-8 h-8 rounded-lg bg-white dark:bg-gray-700 flex items-center justify-center font-mono text-sm border border-gray-200 dark:border-gray-600">
-                      {formData.min_staffing || 1}
-                    </span>
-                  </div>
-                </div>
 
                 {/* Meta */}
                 <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-800">

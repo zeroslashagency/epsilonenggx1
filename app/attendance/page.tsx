@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
@@ -112,15 +112,23 @@ function AttendancePageContent() {
     setShowAnimation(newState)
     localStorage.setItem('animation_receipts', String(newState))
 
+    // ⚡ PROACTIVE PRINTER: Immediately "print" the latest punch if turning ON
+    if (newState && recentLogs.length > 0) {
+      const latest = recentLogs[0]
+      setLastPunch({
+        id: `init-${latest.id}-${Date.now()}`, // Force unique ID to trigger animation
+        employee_code: latest.employee_code,
+        employee_name: latest.employee_name || '',
+        punch_direction: latest.punch_direction || 'in',
+        log_date: latest.log_date || new Date().toISOString()
+      })
+    }
+
     // Save to Cloud
     if (user?.id) {
       const supabase = getSupabaseBrowserClient()
-      // We need to get current settings first to merge, or use jsonb_set in SQL, 
-      // but simplest is just upsert or update if we assume settings is small.
-      // Let's just update the key.
       const { data: current } = await supabase.from('profiles').select('settings').eq('id', user.id).single()
       const newSettings = { ...current?.settings, animation_receipts: newState }
-
       await supabase.from('profiles').update({ settings: newSettings }).eq('id', user.id)
     }
   }
@@ -285,6 +293,12 @@ function AttendancePageContent() {
   // Export filter state
   const [exportFilter, setExportFilter] = useState<'active' | 'all'>('active')
 
+  // Ref to hold latest employees list for realtime callbacks to access without closure staleness
+  const allEmployeesRef = useRef(allEmployees)
+  useEffect(() => {
+    allEmployeesRef.current = allEmployees
+  }, [allEmployees])
+
   // Load today's data on mount and set up auto-refresh
   useEffect(() => {
     let isMounted = true
@@ -311,7 +325,7 @@ function AttendancePageContent() {
           table: 'employee_raw_logs'
         },
         (payload) => {
-          console.log('⚡ [REALTIME] Change received:', payload.eventType)
+          console.log('⚡ [REALTIME] Change received:', payload.eventType, payload)
           if (isMounted) {
             // Instant silent refresh to update counts/tables
             console.log('⚡ [REALTIME] Refreshing data...')
@@ -324,8 +338,9 @@ function AttendancePageContent() {
               console.log(`⚡ [REALTIME] New punch: ${newRecord.employee_code}`)
 
               // Trigger Receipt Animation
-              // We need to find the name if possible, or just use code
-              const empName = allEmployees.find(e => e.code === newRecord.employee_code)?.name || ''
+              // Use Ref to get latest employee list
+              const empName = allEmployeesRef.current.find(e => e.code === newRecord.employee_code)?.name || ''
+              console.log(`⚡ [REALTIME] Resolved name for animation: "${empName}"`)
 
               setLastPunch({
                 id: newRecord.id || Date.now().toString(),
@@ -343,19 +358,20 @@ function AttendancePageContent() {
           console.log('✅ [REALTIME] Connected to employee_raw_logs')
           setRealtimeConnected(true)
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error(`❌ [REALTIME] Connection failed: ${status}`)
           setRealtimeConnected(false)
         }
       })
 
 
-    // Fallback: Poll every 10 seconds (backup for Realtime failures)
-    // The user requested robustness, so we keep this as a safety net.
+    // Fallback: Poll every 60 seconds (backup for Realtime failures)
+    // Reduced from 10s to 60s as requested to optimize performance while maintaining accuracy.
     const refreshInterval = setInterval(() => {
       if (isMounted) {
         console.log('⏰ [POLLING] Fallback sync check...')
         fetchTodayData(true)
       }
-    }, 10000)
+    }, 60000)
 
     return () => {
       isMounted = false
