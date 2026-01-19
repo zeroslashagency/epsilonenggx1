@@ -1,3 +1,4 @@
 # Ralphy Progress Log
 
 - Verified Flutter project structure is intact. Found pubspec.yaml, lib/, and test/ directories.
+- Cleaned build artifacts from previous Android builds using `flutter clean`.
