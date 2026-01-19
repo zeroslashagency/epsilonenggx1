@@ -10,7 +10,7 @@ Convert the existing Android Flutter application to an iOS/iPad version using Ra
 
 - [x] Verify Flutter project structure is intact in epsilon_ios directory
 - [x] Clean build artifacts from previous Android builds
-- [ ] Rename project file from epsilon_android.iml to epsilon_ios.iml
+- [x] Rename project file from epsilon_android.iml to epsilon_ios.iml
 - [ ] Update project name in pubspec.yaml to epsilon_ios
 
 ### Phase 2: iOS Platform Generation
