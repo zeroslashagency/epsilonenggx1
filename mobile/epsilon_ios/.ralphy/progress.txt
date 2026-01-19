@@ -3,3 +3,4 @@
 - Verified Flutter project structure is intact. Found pubspec.yaml, lib/, and test/ directories.
 - Cleaned build artifacts from previous Android builds using `flutter clean`.
 - Renamed project file from `epsilon_android.iml` to `epsilon_ios.iml`.
+- Updated project name in pubspec.yaml to epsilon_ios.
