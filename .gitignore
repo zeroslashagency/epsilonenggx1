@@ -69,4 +69,5 @@ CLEANUP_PLAN.md
 config/supabase.js
 
 # Mobile
-mobile/
+mobile/*
+!mobile/epsilon_ios/

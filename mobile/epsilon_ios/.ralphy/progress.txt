@@ -4,3 +4,4 @@
 - Cleaned build artifacts from previous Android builds using `flutter clean`.
 - Renamed project file from `epsilon_android.iml` to `epsilon_ios.iml`.
 - Updated project name in pubspec.yaml to epsilon_ios.
+- Generated iOS platform files using `flutter create . --platforms=ios`.
