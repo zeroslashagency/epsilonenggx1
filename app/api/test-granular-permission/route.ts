@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
+import { requireGranularPermission } from '@/app/lib/features/auth/auth.middleware'
 
 /**
  * TEST ROUTE: Verify requireGranularPermission middleware works

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireAuth, requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
+import { requireAuth, requireGranularPermission } from '@/app/lib/features/auth/auth.middleware'
 
 /**
  * GET /api/monitoring/quality

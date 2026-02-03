@@ -1,7 +1,7 @@
 "use client"
 
 import React, { Suspense } from 'react';
-import { ZohoLayout } from '@/app/components/zoho-ui/ZohoLayout';
+
 import { useSearchParams } from 'next/navigation';
 
 function FIRLayoutContent({ children }: { children: React.ReactNode }) {
@@ -14,9 +14,9 @@ function FIRLayoutContent({ children }: { children: React.ReactNode }) {
     if (view === 'analytics') label = 'Analytics';
 
     return (
-        <ZohoLayout breadcrumbs={[{ label: 'Tools' }, { label: 'FIR Reporter' }, { label }]}>
+        <div className="space-y-6 p-6">
             {children}
-        </ZohoLayout>
+        </div>
     );
 }
 

@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { userListLimiter } from '@/app/lib/rate-limiter'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 // Admin API for user management - FIXED VERSION
 export async function GET(request: NextRequest) {
@@ -15,9 +16,9 @@ export async function GET(request: NextRequest) {
     // RATE LIMITING: Check if user is making too many requests
     const clientIP = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitKey = `user-list:${clientIP}`
-    
+
     const rateLimitResult = await userListLimiter.check(rateLimitKey)
-    
+
     if (!rateLimitResult.success) {
       return NextResponse.json({
         error: 'Too many user list requests. Please try again later.',
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
           remaining: rateLimitResult.remaining,
           resetTime: rateLimitResult.reset
         }
-      }, { 
+      }, {
         status: 429,
         headers: {
           'X-RateLimit-Limit': rateLimitResult.limit.toString(),
@@ -38,17 +39,17 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdminClient()
 
-    
+
     // Get all users from auth.users (the real authenticated users)
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
-    
+
     if (authError) throw authError
 
     // Get all profiles
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
-    
+
     if (profilesError) throw profilesError
 
     // Create a map of profiles by user ID for quick lookup
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     const body = await request.json()
-    
+
     const {
       email,
       password,
@@ -233,7 +234,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     const body = await request.json()
-    
+
     const {
       userId,
       email,

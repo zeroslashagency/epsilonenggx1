@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 export async function PUT(request: NextRequest) {
   // ✅ PERMISSION CHECK: Require users.edit permission

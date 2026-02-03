@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
+import { requireGranularPermission } from '@/app/lib/features/auth/auth.middleware'
 
 export async function POST(request: NextRequest) {
   // ✅ Check: main_scheduling.Schedule Generator.edit permission

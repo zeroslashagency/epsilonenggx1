@@ -1,12 +1,28 @@
-/**
- * Delete User API Route Tests
- */
-
+// Mock content for replacement
 import { POST } from '../route'
-import { NextRequest } from 'next/server'
+
+// Mock next/server to handle NextResponse.json
+// Mock next/server to handle NextResponse.json
+jest.mock('next/server', () => {
+  return {
+    NextResponse: class extends Response {
+      static json(body: any, init?: ResponseInit) {
+        return new Response(JSON.stringify(body), {
+          ...init,
+          headers: {
+            ...init?.headers,
+            'Content-Type': 'application/json',
+          },
+        })
+      }
+    },
+    // Alias NextRequest to standard Request for type compatibility if needed runtime
+    NextRequest: class extends Request { },
+  }
+})
 
 // Mock the auth middleware
-jest.mock('@/app/lib/middleware/auth.middleware', () => ({
+jest.mock('@/app/lib/features/auth/auth.middleware', () => ({
   requirePermission: jest.fn((request, permission) => {
     // Mock authenticated user
     return {
@@ -17,9 +33,19 @@ jest.mock('@/app/lib/middleware/auth.middleware', () => ({
   }),
 }))
 
+// Mock CSRF protection
+jest.mock('@/app/lib/middleware/csrf-protection', () => ({
+  requireCSRFToken: jest.fn(() => Promise.resolve(null)),
+}))
+
 // Mock Supabase client
 jest.mock('@/app/lib/services/supabase-client', () => ({
-  getSupabaseClient: jest.fn(() => ({
+  getSupabaseAdminClient: jest.fn(() => ({
+    auth: {
+      admin: {
+        deleteUser: jest.fn(() => Promise.resolve({ error: null }))
+      }
+    },
     from: jest.fn(() => ({
       delete: jest.fn(() => ({
         eq: jest.fn(() => Promise.resolve({ error: null })),
@@ -37,17 +63,20 @@ describe('DELETE /api/admin/delete-user', () => {
       userName: 'Test User',
     }
 
-    const request = new NextRequest('http://localhost:3000/api/admin/delete-user', {
+    const request = new Request('http://localhost:3000/api/admin/delete-user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(requestBody)
     })
 
-    // Mock request.json()
-    jest.spyOn(request, 'json').mockResolvedValue(requestBody)
+    // No need to spy on json(), standard request has it.
+    // jest.spyOn(request, 'json').mockResolvedValue(requestBody) 
+    // But Request body is stream, need to init with body string.
 
-    const response = await POST(request)
+    // CASTING to any or NextRequest to satisfy route handler signature which expects NextRequest
+    const response = await POST(request as any)
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -59,16 +88,15 @@ describe('DELETE /api/admin/delete-user', () => {
       userEmail: 'test@example.com',
     }
 
-    const request = new NextRequest('http://localhost:3000/api/admin/delete-user', {
+    const request = new Request('http://localhost:3000/api/admin/delete-user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(requestBody)
     })
 
-    jest.spyOn(request, 'json').mockResolvedValue(requestBody)
-
-    const response = await POST(request)
+    const response = await POST(request as any)
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -81,17 +109,16 @@ describe('DELETE /api/admin/delete-user', () => {
       userEmail: 'invalid-email',
     }
 
-    const request = new NextRequest('http://localhost:3000/api/admin/delete-user', {
+    const request = new Request('http://localhost:3000/api/admin/delete-user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(requestBody)
     })
 
-    jest.spyOn(request, 'json').mockResolvedValue(requestBody)
+    const response = await POST(request as any)
 
-    const response = await POST(request)
-    
     // Should fail validation
     expect(response.status).toBeGreaterThanOrEqual(400)
   })

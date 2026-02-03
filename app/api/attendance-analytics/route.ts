@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
-import { requireAuth } from '@/app/lib/middleware/auth.middleware'
+import { requireAuth } from '@/app/lib/features/auth/auth.middleware'
 
 export async function GET(request: NextRequest) {
   // ✅ AUTH CHECK: Require authentication (any logged-in user can view analytics)
@@ -14,16 +14,16 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseClient()
     const searchParams = request.nextUrl.searchParams
     const days = parseInt(searchParams.get('days') || '14')
-    
+
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0]
-    
+
     // Calculate date range for the requested days
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
     const startDateStr = startDate.toISOString()
-    
-    
+
+
     // Get attendance data - fetch ALL data for the date range (no limit!)
     // Supabase has default limit of 1000, so we need to paginate or increase limit
     const { data: logs, error } = await supabase
@@ -32,42 +32,37 @@ export async function GET(request: NextRequest) {
       .gte('log_date', startDateStr)
       .order('log_date', { ascending: false })
       .limit(50000) // Increase limit to get all data
-    
+
     if (error) throw error
-    
+
     // Filter today's logs for accurate statistics
     const todayLogs = logs?.filter(log => log.log_date.startsWith(today)) || []
-    
-    console.log('📊 Analytics Debug:', {
-      totalLogs: logs?.length || 0,
-      today: today,
-      todayLogs: todayLogs.length,
-      sampleLog: logs?.[0]
-    })
-    
+
+
+
     // Get employee master data for department info
     const { data: employees } = await supabase
       .from('employee_master')
       .select('employee_code, employee_name, department')
       .limit(1000)
-    
+
     const employeeMap = new Map(employees?.map(emp => [emp.employee_code, emp]) || [])
-    
+
     // Calculate daily attendance trends
     const dailyTrends = calculateDailyTrends(logs || [], days)
-    
+
     // Calculate department-wise distribution
     const departmentStats = calculateDepartmentStats(logs || [], employeeMap)
-    
+
     // Calculate gender distribution
     const genderStats = calculateGenderStats(logs || [], employeeMap)
-    
+
     // Calculate time distribution (check-in times)
     const timeDistribution = calculateTimeDistribution(logs || [])
-    
+
     // Calculate top performers
     const topPerformers = calculateTopPerformers(logs || [], employeeMap, days)
-    
+
     // Calculate overall statistics
     const overallStats = {
       totalEmployees: employeeMap.size,
@@ -75,7 +70,7 @@ export async function GET(request: NextRequest) {
       onTimeRate: calculateOnTimeRate(logs || []),
       averageCheckInTime: calculateAverageCheckInTime(logs || [])
     }
-    
+
     return NextResponse.json({
       success: true,
       data: {
@@ -87,7 +82,7 @@ export async function GET(request: NextRequest) {
         overallStats
       }
     })
-    
+
   } catch (error) {
     return NextResponse.json({
       success: false,
@@ -99,13 +94,13 @@ export async function GET(request: NextRequest) {
 function calculateDailyTrends(logs: any[], days: number) {
   const trends = []
   const today = new Date()
-  
-  
+
+
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today)
     date.setDate(date.getDate() - i) // Always get the most recent days
     const dateStr = date.toISOString().split('T')[0]
-    
+
     // Filter logs for this specific date
     const dayLogs = logs.filter(log => {
       // Handle both ISO string and date object formats
@@ -113,35 +108,35 @@ function calculateDailyTrends(logs: any[], days: number) {
       const logDateStr = logDate.toISOString().split('T')[0] // Get YYYY-MM-DD part
       return logDateStr === dateStr
     })
-    
+
     const uniqueEmployees = new Set(dayLogs.map(log => log.employee_code)).size
-    
-    
+
+
     trends.push({
       date: dateStr,
       dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
       present: uniqueEmployees,
       absent: 0, // Will be calculated on frontend based on total employees
       totalPunches: dayLogs.length,
-      fullDate: date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
+      fullDate: date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
       })
     })
   }
-  
+
   return trends
 }
 
 function calculateDepartmentStats(logs: any[], employeeMap: Map<string, any>) {
   const deptCounts: Record<string, number> = {}
-  
+
   logs.forEach(log => {
     const emp = employeeMap.get(log.employee_code)
     const dept = emp?.department || 'Unknown'
     deptCounts[dept] = (deptCounts[dept] || 0) + 1
   })
-  
+
   return Object.entries(deptCounts).map(([name, value]) => ({
     name,
     value,
@@ -153,11 +148,11 @@ function calculateGenderStats(logs: any[], employeeMap: Map<string, any>) {
   // For now, create a simple distribution based on employee codes
   const uniqueEmployees = new Set(logs.map(log => log.employee_code))
   const totalEmployees = uniqueEmployees.size
-  
+
   // Simple distribution: assume roughly 60% male, 40% female
   const maleCount = Math.ceil(totalEmployees * 0.6)
   const femaleCount = totalEmployees - maleCount
-  
+
   return [
     { name: 'Male', value: maleCount },
     { name: 'Female', value: femaleCount }
@@ -174,7 +169,7 @@ function calculateTimeDistribution(logs: any[]) {
     '11-12 PM': 0,
     'After 12': 0
   }
-  
+
   logs.forEach(log => {
     const hour = new Date(log.log_date).getHours()
     if (hour >= 6 && hour < 7) timeSlots['6-7 AM']++
@@ -185,7 +180,7 @@ function calculateTimeDistribution(logs: any[]) {
     else if (hour >= 11 && hour < 12) timeSlots['11-12 PM']++
     else if (hour >= 12) timeSlots['After 12']++
   })
-  
+
   return Object.entries(timeSlots).map(([time, count]) => ({
     time,
     count
@@ -194,31 +189,31 @@ function calculateTimeDistribution(logs: any[]) {
 
 function calculateTopPerformers(logs: any[], employeeMap: Map<string, any>, days: number) {
   const employeeAttendance: Record<string, { days: Set<string>, onTimeDays: Set<string>, totalPunches: number }> = {}
-  
+
   logs.forEach(log => {
     const empCode = log.employee_code
     const date = log.log_date.split('T')[0]
     const hour = new Date(log.log_date).getHours()
-    
+
     if (!employeeAttendance[empCode]) {
       employeeAttendance[empCode] = { days: new Set(), onTimeDays: new Set(), totalPunches: 0 }
     }
-    
+
     employeeAttendance[empCode].days.add(date)
     employeeAttendance[empCode].totalPunches++
-    
+
     // Consider on-time if first punch of the day is before 10 AM
     if (hour < 10) {
       employeeAttendance[empCode].onTimeDays.add(date)
     }
   })
-  
+
   const performers = Object.entries(employeeAttendance)
     .map(([empCode, data]) => {
       const emp = employeeMap.get(empCode)
       const attendanceRate = Math.min(Math.round((data.days.size / days) * 100), 100)
       const onTimeRate = data.days.size > 0 ? Math.round((data.onTimeDays.size / data.days.size) * 100) : 0
-      
+
       return {
         employeeCode: empCode,
         employeeName: emp?.employee_name || `Employee ${empCode}`,
@@ -236,39 +231,39 @@ function calculateTopPerformers(logs: any[], employeeMap: Map<string, any>, days
       return b.onTimeRate - a.onTimeRate
     })
     .slice(0, 5)
-  
+
   return performers
 }
 
 function calculateAverageAttendanceRate(logs: any[], totalEmployees: number, days: number) {
   if (totalEmployees === 0 || days === 0) return 0
-  
+
   const uniqueDates = new Set(logs.map(log => log.log_date.split('T')[0]))
   const totalPossibleAttendance = totalEmployees * days
   const actualAttendance = logs.length
-  
+
   return Math.round((actualAttendance / totalPossibleAttendance) * 100)
 }
 
 function calculateOnTimeRate(logs: any[]) {
   if (logs.length === 0) return 0
-  
+
   const onTimeLogs = logs.filter(log => {
     const hour = new Date(log.log_date).getHours()
     return hour < 10
   })
-  
+
   return Math.round((onTimeLogs.length / logs.length) * 100)
 }
 
 function calculateAverageCheckInTime(logs: any[]) {
   if (logs.length === 0) return '9:00 AM'
-  
+
   const hours = logs.map(log => new Date(log.log_date).getHours())
   const avgHour = Math.round(hours.reduce((a, b) => a + b, 0) / hours.length)
-  
+
   const period = avgHour >= 12 ? 'PM' : 'AM'
   const displayHour = avgHour > 12 ? avgHour - 12 : avgHour
-  
+
   return `${displayHour}:00 ${period}`
 }

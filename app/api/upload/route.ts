@@ -5,16 +5,16 @@ import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('📷 [API] Upload request received')
+
     const formData = await request.formData()
     const file = formData.get('file') as File
-    
+
     if (!file) {
       console.error('❌ [API] No file found in FormData')
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    console.log(`📁 [API] Processing file: ${file.name}, Size: ${file.size}, Type: ${file.type}`)
+
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
     const filePath = `avatars/${fileName}`
 
-    console.log(`🚀 [API] Uploading to ${filePath}...`)
+
 
     // Upload file
     const { error: uploadError } = await supabase.storage
@@ -43,50 +43,50 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.warn(`⚠️ [API] Upload failed initially: ${uploadError.message}`)
-      
-    if (uploadError) {
-      console.warn(`⚠️ [API] Upload failed initially: ${uploadError.message}`)
-      
-      // Attempt to create bucket on ANY error (robust fallback)
-      console.log('🛠 [API] Attempting to create "avatars" bucket (fallback)...')
-      const { data, error: createError } = await supabase.storage.createBucket('avatars', {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB
-        allowedMimeTypes: ['image/*']
-      })
-      
-      if (createError) {
+
+      if (uploadError) {
+        console.warn(`⚠️ [API] Upload failed initially: ${uploadError.message}`)
+
+        // Attempt to create bucket on ANY error (robust fallback)
+
+        const { data, error: createError } = await supabase.storage.createBucket('avatars', {
+          public: true,
+          fileSizeLimit: 5242880, // 5MB
+          allowedMimeTypes: ['image/*']
+        })
+
+        if (createError) {
           // If it already exists, just proceed to retry (maybe permissions issue resolved?)
           // But if it's a real error, log it.
           if (!createError.message.includes('already exists')) {
-              console.error(`❌ [API] Failed to create bucket: ${createError.message}`)
+            console.error(`❌ [API] Failed to create bucket: ${createError.message}`)
           } else {
-              console.log('ℹ️ [API] Bucket already exists.')
-          }
-      }
 
-      // Retry upload
-      console.log('🔄 [API] Retrying upload...')
-      const { error: retryError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
+          }
+        }
+
+        // Retry upload
+
+        const { error: retryError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file, {
             cacheControl: '3600',
             upsert: false
-        })
-        
-      if (retryError) {
+          })
+
+        if (retryError) {
           console.error(`❌ [API] Retry failed: ${retryError.message}`)
           throw retryError
+        }
       }
-    }
     }
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('avatars')
       .getPublicUrl(filePath)
-    
-    console.log(`✅ [API] Upload success: ${publicUrl}`)
+
+
 
     return NextResponse.json({
       success: true,

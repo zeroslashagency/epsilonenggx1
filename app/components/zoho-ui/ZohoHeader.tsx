@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from 'react'
-import { 
-  Search, 
-  Bell, 
-  Settings, 
-  User, 
-  Moon, 
+import {
+  Search,
+  Bell,
+  Settings,
+  User,
+  Moon,
   Sun,
   ChevronDown,
   LogOut,
@@ -26,7 +26,7 @@ interface ZohoHeaderProps {
 export function ZohoHeader({ breadcrumbs, sidebarCollapsed = false, onMobileMenuToggle }: ZohoHeaderProps) {
   const themeContext = useTheme()
   const theme = themeContext?.theme || 'light'
-  const toggleTheme = themeContext?.toggleTheme || (() => {})
+  const toggleTheme = themeContext?.toggleTheme || (() => { })
   const { userEmail, logout } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)

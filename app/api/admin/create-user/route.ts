@@ -2,9 +2,9 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireRole, requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
-import { createUserSchema } from '@/app/lib/validation/schemas'
+import { createUserSchema } from '@/app/lib/features/auth/schemas'
 import { checkRateLimit, strictRateLimit } from '@/app/lib/middleware/rate-limit.middleware'
 import { requireCSRFToken } from '@/app/lib/middleware/csrf-protection'
 

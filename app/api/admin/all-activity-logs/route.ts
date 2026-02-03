@@ -2,22 +2,18 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole } from '@/app/lib/middleware/auth.middleware'
+import { requireRole } from '@/app/lib/features/auth/auth.middleware'
 
 export async function GET(request: NextRequest) {
-  console.log('🚀 API CALLED: /api/admin/all-activity-logs')
-  
   // Require Admin or Super Admin
   const authResult = await requireRole(request, ['Admin', 'Super Admin'])
   if (authResult instanceof NextResponse) {
-    console.log('❌ Auth failed')
     return authResult
   }
   const user = authResult
 
   try {
     const supabase = getSupabaseAdminClient()
-    console.log('✅ Supabase client created')
 
     // Get all audit logs from audit_logs table
     const { data: realAuditLogs, error } = await supabase
@@ -25,8 +21,6 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(500)
-
-    console.log('📊 Audit logs fetched:', { count: realAuditLogs?.length, error: error?.message })
 
     if (error) {
       console.error('❌ Error fetching audit logs:', error)
@@ -37,17 +31,8 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('📊 Sample audit log:', JSON.stringify(realAuditLogs?.[0], null, 2))
-
     // Convert audit_logs format to our expected format
     const logs = (realAuditLogs || []).map((log: any) => {
-      console.log('🔍 Processing log:', { 
-        id: log.id, 
-        actor_id: log.actor_id,
-        target_id: log.target_id,
-        action: log.action 
-      })
-      
       return {
         id: log.id,
         user_id: log.actor_id || 'system',
@@ -62,15 +47,14 @@ export async function GET(request: NextRequest) {
     // Enhance logs with user information - this will generate proper descriptions
     const enhancedLogs = await enhanceLogsWithUserInfo(supabase, logs)
 
-
     // Calculate statistics
     const stats = {
       totalActivities: enhancedLogs.length,
       activeUsers: new Set(enhancedLogs.map(log => log.user_id).filter(Boolean)).size,
       deletions: enhancedLogs.filter(log => log.action === 'user_deletion').length,
-      permissionChanges: enhancedLogs.filter(log => 
-        log.action === 'permission_grant' || 
-        log.action === 'permission_revoke' || 
+      permissionChanges: enhancedLogs.filter(log =>
+        log.action === 'permission_grant' ||
+        log.action === 'permission_revoke' ||
         log.action === 'role_change'
       ).length,
       recentActivities: enhancedLogs.filter(log => {
@@ -103,15 +87,11 @@ async function enhanceLogsWithUserInfo(supabase: any, logs: any[]): Promise<any[
     ...logs.map(log => log.target_user_id)
   ].filter(Boolean))]
 
-  console.log('👥 Fetching users for IDs:', userIds)
-
   // Fetch user information
   const { data: users, error: usersError } = await supabase
     .from('profiles')
     .select('id, full_name, email, role')
     .in('id', userIds)
-
-  console.log('👥 Users fetched:', { count: users?.length, error: usersError?.message, sample: users?.[0] })
 
   const userMap = new Map(users?.map((user: any) => [user.id, user]) || [])
 
@@ -119,15 +99,7 @@ async function enhanceLogsWithUserInfo(supabase: any, logs: any[]): Promise<any[
   return logs.map(log => {
     const actor = log.actor || userMap.get(log.user_id)
     const target_user = log.target_user || userMap.get(log.target_user_id)
-    
-    console.log('🔍 Enhancing log:', {
-      log_id: log.id,
-      user_id: log.user_id,
-      actor_found: !!actor,
-      actor_email: actor?.email,
-      userMap_size: userMap.size
-    })
-    
+
     return {
       ...log,
       actor,
@@ -141,17 +113,11 @@ async function enhanceLogsWithUserInfo(supabase: any, logs: any[]): Promise<any[
   })
 }
 
-// Helper function to generate action descriptions from meta_json
-// This is a fallback - the main description is generated in generateLogDescription
-function generateActionDescription(action: string, metaJson: any): string {
-  return `${action.replace('_', ' ')} activity`
-}
-
 // Helper function to generate human-readable descriptions
 function generateLogDescription(log: any): string {
   const actorName = log.actor?.email || log.actor?.full_name || 'System'
   const targetName = log.target_user?.email || log.target_user?.full_name || 'Unknown User'
-  
+
   // Extract old and new role from meta_json if available
   const oldRole = log.details?.old_role || log.details?.from_role
   const newRole = log.details?.new_role || log.details?.to_role
@@ -159,55 +125,55 @@ function generateLogDescription(log: any): string {
   switch (log.action) {
     case 'user_deletion':
       return `${actorName} deleted user account: ${log.details?.deleted_user?.full_name || targetName}`
-    
+
     case 'user_deletion_completed':
       return `User account deletion completed: ${log.details?.deleted_user?.full_name || targetName}`
-    
+
     case 'role_change':
       if (oldRole && newRole) {
         return `${actorName} changed role from ${oldRole} to ${newRole}`
       }
       return `${actorName} changed role to ${newRole || 'Unknown Role'}`
-    
+
     case 'user_contact_updated':
       return `${actorName} updated contact information`
-    
+
     case 'permission_grant':
       return `${actorName} granted permission "${log.details?.permission || 'Unknown'}" to ${targetName}`
-    
+
     case 'permission_revoke':
       return `${actorName} revoked permission "${log.details?.permission || 'Unknown'}" from ${targetName}`
-    
+
     case 'login':
       return `${actorName} logged into the system`
-    
+
     case 'logout':
       return `${actorName} logged out of the system`
-    
+
     case 'password_change':
       return `${actorName} changed password`
-    
+
     case 'password_reset':
       return `${actorName} reset password`
-    
+
     case 'password_reset_sent':
       return `Password reset link sent to ${actorName}`
-    
+
     case 'email_changed_by_admin':
       return `${actorName} changed email for ${targetName}`
-    
+
     case 'user_created':
       return `${actorName} created new user account: ${targetName}`
-    
+
     case 'user_updated':
       return `${actorName} updated user information`
-    
+
     case 'profile_update':
       return `${actorName} updated profile information`
-    
+
     case 'user_permissions_updated':
       return `${actorName} updated permissions`
-    
+
     default:
       return `${actorName} performed ${log.action.replace(/_/g, ' ')} action`
   }

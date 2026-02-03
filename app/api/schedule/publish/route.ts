@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 
 /**

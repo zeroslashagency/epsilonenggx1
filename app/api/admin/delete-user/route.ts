@@ -1,9 +1,11 @@
 export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { requireCSRFToken } from '@/app/lib/middleware/csrf-protection'
+import { validateRequest, deleteUserSchema } from '@/app/lib/features/auth/schemas'
 
 // Handle both DELETE and POST methods for backwards compatibility
 async function handleDeleteUser(request: NextRequest) {
@@ -17,13 +19,11 @@ async function handleDeleteUser(request: NextRequest) {
   const user = authResult
 
   try {
-    const { userId, userEmail, userName, actorId } = await request.json()
-
-    if (!userId) {
-      return NextResponse.json({ 
-        error: 'User ID is required' 
-      }, { status: 400 })
-    }
+    // Validate input with Zod schema
+    const body = await request.json()
+    // Validate strictly but keep access to other fields if needed
+    const { userId, userEmail } = await validateRequest(deleteUserSchema, body)
+    const userName = body.userName // Extract optional field not in strict schema
 
 
 
@@ -44,12 +44,12 @@ async function handleDeleteUser(request: NextRequest) {
       .eq('id', userId)
 
     if (profileDeleteError) {
-      return NextResponse.json({ 
-        error: `Failed to delete user profile: ${profileDeleteError.message}` 
+      return NextResponse.json({
+        error: `Failed to delete user profile: ${profileDeleteError.message}`
       }, { status: 500 })
     }
 
-    
+
     // Log audit trail
     await supabaseAdmin
       .from('audit_logs')
@@ -66,7 +66,7 @@ async function handleDeleteUser(request: NextRequest) {
           deleted_at: new Date().toISOString()
         }
       })
-    
+
     return NextResponse.json({
       success: true,
       message: `User ${userName || userEmail} has been deleted`,
@@ -78,9 +78,10 @@ async function handleDeleteUser(request: NextRequest) {
     })
 
   } catch (error: any) {
+    const isValidationError = error?.message?.startsWith('Validation failed')
     return NextResponse.json({
       error: error?.message || 'Internal server error'
-    }, { status: 500 })
+    }, { status: isValidationError ? 400 : 500 })
   }
 }
 

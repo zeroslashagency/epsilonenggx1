@@ -68,6 +68,12 @@ CLEANUP_PLAN.md
 # Config files with credentials (use .env instead)
 config/supabase.js
 
+# Agent directories (AI configuration - should not be committed)
+.agent/
+.agent admin/
+
 # Mobile
-mobile/*
-!mobile/epsilon_ios/
+mobile/
+
+# Test coverage reports
+coverage/

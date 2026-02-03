@@ -5,75 +5,141 @@
 
 :root {
   /* Updated to premium emerald-based color palette */
-  --background: oklch(1 0 0); /* Pure white */
-  --foreground: oklch(0.35 0.01 258); /* Dark slate gray #475569 */
-  --card: oklch(0.97 0.005 258); /* Light gray #f1f5f9 */
-  --card-foreground: oklch(0.35 0.01 258); /* Dark slate gray */
-  --popover: oklch(1 0 0); /* Pure white */
-  --popover-foreground: oklch(0.35 0.01 258); /* Dark slate gray */
-  --primary: oklch(0.45 0.15 162); /* Emerald-600 #059669 */
-  --primary-foreground: oklch(1 0 0); /* White */
-  --secondary: oklch(0.35 0.01 258); /* Dark gray #4b5563 */
-  --secondary-foreground: oklch(1 0 0); /* White */
-  --muted: oklch(0.98 0.002 258); /* Very light gray #f9fafb */
-  --muted-foreground: oklch(0.35 0.01 258); /* Dark gray */
-  --accent: oklch(0.55 0.15 162); /* Vibrant emerald #10b981 */
-  --accent-foreground: oklch(1 0 0); /* White */
-  --destructive: oklch(0.55 0.2 35); /* Orange #ea580c */
-  --destructive-foreground: oklch(1 0 0); /* White */
-  --border: oklch(0.92 0.005 258); /* Light border #e5e7eb */
-  --input: oklch(1 0 0); /* White input background */
-  --ring: oklch(0.45 0.15 162 / 0.5); /* Emerald ring with opacity */
-  --chart-1: oklch(0.45 0.15 162); /* Primary emerald */
-  --chart-2: oklch(0.55 0.15 162); /* Accent emerald */
-  --chart-3: oklch(0.35 0.01 258); /* Dark gray */
-  --chart-4: oklch(0.55 0.2 35); /* Orange */
-  --chart-5: oklch(0.6 0.2 35); /* Light orange */
-  --radius: 0.5rem; /* 8px rounded corners */
-  --sidebar: oklch(1 0 0); /* White sidebar */
-  --sidebar-foreground: oklch(0.35 0.01 258); /* Dark text */
-  --sidebar-primary: oklch(0.97 0.005 258); /* Light gray */
-  --sidebar-primary-foreground: oklch(0.35 0.01 258); /* Dark text */
-  --sidebar-accent: oklch(0.55 0.15 162); /* Emerald accent */
-  --sidebar-accent-foreground: oklch(1 0 0); /* White text */
-  --sidebar-border: oklch(0.92 0.005 258); /* Light border */
-  --sidebar-ring: oklch(0.45 0.15 162 / 0.5); /* Emerald ring */
+  --background: oklch(1 0 0);
+  /* Pure white */
+  --foreground: oklch(0.35 0.01 258);
+  /* Dark slate gray #475569 */
+  --card: oklch(0.97 0.005 258);
+  /* Light gray #f1f5f9 */
+  --card-foreground: oklch(0.35 0.01 258);
+  /* Dark slate gray */
+  --popover: oklch(1 0 0);
+  /* Pure white */
+  --popover-foreground: oklch(0.35 0.01 258);
+  /* Dark slate gray */
+  --primary: oklch(0.45 0.15 162);
+  /* Emerald-600 #059669 */
+  --primary-foreground: oklch(1 0 0);
+  /* White */
+  --secondary: oklch(0.35 0.01 258);
+  /* Dark gray #4b5563 */
+  --secondary-foreground: oklch(1 0 0);
+  /* White */
+  --muted: oklch(0.98 0.002 258);
+  /* Very light gray #f9fafb */
+  --muted-foreground: oklch(0.35 0.01 258);
+  /* Dark gray */
+  --accent: oklch(0.55 0.15 162);
+  /* Vibrant emerald #10b981 */
+  --accent-foreground: oklch(1 0 0);
+  /* White */
+  --destructive: oklch(0.55 0.2 35);
+  /* Orange #ea580c */
+  --destructive-foreground: oklch(1 0 0);
+  /* White */
+  --border: oklch(0.92 0.005 258);
+  /* Light border #e5e7eb */
+  --input: oklch(1 0 0);
+  /* White input background */
+  --ring: oklch(0.45 0.15 162 / 0.5);
+  /* Emerald ring with opacity */
+  --chart-1: oklch(0.45 0.15 162);
+  /* Primary emerald */
+  --chart-2: oklch(0.55 0.15 162);
+  /* Accent emerald */
+  --chart-3: oklch(0.35 0.01 258);
+  /* Dark gray */
+  --chart-4: oklch(0.55 0.2 35);
+  /* Orange */
+  --chart-5: oklch(0.6 0.2 35);
+  /* Light orange */
+  --radius: 0.5rem;
+  /* 8px rounded corners */
+  --sidebar: oklch(1 0 0);
+  /* White sidebar */
+  --sidebar-foreground: oklch(0.35 0.01 258);
+  /* Dark text */
+  --sidebar-primary: oklch(0.97 0.005 258);
+  /* Light gray */
+  --sidebar-primary-foreground: oklch(0.35 0.01 258);
+  /* Dark text */
+  /* Light gray for hover state */
+  --sidebar-accent: oklch(0.96 0.01 258);
+  /* Dark text for hover state */
+  --sidebar-accent-foreground: oklch(0.35 0.01 258);
+  /* White text */
+  --sidebar-border: oklch(0.92 0.005 258);
+  /* Light border */
+  --sidebar-ring: oklch(0.58 0.16 260 / 0.5);
+  /* Blue ring */
 }
 
 .dark {
   /* Enhanced dark mode with premium colors */
-  --background: oklch(0.08 0.005 258); /* Very dark background */
-  --foreground: oklch(0.95 0.005 258); /* Light text */
-  --card: oklch(0.12 0.01 258); /* Dark card background */
-  --card-foreground: oklch(0.95 0.005 258); /* Light text */
-  --popover: oklch(0.12 0.01 258); /* Dark popover */
-  --popover-foreground: oklch(0.95 0.005 258); /* Light text */
-  --primary: oklch(0.55 0.15 162); /* Brighter emerald for dark mode */
-  --primary-foreground: oklch(0.08 0.005 258); /* Dark text */
-  --secondary: oklch(0.2 0.01 258); /* Medium gray */
-  --secondary-foreground: oklch(0.95 0.005 258); /* Light text */
-  --muted: oklch(0.15 0.01 258); /* Muted dark background */
-  --muted-foreground: oklch(0.7 0.005 258); /* Medium light text */
-  --accent: oklch(0.6 0.15 162); /* Bright emerald accent */
-  --accent-foreground: oklch(0.08 0.005 258); /* Dark text */
-  --destructive: oklch(0.6 0.2 35); /* Bright orange */
-  --destructive-foreground: oklch(0.08 0.005 258); /* Dark text */
-  --border: oklch(0.2 0.01 258); /* Dark border */
-  --input: oklch(0.12 0.01 258); /* Dark input */
-  --ring: oklch(0.55 0.15 162 / 0.5); /* Emerald ring */
-  --chart-1: oklch(0.55 0.15 162); /* Emerald */
-  --chart-2: oklch(0.6 0.15 162); /* Light emerald */
-  --chart-3: oklch(0.7 0.005 258); /* Light gray */
-  --chart-4: oklch(0.6 0.2 35); /* Orange */
-  --chart-5: oklch(0.65 0.2 35); /* Light orange */
-  --sidebar: oklch(0.1 0.005 258); /* Dark sidebar */
-  --sidebar-foreground: oklch(0.95 0.005 258); /* Light text */
-  --sidebar-primary: oklch(0.55 0.15 162); /* Emerald primary */
-  --sidebar-primary-foreground: oklch(0.08 0.005 258); /* Dark text */
-  --sidebar-accent: oklch(0.2 0.01 258); /* Dark accent */
-  --sidebar-accent-foreground: oklch(0.95 0.005 258); /* Light text */
-  --sidebar-border: oklch(0.2 0.01 258); /* Dark border */
-  --sidebar-ring: oklch(0.55 0.15 162 / 0.5); /* Emerald ring */
+  --background: oklch(0.08 0.005 258);
+  /* Very dark background */
+  --foreground: oklch(0.95 0.005 258);
+  /* Light text */
+  --card: oklch(0.12 0.01 258);
+  /* Dark card background */
+  --card-foreground: oklch(0.95 0.005 258);
+  /* Light text */
+  --popover: oklch(0.12 0.01 258);
+  /* Dark popover */
+  --popover-foreground: oklch(0.95 0.005 258);
+  /* Light text */
+  --primary: oklch(0.55 0.15 162);
+  /* Brighter emerald for dark mode */
+  --primary-foreground: oklch(0.08 0.005 258);
+  /* Dark text */
+  --secondary: oklch(0.2 0.01 258);
+  /* Medium gray */
+  --secondary-foreground: oklch(0.95 0.005 258);
+  /* Light text */
+  --muted: oklch(0.15 0.01 258);
+  /* Muted dark background */
+  --muted-foreground: oklch(0.7 0.005 258);
+  /* Medium light text */
+  --accent: oklch(0.6 0.15 162);
+  /* Bright emerald accent */
+  --accent-foreground: oklch(0.08 0.005 258);
+  /* Dark text */
+  --destructive: oklch(0.6 0.2 35);
+  /* Bright orange */
+  --destructive-foreground: oklch(0.08 0.005 258);
+  /* Dark text */
+  --border: oklch(0.2 0.01 258);
+  /* Dark border */
+  --input: oklch(0.12 0.01 258);
+  /* Dark input */
+  --ring: oklch(0.55 0.15 162 / 0.5);
+  /* Emerald ring */
+  --chart-1: oklch(0.55 0.15 162);
+  /* Emerald */
+  --chart-2: oklch(0.6 0.15 162);
+  /* Light emerald */
+  --chart-3: oklch(0.7 0.005 258);
+  /* Light gray */
+  --chart-4: oklch(0.6 0.2 35);
+  /* Orange */
+  --chart-5: oklch(0.65 0.2 35);
+  /* Light orange */
+  --sidebar: oklch(0.1 0.005 258);
+  /* Dark sidebar */
+  --sidebar-foreground: oklch(0.95 0.005 258);
+  /* Light text */
+  --sidebar-primary: oklch(0.55 0.15 162);
+  /* Emerald primary */
+  --sidebar-primary-foreground: oklch(0.08 0.005 258);
+  /* Dark text */
+  --sidebar-accent: oklch(0.25 0.01 258);
+  /* Dark accent */
+  --sidebar-accent-foreground: oklch(0.95 0.005 258);
+  /* Light text */
+  --sidebar-border: oklch(0.2 0.01 258);
+  /* Dark border */
+  --sidebar-ring: oklch(0.55 0.15 162 / 0.5);
+  /* Emerald ring */
 }
 
 @theme inline {
@@ -121,6 +187,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
@@ -179,7 +246,41 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Sidebar Navigation Styles */
+[data-sidebar="menu-button"],
+[data-sidebar="menu-sub-button"] {
+  transition: all 0.2s ease;
+}
+
+/* Hover State - Light Gray */
+[data-sidebar="menu-button"]:hover:not([data-active="true"]),
+[data-sidebar="menu-sub-button"]:hover:not([data-active="true"]) {
+  background-color: var(--sidebar-accent) !important;
+  color: var(--sidebar-accent-foreground) !important;
+}
+
+/* Active State - Blue */
+[data-sidebar="menu-button"][data-active="true"],
+[data-sidebar="menu-sub-button"][data-active="true"] {
+  background-color: rgb(37 99 235) !important;
+  /* Blue-600 */
+  color: white !important;
+}
+
+[data-sidebar="menu-button"][data-active="true"] svg,
+[data-sidebar="menu-sub-button"][data-active="true"] svg {
+  color: white !important;
+}
+
+/* Active + Hover - Darker Blue */
+[data-sidebar="menu-button"][data-active="true"]:hover,
+[data-sidebar="menu-sub-button"][data-active="true"]:hover {
+  background-color: rgb(29 78 216) !important;
+  /* Blue-700 */
 }

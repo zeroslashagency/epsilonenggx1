@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/app/lib/middleware/auth.middleware'
+import { requireAuth } from '@/app/lib/features/auth/auth.middleware'
 
 // 🔐 SECURITY: Restrict CORS to your domain only
 const corsHeaders = {

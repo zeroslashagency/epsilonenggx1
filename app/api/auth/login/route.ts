@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { successResponse, unauthorizedResponse, serverErrorResponse } from '@/app/lib/utils/api-response'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
-import { loginSchema } from '@/app/lib/validation/schemas'
+import { loginSchema } from '@/app/lib/features/auth/schemas'
 import { checkRateLimit, authRateLimit } from '@/app/lib/middleware/rate-limit.middleware'
 
 export async function POST(request: NextRequest) {

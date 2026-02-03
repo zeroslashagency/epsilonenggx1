@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole } from '@/app/lib/middleware/auth.middleware'
+import { requireRole } from '@/app/lib/features/auth/auth.middleware'
 
 /**
  * POST /api/admin/roles/[id]/clone
@@ -19,27 +19,27 @@ export async function POST(
   try {
     const supabase = getSupabaseAdminClient()
     const sourceRoleId = params.id
-    
-    console.log('🔄 Cloning role:', sourceRoleId)
-    
+
+
+
     // Get source role
     const { data: sourceRole, error: fetchError } = await supabase
       .from('roles')
       .select('*')
       .eq('id', sourceRoleId)
       .single()
-    
+
     if (fetchError) {
       console.error('❌ Error fetching source role:', fetchError)
       throw fetchError
     }
-    
-    console.log('📋 Source role:', sourceRole.name)
-    
+
+
+
     // Generate new name
     let newName = `${sourceRole.name} (Copy)`
     let counter = 1
-    
+
     // Check if name exists, increment counter if needed
     while (true) {
       const { data: existing } = await supabase
@@ -47,15 +47,15 @@ export async function POST(
         .select('id')
         .eq('name', newName)
         .single()
-      
+
       if (!existing) break
-      
+
       counter++
       newName = `${sourceRole.name} (Copy ${counter})`
     }
-    
-    console.log('✨ New role name:', newName)
-    
+
+
+
     // Create cloned role
     const { data: newRole, error: createError } = await supabase
       .from('roles')
@@ -67,37 +67,36 @@ export async function POST(
       })
       .select()
       .single()
-    
+
     if (createError) {
       console.error('❌ Error creating role:', createError)
       throw createError
     }
-    
-    console.log('✅ Role cloned successfully:', newRole.id)
-    
+
+
+
     // Clone role_permissions if they exist
     const { data: sourcePermissions } = await supabase
       .from('role_permissions')
       .select('permission_id')
       .eq('role_id', sourceRoleId)
-    
+
     if (sourcePermissions && sourcePermissions.length > 0) {
-      console.log(`📝 Cloning ${sourcePermissions.length} role permissions`)
-      
+
       const permissionInserts = sourcePermissions.map(sp => ({
         role_id: newRole.id,
         permission_id: sp.permission_id
       }))
-      
+
       const { error: rpError } = await supabase
         .from('role_permissions')
         .insert(permissionInserts)
-      
+
       if (rpError) {
         console.error('⚠️ Error cloning role_permissions:', rpError)
       }
     }
-    
+
     // Log audit trail
     await supabase
       .from('audit_logs')
@@ -112,13 +111,13 @@ export async function POST(
           cloned_by: user.email
         }
       })
-    
+
     return NextResponse.json({
       success: true,
       data: newRole,
       message: `Role cloned as "${newName}"`
     })
-    
+
   } catch (error) {
     console.error('❌ Clone error:', error)
     return NextResponse.json({

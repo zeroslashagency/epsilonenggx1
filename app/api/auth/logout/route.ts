@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
  * @security Requires authentication
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/app/lib/middleware/auth.middleware'
+import { requireAuth } from '@/app/lib/features/auth/auth.middleware'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { successResponse, serverErrorResponse } from '@/app/lib/utils/api-response'
 

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
+import { requireGranularPermission } from '@/app/lib/features/auth/auth.middleware'
 
 /**
  * GET /api/production/machines
@@ -17,30 +17,34 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     const { searchParams } = new URL(request.url)
-    
+
     const status = searchParams.get('status')
     const type = searchParams.get('type')
-    
+
     let query = supabase
       .from('machines')
       .select('*, current_order:production_orders(order_number, customer_name)')
       .order('created_at', { ascending: false })
-    
+
     if (status && status !== 'all') {
       query = query.eq('status', status)
     }
-    
+
     if (type && type !== 'all') {
       query = query.eq('type', type)
     }
-    
+
     const { data: machines, error } = await query
-    
+
     if (error) throw error
-    
+
     return NextResponse.json({
       success: true,
       data: machines
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
+      }
     })
   } catch (error) {
     return NextResponse.json({
@@ -63,16 +67,16 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     const body = await request.json()
-    
+
     const { machine_id, name, type, status, efficiency, location, last_maintenance, next_maintenance } = body
-    
+
     if (!machine_id || !name || !type) {
       return NextResponse.json({
         success: false,
         error: 'Missing required fields'
       }, { status: 400 })
     }
-    
+
     const { data: machine, error } = await supabase
       .from('machines')
       .insert({
@@ -87,9 +91,9 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single()
-    
+
     if (error) throw error
-    
+
     await supabase
       .from('audit_logs')
       .insert({
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
           created_by: user.email
         }
       })
-    
+
     return NextResponse.json({
       success: true,
       data: machine,
@@ -128,25 +132,25 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     const body = await request.json()
-    
+
     const { id, ...updates } = body
-    
+
     if (!id) {
       return NextResponse.json({
         success: false,
         error: 'Machine ID is required'
       }, { status: 400 })
     }
-    
+
     const { data: machine, error } = await supabase
       .from('machines')
       .update(updates)
       .eq('id', id)
       .select()
       .single()
-    
+
     if (error) throw error
-    
+
     await supabase
       .from('audit_logs')
       .insert({
@@ -158,7 +162,7 @@ export async function PATCH(request: NextRequest) {
           updated_by: user.email
         }
       })
-    
+
     return NextResponse.json({
       success: true,
       data: machine,

@@ -1,6 +1,4 @@
 // Zoho UI Components - Central Export
-export { ZohoLayout } from './ZohoLayout'
-export { ZohoSidebar } from './ZohoSidebar'
 export { ZohoHeader } from './ZohoHeader'
 export { ZohoBreadcrumb } from './ZohoBreadcrumb'
 export { ZohoButton } from './ZohoButton'

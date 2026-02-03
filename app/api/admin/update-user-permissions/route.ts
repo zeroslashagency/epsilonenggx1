@@ -2,9 +2,9 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireRole, requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
-import { updateUserPermissionsSchema } from '@/app/lib/validation/schemas'
+import { updateUserPermissionsSchema } from '@/app/lib/features/auth/schemas'
 import { permissionUpdateLimiter } from '@/app/lib/rate-limiter'
 
 export async function POST(request: NextRequest) {
@@ -15,32 +15,32 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    
+
     // Validate request body
     const validation = await validateRequestBody(request, updateUserPermissionsSchema)
     if (!validation.success) return validation.response
-    
+
     const { userId, role, permissions, standalone_attendance } = validation.data
 
     if (!userId) {
-      return NextResponse.json({ 
-        error: 'User ID is required' 
+      return NextResponse.json({
+        error: 'User ID is required'
       }, { status: 400 })
     }
 
     // RATE LIMITING: Check if user is making too many requests
     const clientIP = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitKey = `permission-update:${clientIP}`
-    
+
     const rateLimitResult = await permissionUpdateLimiter.check(rateLimitKey)
-    
+
     if (!rateLimitResult.success) {
-      console.warn('🚨 Rate limit exceeded:', { 
-        ip: clientIP, 
+      console.warn('🚨 Rate limit exceeded:', {
+        ip: clientIP,
         limit: rateLimitResult.limit,
         reset: new Date(rateLimitResult.reset).toISOString()
       })
-      
+
       return NextResponse.json({
         error: 'Too many permission update requests. Please try again later.',
         rateLimitInfo: {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
           remaining: rateLimitResult.remaining,
           resetTime: rateLimitResult.reset
         }
-      }, { 
+      }, {
         status: 429,
         headers: {
           'X-RateLimit-Limit': rateLimitResult.limit.toString(),
@@ -59,13 +59,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('💾 Updating user permissions:', { 
-      userId, 
-      role, 
-      permissions, 
-      standalone_attendance,
-      rateLimitRemaining: rateLimitResult.remaining
-    })
+
 
     // SECURITY: Prevent self-modification
     if (user.id === userId) {
@@ -88,15 +82,15 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (updateError) {
-      return NextResponse.json({ 
-        error: `Failed to update user profile: ${updateError.message}` 
+      return NextResponse.json({
+        error: `Failed to update user profile: ${updateError.message}`
       }, { status: 500 })
     }
 
     // Check if user actually exists (update returns empty array if no match)
     if (!updateData || updateData.length === 0) {
-      return NextResponse.json({ 
-        error: 'User not found' 
+      return NextResponse.json({
+        error: 'User not found'
       }, { status: 404 })
     }
 
@@ -106,7 +100,7 @@ export async function POST(request: NextRequest) {
     if (permissions && Array.isArray(permissions)) {
     }
 
-    
+
     // Log to audit_logs with proper fields
     const { error: auditError } = await supabase
       .from('audit_logs')

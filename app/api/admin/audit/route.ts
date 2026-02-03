@@ -2,9 +2,9 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireRole, requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { validateQueryParams } from '@/app/lib/middleware/validation.middleware'
-import { auditLogQuerySchema } from '@/app/lib/validation/schemas'
+import { auditLogQuerySchema } from '@/app/lib/features/auth/schemas'
 
 // Get audit logs with filtering
 export async function GET(request: NextRequest) {

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireAuth } from '@/app/lib/middleware/auth.middleware'
+import { requireAuth } from '@/app/lib/features/auth/auth.middleware'
 
 export async function GET(request: NextRequest) {
   // ✅ Check: dashboard OR analytics permission

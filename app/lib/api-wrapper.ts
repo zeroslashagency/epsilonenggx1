@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServerClient } from './services/supabase-server'
-import { hasPermission } from './middleware/auth.middleware'
-import { UserRole } from './types/auth.types'
+import { hasPermission } from './features/auth/auth.middleware'
+import { UserRole } from './features/auth/types'
 
 type ApiHandler = (request: NextRequest, user: any) => Promise<NextResponse>
 
@@ -29,7 +29,7 @@ export function withAuth(handler: ApiHandler, options?: AuthOptions) {
         .select('*')
         .eq('id', user.id)
         .single()
-      
+
       const userWithRole = { ...user, role: profile?.role || 'Employee' }
 
       // Check Role
@@ -46,7 +46,7 @@ export function withAuth(handler: ApiHandler, options?: AuthOptions) {
         // For now, using the middleware helper which uses Admin client (safe in API context)
         const hasAccess = await hasPermission(userWithRole as any, options.requiredPermission)
         if (!hasAccess) {
-             return NextResponse.json(
+          return NextResponse.json(
             { success: false, error: `Forbidden: Missing permission ${options.requiredPermission}` },
             { status: 403 }
           )

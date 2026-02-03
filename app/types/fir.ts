@@ -53,6 +53,21 @@ export interface Comment {
   attachments?: Attachment[];
 }
 
+// New Message interface for CRM-like timeline
+export interface Message {
+  id: string;
+  report_id: string;
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  message: string;
+  message_type: 'comment' | 'action' | 'system';
+  action?: 'accept' | 'reject' | 'confirm' | 'send_back' | 'escalate' | 'request_info' | 'close' | null;
+  attachments: Attachment[];
+  is_read: boolean;
+  created_at: string;
+}
+
 export interface Report {
   id: string;
   title: string;

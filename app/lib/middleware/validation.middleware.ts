@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { validationErrorResponse } from '@/app/lib/utils/api-response'
-import { formatZodErrors } from '@/app/lib/validation/schemas'
+import { formatZodErrors } from '@/app/lib/features/auth/schemas'
 
 /**
  * Validate request body

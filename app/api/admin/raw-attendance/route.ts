@@ -2,17 +2,17 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient, getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireAuth, requireGranularPermission } from '@/app/lib/middleware/auth.middleware'
+import { requireAuth, requireGranularPermission } from '@/app/lib/features/auth/auth.middleware'
 
 export async function GET(request: NextRequest) {
   // ✅ SECURITY FIX: Check if user has dashboard OR attendance permission
   const supabase = getSupabaseAdminClient()
-  
+
   // Get user
   const authResult = await requireAuth(request)
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
-  
+
   // Super Admin bypass
   if (user.role === 'Super Admin' || user.role === 'super_admin') {
     // Continue to data fetching
@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
       .select('permissions_json')
       .eq('name', user.role)
       .single()
-    
+
     const permissions = roleData?.permissions_json
     const hasDashboardPermission = permissions?.main_dashboard?.items?.Dashboard?.view === true
     const hasAttendancePermission = permissions?.main_attendance?.items?.Attendance?.view === true
-    
+
     if (!hasDashboardPermission && !hasAttendancePermission) {
       return NextResponse.json(
         { success: false, error: 'Forbidden', message: 'Access denied. Required: dashboard.Dashboard.view OR attendance.Attendance.view' },
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
     const searchParams = request.nextUrl.searchParams
-    
+
     const employeeCode = searchParams.get('employeeCode')
     const date = searchParams.get('date')
     const fromDate = searchParams.get('fromDate')
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const issuesDetected = Object.entries(employeeIssues).filter(([code, data]: [string, any]) => 
+    const issuesDetected = Object.entries(employeeIssues).filter(([code, data]: [string, any]) =>
       data.ins > data.outs + 1 || data.outs > data.ins
     ).length
 

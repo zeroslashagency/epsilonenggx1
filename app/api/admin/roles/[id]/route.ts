@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole } from '@/app/lib/middleware/auth.middleware'
+import { requireRole } from '@/app/lib/features/auth/auth.middleware'
 
 /**
  * GET /api/admin/roles/[id]
@@ -32,8 +32,8 @@ export async function GET(
   try {
     const supabase = getSupabaseAdminClient()
     const roleId = params.id
-    
-    
+
+
     // Get role from database
     const { data: role, error: roleError } = await supabase
       .from('roles')
@@ -88,9 +88,9 @@ export async function PUT(
     const supabase = getSupabaseAdminClient()
     const roleId = params.id
     const body = await request.json()
-    
-    console.log('🔧 PUT /api/admin/roles/[id] - Request body:', JSON.stringify(body, null, 2))
-    
+
+
+
     const { name, description, is_manufacturing_role, permissions, permissions_json } = body
 
     // Prepare update data - only include fields that exist in the table
@@ -104,17 +104,17 @@ export async function PUT(
     if (is_manufacturing_role !== undefined) {
       updateData.is_manufacturing_role = is_manufacturing_role
     }
-    
+
     // Fix: Prioritize permissions_json (granular) over permissions (legacy array)
     if (permissions_json) {
       updateData.permissions_json = permissions_json
-      console.log('📝 Saving permissions_json:', JSON.stringify(permissions_json, null, 2).substring(0, 500))
+
     } else if (permissions && !Array.isArray(permissions)) {
       // Legacy fallback: If permissions is passed as an object (old behavior), treat as json
       updateData.permissions_json = permissions
     }
 
-    console.log('💾 Updating role with data:', updateData)
+
 
     // Update the role
     const { error: updateError } = await supabase
@@ -127,18 +127,17 @@ export async function PUT(
       throw updateError
     }
 
-    console.log('✅ Role updated successfully')
+
 
     // TASK 4: Sync role_permissions table with permissions_json
     if (permissions) {
-      console.log('🔄 Syncing role_permissions table...')
-      
+
       // First, delete existing role_permissions
       await supabase
         .from('role_permissions')
         .delete()
         .eq('role_id', roleId)
-      
+
       // Extract permission codes from permissions_json
       const permissionCodes: string[] = []
       Object.values(permissions).forEach((module: any) => {
@@ -151,30 +150,30 @@ export async function PUT(
           })
         }
       })
-      
-      console.log(`📋 Found ${permissionCodes.length} active permissions`)
-      
+
+
+
       // Get permission IDs from codes
       if (permissionCodes.length > 0) {
         const { data: permissionData } = await supabase
           .from('permissions')
           .select('id, code')
           .in('code', permissionCodes)
-        
+
         if (permissionData && permissionData.length > 0) {
           const rolePermissionInserts = permissionData.map(p => ({
             role_id: roleId,
             permission_id: p.id
           }))
-          
+
           const { error: rpError } = await supabase
             .from('role_permissions')
             .insert(rolePermissionInserts)
-          
+
           if (rpError) {
             console.error('⚠️ Error syncing role_permissions:', rpError)
           } else {
-            console.log(`✅ Synced ${permissionData.length} permissions to role_permissions table`)
+
           }
         }
       }
@@ -206,7 +205,7 @@ export async function PUT(
 
   } catch (error: any) {
     console.error('❌ PUT /api/admin/roles/[id] error:', error)
-    
+
     // Return detailed error information
     return NextResponse.json({
       success: false,
@@ -238,7 +237,7 @@ export async function DELETE(
   try {
     const supabase = getSupabaseAdminClient()
     const roleId = params.id
-    
+
 
     // Delete the role
     const { error: deleteError } = await supabase

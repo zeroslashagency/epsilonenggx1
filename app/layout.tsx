@@ -10,6 +10,7 @@ import { ToastProvider } from "./lib/contexts/toast-context"
 import { AuthProvider } from "./lib/contexts/auth-context"
 import { QueryProvider } from "./lib/providers/query-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "sonner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -51,6 +52,7 @@ export default function RootLayout({
                 <Suspense fallback={null}>{children}</Suspense>
               </QueryProvider>
               <Toaster />
+              <SonnerToaster position="top-right" richColors closeButton />
               <Analytics />
               {/* ⚡ PERFORMANCE: Speed Insights for Web Vitals monitoring */}
               <SpeedInsights />

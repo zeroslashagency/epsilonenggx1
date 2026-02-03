@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
 /**
  * Roles API Route
@@ -9,10 +10,10 @@ export const dynamic = 'force-dynamic'
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole, requirePermission } from '@/app/lib/middleware/auth.middleware'
+import { requireRole, requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { successResponse, serverErrorResponse } from '@/app/lib/utils/api-response'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
-import { createRoleSchema, updateRoleSchema } from '@/app/lib/validation/schemas'
+import { createRoleSchema, updateRoleSchema } from '@/app/lib/features/auth/schemas'
 import { z } from 'zod'
 
 /**
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    
+
     // Get all roles
     const { data: roles, error: rolesError } = await supabase
       .from('roles')
@@ -76,6 +77,10 @@ export async function GET(request: NextRequest) {
         permissionMatrix,
         rolePermissions
       }
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400'
+      }
     })
 
   } catch (error) {
@@ -102,11 +107,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    
+
     // Validate request body
     const validation = await validateRequestBody(request, createRoleSchema)
     if (!validation.success) return validation.response
-    
+
     const { name, description, permissions = [], is_manufacturing_role = false, permissions_json = {} } = validation.data
 
     // Create role
@@ -124,11 +129,12 @@ export async function POST(request: NextRequest) {
     if (roleError) throw roleError
 
     // Assign permissions to role
-    if (permissions.length > 0) {
+    const permissionsArray = Array.isArray(permissions) ? permissions : Object.keys(permissions)
+    if (permissionsArray.length > 0) {
       const { data: permissionData, error: permissionQueryError } = await supabase
         .from('permissions')
         .select('id')
-        .in('code', permissions)
+        .in('code', permissionsArray)
 
       if (permissionQueryError) throw permissionQueryError
 
@@ -187,11 +193,11 @@ export async function PUT(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    
+
     // Validate request body
     const validation = await validateRequestBody(request, updateRoleSchema.extend({ roleId: z.string().uuid() }))
     if (!validation.success) return validation.response
-    
+
     const { roleId, name, description, permissions = [], permissions_json } = validation.data
 
     // Update role
@@ -213,11 +219,12 @@ export async function PUT(request: NextRequest) {
       .eq('role_id', roleId)
 
     // Add new permissions
-    if (permissions.length > 0) {
+    const permissionsArray = Array.isArray(permissions) ? permissions : Object.keys(permissions)
+    if (permissionsArray.length > 0) {
       const { data: permissionData, error: permissionQueryError } = await supabase
         .from('permissions')
         .select('id')
-        .in('code', permissions)
+        .in('code', permissionsArray)
 
       if (permissionQueryError) throw permissionQueryError
 
