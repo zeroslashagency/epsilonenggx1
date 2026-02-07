@@ -376,7 +376,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <SidebarMenuSub>
-                              {item.items.map((subItem) => (
+                              {item.items?.map((subItem) => (
                                 <SidebarMenuSubItem key={subItem.id}>
                                   <SidebarMenuSubButton
                                     asChild
