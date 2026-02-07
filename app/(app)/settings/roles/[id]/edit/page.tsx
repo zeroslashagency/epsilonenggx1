@@ -22,6 +22,8 @@ import {
   buildPermissionCodes,
   getModuleActionColumns,
   recomputeParentFlagsFromChildren,
+  type PermissionModule as MappingPermissionModule,
+  type PermissionModules as MappingPermissionModules,
 } from '@/app/lib/features/auth/permission-mapping'
 
 const ACTION_LABELS: Record<string, string> = {
@@ -353,7 +355,7 @@ export default function EditRolePage() {
         0
       )
 
-      const permissionCodes = buildPermissionCodes(permissionModules as import('@/app/lib/features/auth/permission-mapping').PermissionModules)
+      const permissionCodes = buildPermissionCodes(permissionModules as MappingPermissionModules)
 
       const roleData = {
         roleId, // Required by validation schema
@@ -502,7 +504,7 @@ export default function EditRolePage() {
 
           {/* Permissions */}
           {Object.entries(permissionModules).map(([moduleKey, module]) => {
-            const actionColumns = getModuleActionColumns(module as import('@/app/lib/features/auth/permission-mapping').PermissionModule)
+            const actionColumns = getModuleActionColumns(module as MappingPermissionModule)
 
             return (
               <div
