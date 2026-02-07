@@ -20,6 +20,8 @@ import { initialPermissionModules, ModulePermission, PermissionModule } from '..
 import {
   buildPermissionCodes,
   getModuleActionColumns,
+  type PermissionModule as MappingPermissionModule,
+  type PermissionModules as MappingPermissionModules,
 } from '@/app/lib/features/auth/permission-mapping'
 
 const ACTION_LABELS: Record<string, string> = {
@@ -87,11 +89,11 @@ export default function NewRolePage() {
 
       if (isParent) {
         // Parent clicked: set this permission on parent AND all children
-        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
-        
+        ; (updated[moduleKey].items[itemKey] as any)[permission] = value
+
         // If 'full' toggled, also set all derived permissions on parent
         if (permission === 'full') {
-          ;(updated[moduleKey].items[itemKey] as any).view = value
+          ; (updated[moduleKey].items[itemKey] as any).view = value
           if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
           if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
           if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
@@ -102,11 +104,11 @@ export default function NewRolePage() {
         // Sync to all children
         Object.entries(updated[moduleKey].items).forEach(([childKey, childItem]) => {
           if (childItem.isSubItem && childItem.parent === itemKey) {
-            ;(updated[moduleKey].items[childKey] as any)[permission] = value
-            
+            ; (updated[moduleKey].items[childKey] as any)[permission] = value
+
             // If 'full' toggled, sync derived permissions to child too
             if (permission === 'full') {
-              ;(updated[moduleKey].items[childKey] as any).view = value
+              ; (updated[moduleKey].items[childKey] as any).view = value
               if ('create' in childItem) (updated[moduleKey].items[childKey] as any).create = value
               if ('edit' in childItem) (updated[moduleKey].items[childKey] as any).edit = value
               if ('delete' in childItem) (updated[moduleKey].items[childKey] as any).delete = value
@@ -117,11 +119,11 @@ export default function NewRolePage() {
         })
       } else if (isChild) {
         // Child clicked: update this child
-        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
-        
+        ; (updated[moduleKey].items[itemKey] as any)[permission] = value
+
         // If 'full' toggled, also set derived permissions on this child
         if (permission === 'full') {
-          ;(updated[moduleKey].items[itemKey] as any).view = value
+          ; (updated[moduleKey].items[itemKey] as any).view = value
           if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
           if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
           if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
@@ -135,27 +137,27 @@ export default function NewRolePage() {
           const siblings = Object.values(updated[moduleKey].items).filter(
             item => item.isSubItem && item.parent === parentKey
           )
-          
+
           // Parent action is true only if ALL children have that action
           const parentItem = updated[moduleKey].items[parentKey]
-          ;['full', 'view', 'create', 'edit', 'delete', 'approve', 'export'].forEach(action => {
-            if (parentItem[action as keyof ModulePermission] !== undefined) {
-              const relevantSiblings = siblings.filter(s => s[action as keyof ModulePermission] !== undefined)
-              if (relevantSiblings.length > 0) {
-                ;(parentItem as any)[action] = relevantSiblings.every(
-                  s => Boolean(s[action as keyof ModulePermission])
-                )
+            ;['full', 'view', 'create', 'edit', 'delete', 'approve', 'export'].forEach(action => {
+              if (parentItem[action as keyof ModulePermission] !== undefined) {
+                const relevantSiblings = siblings.filter(s => s[action as keyof ModulePermission] !== undefined)
+                if (relevantSiblings.length > 0) {
+                  ; (parentItem as any)[action] = relevantSiblings.every(
+                    s => Boolean(s[action as keyof ModulePermission])
+                  )
+                }
               }
-            }
-          })
+            })
         }
       } else {
         // Standalone item: just update it
-        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
-        
+        ; (updated[moduleKey].items[itemKey] as any)[permission] = value
+
         // If 'full' toggled, sync derived permissions
         if (permission === 'full') {
-          ;(updated[moduleKey].items[itemKey] as any).view = value
+          ; (updated[moduleKey].items[itemKey] as any).view = value
           if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
           if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
           if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
@@ -183,7 +185,7 @@ export default function NewRolePage() {
     }
 
     try {
-      const uniquePermissions = buildPermissionCodes(permissionModules)
+      const uniquePermissions = buildPermissionCodes(permissionModules as MappingPermissionModules)
 
       const { apiPost } = await import('@/app/lib/utils/api-client')
       const roleData = {
@@ -337,7 +339,7 @@ export default function NewRolePage() {
 
         {/* Permissions */}
         {Object.entries(permissionModules).map(([moduleKey, module]) => {
-          const actionColumns = getModuleActionColumns(module)
+          const actionColumns = getModuleActionColumns(module as MappingPermissionModule)
           const parentItems = Object.entries(module.items).filter(([_, item]) => !item.isSubItem)
 
           return (
@@ -408,13 +410,13 @@ export default function NewRolePage() {
                                 {item[action as keyof ModulePermission] !== undefined && (
                                   <input
                                     type="checkbox"
-                                    checked={item[action as keyof ModulePermission] ?? false}
+                                    checked={Boolean(item[action as keyof ModulePermission])}
                                     ref={(el) => {
                                       if (el && hasSubItems) {
                                         // Calculate indeterminate state for parent
                                         const children = Object.entries(module.items)
                                           .filter(([_, subItem]) => subItem.isSubItem && subItem.parent === itemKey)
-                                          .map(([_, subItem]) => subItem[action as keyof ModulePermission] ?? false);
+                                          .map(([_, subItem]) => Boolean(subItem[action as keyof ModulePermission]));
                                         const allChecked = children.length > 0 && children.every(Boolean);
                                         const someChecked = children.some(Boolean);
                                         el.indeterminate = someChecked && !allChecked;
@@ -454,7 +456,7 @@ export default function NewRolePage() {
                                     {subItem[action as keyof ModulePermission] !== undefined && (
                                       <input
                                         type="checkbox"
-                                        checked={subItem[action as keyof ModulePermission] ?? false}
+                                        checked={Boolean(subItem[action as keyof ModulePermission])}
                                         onChange={e =>
                                           updatePermission(
                                             moduleKey,
