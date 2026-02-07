@@ -213,7 +213,7 @@ export default function EditRolePage() {
           })
 
           const withEffectiveCodes = applyPermissionCodesToModules(
-            cleanPermissions as import('@/app/lib/features/auth/permission-mapping').PermissionModules,
+            cleanPermissions as MappingPermissionModules,
             effectivePermissionCodes
           )
           const reconciledPermissions = recomputeParentFlagsFromChildren(withEffectiveCodes) as Record<string, PermissionModule>
@@ -222,7 +222,7 @@ export default function EditRolePage() {
         } else {
           console.log('⚠️ No permissions_json in database, using effective permission codes only')
           const withEffectiveCodes = applyPermissionCodesToModules(
-            cleanPermissions as import('@/app/lib/features/auth/permission-mapping').PermissionModules,
+            cleanPermissions as MappingPermissionModules,
             effectivePermissionCodes
           )
           const reconciledPermissions = recomputeParentFlagsFromChildren(withEffectiveCodes) as Record<string, PermissionModule>
