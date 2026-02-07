@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from 'next/navigation'
-import { ZohoButton } from '../components/zoho-ui'
+import { ZohoButton } from '@/app/components/zoho-ui'
 import { Shield, Home, ArrowLeft } from 'lucide-react'
 
 export default function ForbiddenPage() {
@@ -24,17 +24,17 @@ export default function ForbiddenPage() {
         </div>
 
         <div className="space-y-3">
-          <ZohoButton 
-            variant="primary" 
+          <ZohoButton
+            variant="primary"
             className="w-full"
             icon={<Home className="w-4 h-4" />}
             onClick={() => router.push('/dashboard')}
           >
             Go to Dashboard
           </ZohoButton>
-          
-          <ZohoButton 
-            variant="ghost" 
+
+          <ZohoButton
+            variant="ghost"
             className="w-full"
             icon={<ArrowLeft className="w-4 h-4" />}
             onClick={() => router.back()}
