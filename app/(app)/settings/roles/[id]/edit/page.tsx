@@ -111,8 +111,8 @@ export default function EditRolePage() {
         const role = data.data
         const effectivePermissionCodes = Array.isArray(data.effective_permission_codes)
           ? data.effective_permission_codes.filter(
-              (code: unknown): code is string => typeof code === 'string' && code.length > 0
-            )
+            (code: unknown): code is string => typeof code === 'string' && code.length > 0
+          )
           : []
         setFetchedEffectivePermissionCodes(effectivePermissionCodes)
 
@@ -211,19 +211,19 @@ export default function EditRolePage() {
           })
 
           const withEffectiveCodes = applyPermissionCodesToModules(
-            cleanPermissions,
+            cleanPermissions as import('@/app/lib/features/auth/permission-mapping').PermissionModules,
             effectivePermissionCodes
           )
-          const reconciledPermissions = recomputeParentFlagsFromChildren(withEffectiveCodes)
+          const reconciledPermissions = recomputeParentFlagsFromChildren(withEffectiveCodes) as Record<string, PermissionModule>
           console.log('✅ Database permissions applied')
           setPermissionModules(reconciledPermissions)
         } else {
           console.log('⚠️ No permissions_json in database, using effective permission codes only')
           const withEffectiveCodes = applyPermissionCodesToModules(
-            cleanPermissions,
+            cleanPermissions as import('@/app/lib/features/auth/permission-mapping').PermissionModules,
             effectivePermissionCodes
           )
-          const reconciledPermissions = recomputeParentFlagsFromChildren(withEffectiveCodes)
+          const reconciledPermissions = recomputeParentFlagsFromChildren(withEffectiveCodes) as Record<string, PermissionModule>
           setPermissionModules(reconciledPermissions)
         }
 
@@ -255,11 +255,11 @@ export default function EditRolePage() {
 
       if (isParent) {
         // Parent clicked: set this permission on parent AND all children
-        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
-        
+        ; (updated[moduleKey].items[itemKey] as any)[permission] = value
+
         // If 'full' toggled, also set all derived permissions on parent
         if (permission === 'full') {
-          ;(updated[moduleKey].items[itemKey] as any).view = value
+          ; (updated[moduleKey].items[itemKey] as any).view = value
           if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
           if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
           if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
@@ -270,11 +270,11 @@ export default function EditRolePage() {
         // Sync to all children
         Object.entries(updated[moduleKey].items).forEach(([childKey, childItem]) => {
           if (childItem.isSubItem && childItem.parent === itemKey) {
-            ;(updated[moduleKey].items[childKey] as any)[permission] = value
-            
+            ; (updated[moduleKey].items[childKey] as any)[permission] = value
+
             // If 'full' toggled, sync derived permissions to child too
             if (permission === 'full') {
-              ;(updated[moduleKey].items[childKey] as any).view = value
+              ; (updated[moduleKey].items[childKey] as any).view = value
               if ('create' in childItem) (updated[moduleKey].items[childKey] as any).create = value
               if ('edit' in childItem) (updated[moduleKey].items[childKey] as any).edit = value
               if ('delete' in childItem) (updated[moduleKey].items[childKey] as any).delete = value
@@ -285,11 +285,11 @@ export default function EditRolePage() {
         })
       } else if (isChild) {
         // Child clicked: update this child
-        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
-        
+        ; (updated[moduleKey].items[itemKey] as any)[permission] = value
+
         // If 'full' toggled, also set derived permissions on this child
         if (permission === 'full') {
-          ;(updated[moduleKey].items[itemKey] as any).view = value
+          ; (updated[moduleKey].items[itemKey] as any).view = value
           if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
           if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
           if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
@@ -303,27 +303,27 @@ export default function EditRolePage() {
           const siblings = Object.values(updated[moduleKey].items).filter(
             item => item.isSubItem && item.parent === parentKey
           )
-          
+
           // Parent action is true only if ALL children have that action
           const parentItem = updated[moduleKey].items[parentKey]
-          ;['full', 'view', 'create', 'edit', 'delete', 'approve', 'export'].forEach(action => {
-            if (parentItem[action as keyof ModulePermission] !== undefined) {
-              const relevantSiblings = siblings.filter(s => s[action as keyof ModulePermission] !== undefined)
-              if (relevantSiblings.length > 0) {
-                ;(parentItem as any)[action] = relevantSiblings.every(
-                  s => Boolean(s[action as keyof ModulePermission])
-                )
+            ;['full', 'view', 'create', 'edit', 'delete', 'approve', 'export'].forEach(action => {
+              if (parentItem[action as keyof ModulePermission] !== undefined) {
+                const relevantSiblings = siblings.filter(s => s[action as keyof ModulePermission] !== undefined)
+                if (relevantSiblings.length > 0) {
+                  ; (parentItem as any)[action] = relevantSiblings.every(
+                    s => Boolean(s[action as keyof ModulePermission])
+                  )
+                }
               }
-            }
-          })
+            })
         }
       } else {
         // Standalone item: just update it
-        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
-        
+        ; (updated[moduleKey].items[itemKey] as any)[permission] = value
+
         // If 'full' toggled, sync derived permissions
         if (permission === 'full') {
-          ;(updated[moduleKey].items[itemKey] as any).view = value
+          ; (updated[moduleKey].items[itemKey] as any).view = value
           if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
           if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
           if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
@@ -370,9 +370,9 @@ export default function EditRolePage() {
         totalItems,
         sample: Object.keys(permissionModules)[0]
           ? {
-              module: Object.keys(permissionModules)[0],
-              items: Object.keys(permissionModules[Object.keys(permissionModules)[0]].items).length,
-            }
+            module: Object.keys(permissionModules)[0],
+            items: Object.keys(permissionModules[Object.keys(permissionModules)[0]].items).length,
+          }
           : null,
       })
 
@@ -625,22 +625,22 @@ export default function EditRolePage() {
                                       >
                                         {subItem[action as keyof ModulePermission] !==
                                           undefined && (
-                                          <input
-                                            type="checkbox"
-                                            checked={
-                                              subItem[action as keyof ModulePermission] ?? false
-                                            }
-                                            onChange={e =>
-                                              updatePermission(
-                                                moduleKey,
-                                                subItemKey,
-                                                action as keyof ModulePermission,
-                                                e.target.checked
-                                              )
-                                            }
-                                            className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
-                                          />
-                                        )}
+                                            <input
+                                              type="checkbox"
+                                              checked={
+                                                subItem[action as keyof ModulePermission] ?? false
+                                              }
+                                              onChange={e =>
+                                                updatePermission(
+                                                  moduleKey,
+                                                  subItemKey,
+                                                  action as keyof ModulePermission,
+                                                  e.target.checked
+                                                )
+                                              }
+                                              className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                            />
+                                          )}
                                       </td>
                                     ))}
                                   </tr>
