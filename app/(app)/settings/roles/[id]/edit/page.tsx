@@ -572,13 +572,13 @@ export default function EditRolePage() {
                                   {item[action as keyof ModulePermission] !== undefined && (
                                     <input
                                       type="checkbox"
-                                      checked={item[action as keyof ModulePermission] ?? false}
+                                      checked={Boolean(item[action as keyof ModulePermission])}
                                       ref={(el) => {
                                         if (el && hasSubItems) {
                                           // Calculate indeterminate state for parent
                                           const children = Object.entries(module.items)
                                             .filter(([_, subItem]) => subItem.isSubItem && subItem.parent === itemKey)
-                                            .map(([_, subItem]) => subItem[action as keyof ModulePermission] ?? false);
+                                            .map(([_, subItem]) => Boolean(subItem[action as keyof ModulePermission]));
                                           const allChecked = children.length > 0 && children.every(Boolean);
                                           const someChecked = children.some(Boolean);
                                           el.indeterminate = someChecked && !allChecked;
@@ -628,7 +628,7 @@ export default function EditRolePage() {
                                             <input
                                               type="checkbox"
                                               checked={
-                                                subItem[action as keyof ModulePermission] ?? false
+                                                Boolean(subItem[action as keyof ModulePermission])
                                               }
                                               onChange={e =>
                                                 updatePermission(
