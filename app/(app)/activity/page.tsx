@@ -5,7 +5,7 @@ import {
   ZohoCard,
   ZohoButton,
   ZohoBadge
-} from '../components/zoho-ui'
+} from '@/app/components/zoho-ui'
 import {
   Activity,
   Clock,

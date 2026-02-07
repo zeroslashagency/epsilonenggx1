@@ -264,7 +264,6 @@ function AlertsPageContent() {
         ))}
       </div>
     </div>
-    </div >
   )
 }
 

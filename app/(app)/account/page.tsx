@@ -387,7 +387,6 @@ function AccountPageContent() {
         </div>
       </div>
     </div>
-    </div >
   )
 }
 
