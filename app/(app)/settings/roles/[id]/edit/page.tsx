@@ -353,7 +353,7 @@ export default function EditRolePage() {
         0
       )
 
-      const permissionCodes = buildPermissionCodes(permissionModules)
+      const permissionCodes = buildPermissionCodes(permissionModules as import('@/app/lib/features/auth/permission-mapping').PermissionModules)
 
       const roleData = {
         roleId, // Required by validation schema
@@ -502,7 +502,7 @@ export default function EditRolePage() {
 
           {/* Permissions */}
           {Object.entries(permissionModules).map(([moduleKey, module]) => {
-            const actionColumns = getModuleActionColumns(module)
+            const actionColumns = getModuleActionColumns(module as import('@/app/lib/features/auth/permission-mapping').PermissionModule)
 
             return (
               <div
