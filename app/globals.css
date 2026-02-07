@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -265,22 +266,45 @@
   color: var(--sidebar-accent-foreground) !important;
 }
 
-/* Active State - Blue */
-[data-sidebar="menu-button"][data-active="true"],
-[data-sidebar="menu-sub-button"][data-active="true"] {
+/* Active State - Collapsed (Blue Fill) */
+[data-slot="sidebar"][data-state="collapsed"] [data-sidebar="menu-button"][data-active="true"],
+[data-slot="sidebar"][data-state="collapsed"] [data-sidebar="menu-sub-button"][data-active="true"] {
   background-color: rgb(37 99 235) !important;
-  /* Blue-600 */
   color: white !important;
 }
 
-[data-sidebar="menu-button"][data-active="true"] svg,
-[data-sidebar="menu-sub-button"][data-active="true"] svg {
+[data-slot="sidebar"][data-state="collapsed"] [data-sidebar="menu-button"][data-active="true"] svg,
+[data-slot="sidebar"][data-state="collapsed"] [data-sidebar="menu-sub-button"][data-active="true"] svg {
   color: white !important;
 }
 
-/* Active + Hover - Darker Blue */
-[data-sidebar="menu-button"][data-active="true"]:hover,
-[data-sidebar="menu-sub-button"][data-active="true"]:hover {
+/* Active + Hover - Collapsed */
+[data-slot="sidebar"][data-state="collapsed"] [data-sidebar="menu-button"][data-active="true"]:hover,
+[data-slot="sidebar"][data-state="collapsed"] [data-sidebar="menu-sub-button"][data-active="true"]:hover {
   background-color: rgb(29 78 216) !important;
-  /* Blue-700 */
+}
+
+/* Active State - Expanded (Soft Outline) */
+[data-slot="sidebar"][data-state="expanded"] [data-sidebar="menu-button"][data-active="true"],
+[data-slot="sidebar"][data-state="expanded"] [data-sidebar="menu-sub-button"][data-active="true"],
+[data-slot="sidebar"][data-mobile="true"] [data-sidebar="menu-button"][data-active="true"],
+[data-slot="sidebar"][data-mobile="true"] [data-sidebar="menu-sub-button"][data-active="true"] {
+  background-color: rgb(219 234 254) !important;
+  color: rgb(30 64 175) !important;
+  box-shadow: 0 0 0 1px rgb(37 99 235 / 0.6) !important;
+}
+
+[data-slot="sidebar"][data-state="expanded"] [data-sidebar="menu-button"][data-active="true"] svg,
+[data-slot="sidebar"][data-state="expanded"] [data-sidebar="menu-sub-button"][data-active="true"] svg,
+[data-slot="sidebar"][data-mobile="true"] [data-sidebar="menu-button"][data-active="true"] svg,
+[data-slot="sidebar"][data-mobile="true"] [data-sidebar="menu-sub-button"][data-active="true"] svg {
+  color: rgb(30 64 175) !important;
+}
+
+/* Active + Hover - Expanded */
+[data-slot="sidebar"][data-state="expanded"] [data-sidebar="menu-button"][data-active="true"]:hover,
+[data-slot="sidebar"][data-state="expanded"] [data-sidebar="menu-sub-button"][data-active="true"]:hover,
+[data-slot="sidebar"][data-mobile="true"] [data-sidebar="menu-button"][data-active="true"]:hover,
+[data-slot="sidebar"][data-mobile="true"] [data-sidebar="menu-sub-button"][data-active="true"]:hover {
+  background-color: rgb(191 219 254) !important;
 }

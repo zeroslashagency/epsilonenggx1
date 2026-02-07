@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
+import { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Calendar, Moon, Download } from 'lucide-react'
+import { TimelineEmployee } from './TimelineView'
 
 // Types specific to Table View
 interface EmployeeSchedule {
@@ -20,116 +20,89 @@ interface EmployeeSchedule {
     }[]
 }
 
-export function TableView() {
-    const [currentMonth, setCurrentMonth] = useState(new Date())
+export function TableView({
+    employees,
+    currentDate,
+    onDateChange,
+    isLoading
+}: {
+    employees: TimelineEmployee[]
+    currentDate: Date
+    onDateChange: (date: Date) => void
+    isLoading: boolean
+}) {
     const [selectedEmployee, setSelectedEmployee] = useState<string>('all')
-    const [employees, setEmployees] = useState<EmployeeSchedule[]>([])
-    const [loading, setLoading] = useState(true)
-    const supabase = getSupabaseBrowserClient()
 
     const formatMonth = (date: Date) => {
         return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     }
 
     const previousMonth = () => {
-        const newDate = new Date(currentMonth)
+        const newDate = new Date(currentDate)
         newDate.setMonth(newDate.getMonth() - 1)
-        setCurrentMonth(newDate)
+        onDateChange(newDate)
     }
 
     const nextMonth = () => {
-        const newDate = new Date(currentMonth)
+        const newDate = new Date(currentDate)
         newDate.setMonth(newDate.getMonth() + 1)
-        setCurrentMonth(newDate)
+        onDateChange(newDate)
     }
 
-    useEffect(() => {
-        fetchEmployeeSchedules()
-    }, [currentMonth])
+    const employeeSchedules = useMemo(() => {
+        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
 
-    async function fetchEmployeeSchedules() {
-        try {
-            setLoading(true)
+        const startStr = startDate.toISOString().split('T')[0]
+        const endStr = endDate.toISOString().split('T')[0]
 
-            // Get month range
-            const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
-            const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+        const employeeMap = new Map<string, EmployeeSchedule>()
 
-            // Fetch employee schedules for the month from employee_daily_schedule
-            const { data: scheduleData, error } = await supabase
-                .from('employee_daily_schedule')
-                .select(`
-          *,
-          employee_master!inner (
-            id,
-            employee_code,
-            employee_name,
-            department
-          )
-        `)
-                .gte('work_date', startDate.toISOString().split('T')[0])
-                .lte('work_date', endDate.toISOString().split('T')[0])
-
-            if (error) throw error
-
-            // Group schedules by employee and organize by weeks
-            const employeeMap = new Map()
-
-            scheduleData?.forEach((schedule: any) => {
-                const empId = schedule.employee_master.id
-                const empCode = schedule.employee_master.employee_code
-                const empName = schedule.employee_master.employee_name
-                const empDept = schedule.employee_master.department
-
-                if (!employeeMap.has(empId)) {
-                    employeeMap.set(empId, {
-                        id: empId,
-                        code: empCode,
-                        name: empName,
-                        department: empDept,
-                        weeks: []
-                    })
-                }
-
-                const employee = employeeMap.get(empId)
-                const scheduleDate = new Date(schedule.work_date)
-                const weekNumber = Math.ceil(scheduleDate.getDate() / 7)
-
-                // Find or create week entry
-                let weekEntry = employee.weeks.find((w: any) => w.weekNumber === weekNumber)
-                if (!weekEntry) {
-                    const weekStart = new Date(scheduleDate)
-                    weekStart.setDate(scheduleDate.getDate() - scheduleDate.getDay())
-                    const weekEnd = new Date(weekStart)
-                    weekEnd.setDate(weekStart.getDate() + 6)
-
-                    weekEntry = {
-                        weekNumber,
-                        dateRange: `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${weekEnd.getDate()}`,
-                        shiftName: schedule.shift_name || 'No Shift',
-                        timeRange: `${schedule.shift_start?.slice(0, 5) || '09:00'} - ${schedule.shift_end?.slice(0, 5) || '18:00'}`,
-                        color: schedule.color || '#DFF0D8',
-                        overnight: schedule.overnight || false
+        employees.forEach((emp) => {
+            emp.shifts
+                .filter((shift) => shift.date >= startStr && shift.date <= endStr)
+                .forEach((shift) => {
+                    if (!employeeMap.has(emp.id)) {
+                        employeeMap.set(emp.id, {
+                            id: emp.id,
+                            code: emp.code,
+                            name: emp.name,
+                            department: emp.department,
+                            weeks: []
+                        })
                     }
-                    employee.weeks.push(weekEntry)
-                }
-            })
 
-            const employeeSchedules = Array.from(employeeMap.values())
-            setEmployees(employeeSchedules)
+                    const scheduleDate = new Date(shift.date)
+                    const weekNumber = Math.ceil(scheduleDate.getDate() / 7)
 
-        } catch (error) {
-            console.error('Error fetching employee schedules:', error)
-            setEmployees([])
-        } finally {
-            setLoading(false)
-        }
-    }
+                    const employeeEntry = employeeMap.get(emp.id)!
+                    let weekEntry = employeeEntry.weeks.find((w) => w.weekNumber === weekNumber)
+                    if (!weekEntry) {
+                        const weekStart = new Date(scheduleDate)
+                        weekStart.setDate(scheduleDate.getDate() - scheduleDate.getDay())
+                        const weekEnd = new Date(weekStart)
+                        weekEnd.setDate(weekStart.getDate() + 6)
+
+                        weekEntry = {
+                            weekNumber,
+                            dateRange: `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${weekEnd.getDate()}`,
+                            shiftName: shift.shiftName || 'No Shift',
+                            timeRange: `${shift.startTime?.slice(0, 5) || '09:00'} - ${shift.endTime?.slice(0, 5) || '18:00'}`,
+                            color: shift.color || '#DFF0D8',
+                            overnight: shift.overnight || false
+                        }
+                        employeeEntry.weeks.push(weekEntry)
+                    }
+                })
+        })
+
+        return Array.from(employeeMap.values())
+    }, [employees, currentDate])
 
 
     const filteredEmployees = selectedEmployee === 'all'
-        ? employees
-        : employees.filter(e => e.id === selectedEmployee)
+        ? employeeSchedules
+        : employeeSchedules.filter(e => e.id === selectedEmployee)
 
     return (
         <div className="space-y-6">
@@ -162,7 +135,7 @@ export function TableView() {
                             <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                         </button>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white min-w-[180px] text-center">
-                            {formatMonth(currentMonth)}
+                            {formatMonth(currentDate)}
                         </div>
                         <button
                             onClick={nextMonth}
@@ -177,7 +150,7 @@ export function TableView() {
                         className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                         <option value="all">All Employees</option>
-                        {employees.map(emp => (
+                        {employeeSchedules.map(emp => (
                             <option key={emp.id} value={emp.id}>{emp.name} ({emp.code})</option>
                         ))}
                     </select>
@@ -208,7 +181,7 @@ export function TableView() {
             </div>
 
             {/* Loading State */}
-            {loading && (
+            {isLoading && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8">
                     <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -218,7 +191,7 @@ export function TableView() {
             )}
 
             {/* Desktop: Table View */}
-            {!loading && (
+            {!isLoading && (
                 <div className="hidden lg:block bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">
@@ -278,7 +251,7 @@ export function TableView() {
             )}
 
             {/* Mobile: Card View */}
-            {!loading && (
+            {!isLoading && (
                 <div className="lg:hidden space-y-4">
                     {filteredEmployees.map(employee => (
                         <div key={employee.id} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -321,7 +294,7 @@ export function TableView() {
                 </div>
             )}
 
-            {!loading && filteredEmployees.length === 0 && (
+            {!isLoading && filteredEmployees.length === 0 && (
                 <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
                     <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 dark:text-gray-400">No schedules found</p>

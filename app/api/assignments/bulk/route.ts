@@ -54,6 +54,48 @@ export async function POST(request: NextRequest) {
     // 1. If an assignment STARTS on or after the new Start Date, DELETE it (it's entirely replaced).
     // 2. If an assignment STARTS before but ENDS after (or is open), CLIP it to end the day before new Start Date.
 
+    // Collect warnings before destructive updates
+    const warnings: any[] = []
+
+    const { data: futureAssignments } = await supabase
+      .from('employee_shift_assignments')
+      .select('id, employee_code, shift_template_id, assignment_type, start_date, end_date')
+      .in('employee_code', employees)
+      .gte('start_date', startDate)
+
+    if (futureAssignments && futureAssignments.length > 0) {
+      futureAssignments.forEach((a: any) => {
+        warnings.push({
+          employee_code: a.employee_code,
+          type: 'future_assignment_replaced',
+          previous_shift_id: a.shift_template_id,
+          assignment_type: a.assignment_type,
+          start_date: a.start_date,
+          end_date: a.end_date
+        })
+      })
+    }
+
+    const { data: overlappingAssignments } = await supabase
+      .from('employee_shift_assignments')
+      .select('id, employee_code, shift_template_id, assignment_type, start_date, end_date')
+      .in('employee_code', employees)
+      .lt('start_date', startDate)
+      .or(`end_date.is.null,end_date.gte.${startDate}`)
+
+    if (overlappingAssignments && overlappingAssignments.length > 0) {
+      overlappingAssignments.forEach((a: any) => {
+        warnings.push({
+          employee_code: a.employee_code,
+          type: 'assignment_clipped',
+          previous_shift_id: a.shift_template_id,
+          assignment_type: a.assignment_type,
+          start_date: a.start_date,
+          end_date: a.end_date
+        })
+      })
+    }
+
     // Step 1: Delete ALL future assignments that start on or after the unassign date
     const { error: deleteError } = await supabase
       .from('employee_shift_assignments')
@@ -120,7 +162,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: `Successfully unassigned shifts from ${employees.length} employee(s)`,
-        count: employees.length
+        count: employees.length,
+        warnings
       })
     }
 
@@ -172,6 +215,7 @@ export async function POST(request: NextRequest) {
         let rotationPattern: any[] = []
         let rotationWeeks = 1
         let rotationShiftMap = new Map<string, any>()
+        let rotationBaseShiftMap = new Map<string, any>()
 
         if (shiftType === 'rotation') {
           // Attempt to fetch from new normalized table first
@@ -182,16 +226,29 @@ export async function POST(request: NextRequest) {
             .order('step_order', { ascending: true })
 
           if (steps && steps.length > 0) {
-
             rotationPattern = steps
             rotationWeeks = steps.length
           } else {
-
             rotationPattern = Array.isArray(template.pattern) ? template.pattern : []
             rotationWeeks = template.weeks_pattern || rotationPattern.length || 1
           }
 
-          // Fetch base shifts referenced in the pattern
+          const baseShiftIds = Array.from(new Set(
+            rotationPattern.map((p: any) => p?.base_shift_id).filter((id: any) => !!id)
+          )) as string[]
+
+          if (baseShiftIds.length > 0) {
+            const { data: baseShifts } = await supabase
+              .from('shift_templates')
+              .select('*')
+              .in('id', baseShiftIds)
+
+            if (baseShifts) {
+              rotationBaseShiftMap = new Map(baseShifts.map(s => [s.id, s]))
+            }
+          }
+
+          // Fallback: Fetch base shifts referenced by name if no IDs are present
           const shiftNames = Array.from(new Set(
             rotationPattern.map((p: any) => p?.shift_name).filter((n: any) => !!n)
           )) as string[]
@@ -235,8 +292,22 @@ export async function POST(request: NextRequest) {
               currentActiveDays = weekPattern.work_days
             }
 
-            // Priority 1: Base Shift Lookup
-            if (weekPattern?.shift_name) {
+            // Priority 1: Base Shift Lookup by ID
+            if (weekPattern?.base_shift_id) {
+              const baseShift = rotationBaseShiftMap.get(weekPattern.base_shift_id)
+              if (baseShift) {
+                currentShiftId = baseShift.id
+                shiftName = baseShift.name
+                shiftStart = baseShift.start_time
+                shiftEnd = baseShift.end_time
+                color = baseShift.color
+                overnight = baseShift.overnight
+                graceMinutes = baseShift.grace_minutes
+              }
+            }
+
+            // Priority 2: Base Shift Lookup by Name
+            if (weekPattern?.shift_name && !weekPattern?.base_shift_id) {
               const baseShift = rotationShiftMap.get(weekPattern.shift_name)
               if (baseShift) {
                 currentShiftId = baseShift.id
@@ -246,18 +317,12 @@ export async function POST(request: NextRequest) {
                 color = baseShift.color
                 overnight = baseShift.overnight
                 graceMinutes = baseShift.grace_minutes
-
               } else {
                 console.warn(`[RotationDecision] Base shift '${weekPattern.shift_name}' not found for ${dateStr}. Checking inline times...`)
-                // Fallback if name provided but not found in map (should unlikely happen if rotationShiftMap built correctly)
-                // But if we have inline times, use them
                 if (weekPattern?.start_time && weekPattern?.end_time) {
                   shiftStart = weekPattern.start_time
                   shiftEnd = weekPattern.end_time
                   shiftName = weekPattern.shift_name || shiftName
-
-                  // Keep default color/overnight from template unless specified? 
-                  // Usually ad-hoc patterns might verify this.
                 } else {
                   console.error(`[RotationDecision] FAILED to resolve shift for ${dateStr}. Defaulting to template metrics but this may be 00:00!`)
                 }
@@ -283,6 +348,7 @@ export async function POST(request: NextRequest) {
             dailyRecords.push({
               employee_code: empCode,
               work_date: dateStr,
+              shift_id: currentShiftId,
               shift_name: shiftName,
               shift_start: shiftStart,
               shift_end: shiftEnd,
@@ -327,7 +393,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message: `Successfully assigned shifts to ${employees.length} employee(s)`,
       data: data,
-      count: data?.length || 0
+      count: data?.length || 0,
+      warnings
     })
 
   } catch (error: any) {

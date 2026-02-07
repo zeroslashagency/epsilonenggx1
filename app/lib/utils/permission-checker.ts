@@ -24,6 +24,17 @@ export interface PermissionModule {
 
 export type PermissionAction = 'full' | 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'export'
 
+const resolveModuleKey = (
+  permissions: Record<string, PermissionModule> | null | undefined,
+  moduleKey: string
+) => {
+  if (permissions?.[moduleKey]) return moduleKey
+  if ((moduleKey === 'web_user_attendance' || moduleKey === 'mobile_user_attendance') && permissions?.user_attendance) {
+    return 'user_attendance'
+  }
+  return moduleKey
+}
+
 /**
  * Check if user has a specific permission action
  * @param permissions - User's permission modules from database
@@ -39,11 +50,12 @@ export function hasPermission(
   action: PermissionAction
 ): boolean {
   // No permissions = no access
-  if (!permissions || !permissions[moduleKey]) {
+  const resolvedModuleKey = resolveModuleKey(permissions, moduleKey)
+  if (!permissions || !permissions[resolvedModuleKey]) {
     return false
   }
 
-  const module = permissions[moduleKey]
+  const module = permissions[resolvedModuleKey]
   const item = module.items[itemKey]
 
   if (!item) {
@@ -71,11 +83,12 @@ export function hasAnyAccess(
   moduleKey: string,
   itemKey: string
 ): boolean {
-  if (!permissions || !permissions[moduleKey]) {
+  const resolvedModuleKey = resolveModuleKey(permissions, moduleKey)
+  if (!permissions || !permissions[resolvedModuleKey]) {
     return false
   }
 
-  const item = permissions[moduleKey].items[itemKey]
+  const item = permissions[resolvedModuleKey].items[itemKey]
   if (!item) {
     return false
   }
@@ -243,21 +256,27 @@ export function isSuperAdmin(userRole: string | null | undefined): boolean {
   return userRole === 'Super Admin' || userRole === 'super_admin'
 }
 
+const hasAnyUserAttendanceAccess = (permissions: Record<string, PermissionModule> | null | undefined) =>
+  canView(permissions, 'web_user_attendance', 'Attendance: Overview') ||
+  canView(permissions, 'web_user_attendance', 'Attendance: Calendar') ||
+  canView(permissions, 'web_user_attendance', 'Attendance: Timeline') ||
+  canView(permissions, 'web_user_attendance', 'Attendance: History')
+
 /**
  * Attendance-specific permission checks
  */
 export const AttendancePermissions = {
   canViewTodaysActivity: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_attendance', "Today's Recent Activity"),
+    isSuperAdmin(userRole) || canView(permissions, 'main_attendance', 'Attendance') || hasAnyUserAttendanceAccess(permissions),
   
   canViewAllRecords: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_attendance', 'All Track Records'),
+    isSuperAdmin(userRole) || canView(permissions, 'main_attendance', 'Attendance') || hasAnyUserAttendanceAccess(permissions),
   
   canExportRecords: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canExport(permissions, 'main_attendance', 'All Track Records'),
+    isSuperAdmin(userRole) || hasPermission(permissions, 'main_attendance', 'Attendance', 'edit'),
   
   canExportExcel: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canExport(permissions, 'main_attendance', 'Export Excel'),
+    isSuperAdmin(userRole) || hasPermission(permissions, 'main_attendance', 'Attendance', 'edit'),
   
   canAccessStandalone: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
     isSuperAdmin(userRole) || hasAnyAccess(permissions, 'main_attendance', 'Standalone Attendance')
@@ -268,19 +287,19 @@ export const AttendancePermissions = {
  */
 export const ChartPermissions = {
   canViewCharts: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_charts', 'Chart'),
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Chart'),
   
   canViewTimeline: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_charts', 'Timeline View'),
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Chart'),
   
   canViewGantt: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_charts', 'Gantt Chart'),
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Chart'),
   
   canViewKPI: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_charts', 'KPI Charts'),
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Chart'),
   
   canExportCharts: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canExport(permissions, 'main_charts', 'Chart')
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Chart')
 }
 
 /**
@@ -291,16 +310,16 @@ export const AnalyticsPermissions = {
     isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Analytics'),
   
   canViewProduction: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Production Analytics'),
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Analytics'),
   
   canViewEfficiency: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Efficiency Analytics'),
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Analytics'),
   
   canViewQuality: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Quality Analytics'),
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Analytics'),
   
   canViewMachine: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Machine Analytics')
+    isSuperAdmin(userRole) || canView(permissions, 'main_analytics', 'Analytics')
 }
 
 /**
@@ -314,28 +333,28 @@ export const SchedulingPermissions = {
     canView(permissions, 'main_scheduling', 'Schedule Generator Dashboard'),
   
   canCreateSchedule: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    hasPermission(permissions, 'main_scheduling', 'Create Schedule', 'create'),
+    hasPermission(permissions, 'main_scheduling', 'Schedule Generator', 'create'),
   
   canEditSchedule: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    hasPermission(permissions, 'main_scheduling', 'Edit Schedule', 'edit'),
+    hasPermission(permissions, 'main_scheduling', 'Schedule Generator', 'edit'),
   
   canPublishSchedule: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    hasPermission(permissions, 'main_scheduling', 'Publish Schedule', 'approve'),
+    hasPermission(permissions, 'main_scheduling', 'Schedule Generator', 'approve'),
   
   canViewScheduleHistory: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_scheduling', 'Schedule History'),
+    canView(permissions, 'main_scheduling', 'Schedule Generator'),
   
   canViewTimeline: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_scheduling', 'Timeline View'),
+    canView(permissions, 'main_scheduling', 'Schedule Generator'),
   
   canViewCalendar: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_scheduling', 'Calendar View'),
+    canView(permissions, 'main_scheduling', 'Schedule Generator'),
   
   canViewListView: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_scheduling', 'List View'),
+    canView(permissions, 'main_scheduling', 'Schedule Generator'),
   
   canViewFilterOptions: (permissions: Record<string, PermissionModule> | null | undefined) =>
-    canView(permissions, 'main_scheduling', 'Filter Options')
+    canView(permissions, 'main_scheduling', 'Schedule Generator')
 }
 
 /**

@@ -2004,9 +2004,17 @@ function AttendancePageContent() {
 
 export default function AttendancePage() {
   return (
-    <ProtectedPage module="main_attendance" item="Attendance" permission="view">
+    <ProtectedPage
+      module="web_user_attendance"
+      item="Attendance: Overview"
+      permission="view"
+      anyOf={[
+        { module: 'web_user_attendance', item: 'Attendance: Calendar', permission: 'view' },
+        { module: 'web_user_attendance', item: 'Attendance: Timeline', permission: 'view' },
+        { module: 'web_user_attendance', item: 'Attendance: History', permission: 'view' }
+      ]}
+    >
       <AttendancePageContent />
     </ProtectedPage>
   )
 }
-

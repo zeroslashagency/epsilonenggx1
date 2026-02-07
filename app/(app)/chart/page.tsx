@@ -844,7 +844,7 @@ function ChartPageContent() {
 
 export default function ChartPage() {
   return (
-    <ProtectedPage module="main_charts" item="Chart" permission="view">
+    <ProtectedPage module="main_analytics" item="Chart" permission="view">
       <ChartPageContent />
     </ProtectedPage>
   )

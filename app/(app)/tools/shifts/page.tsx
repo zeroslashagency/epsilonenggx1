@@ -5,8 +5,8 @@ import PermissionGuard from '@/app/components/auth/PermissionGuard'
 // import removed
 import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
 import {
-  Plus, Search, MoreHorizontal, ChevronRight,
-  Users, Shield, Briefcase, Clock, Trash2, Save
+  Plus, Search, ChevronRight,
+  Clock, Trash2, Save
 } from 'lucide-react'
 
 // Types
@@ -20,8 +20,12 @@ interface Shift {
   overnight: boolean
   active_count?: number // New field
   type?: 'fixed' | 'rotation'
-  pattern?: any // Changed from any[] to any to support object storage for fixed shifts
+  pattern?: any // Backward compatibility for older schema
   work_days?: number[] // Helper property for UI state, not necessarily DB column
+  rotation_steps?: any[]
+  notes?: string
+  overtime_threshold?: number
+  is_archived?: boolean
 }
 
 export default function ShiftManagerPage() {
@@ -77,19 +81,52 @@ export default function ShiftManagerPage() {
         }
       })
 
+      const templateById = new Map<string, any>()
+      ;(data || []).forEach((t: any) => templateById.set(t.id, t))
+
+      const rotationIds = (data || []).filter((t: any) => t.type === 'rotation').map((t: any) => t.id)
+      let rotationSteps: any[] = []
+      if (rotationIds.length > 0) {
+        const { data: steps } = await supabase
+          .from('shift_rotation_steps')
+          .select('*')
+          .in('template_id', rotationIds)
+          .order('step_order', { ascending: true })
+        rotationSteps = steps || []
+      }
+
+      const rotationMap = new Map<string, any[]>()
+      rotationSteps.forEach((step: any) => {
+        if (!rotationMap.has(step.template_id)) rotationMap.set(step.template_id, [])
+        const baseShift = step.base_shift_id ? templateById.get(step.base_shift_id) : null
+        rotationMap.get(step.template_id)!.push({
+          ...step,
+          shift_name: baseShift?.name || step.custom_name || '',
+          custom_name: step.custom_name || '',
+          start_time: step.start_time || baseShift?.start_time || '',
+          end_time: step.end_time || baseShift?.end_time || '',
+          work_days: step.work_days || [0, 1, 2, 3, 4, 5, 6]
+        })
+      })
+
       // Ensure arrays are initialized if null
-      const safeData = (data || []).map((d: any) => ({
-        ...d,
-        role_tags: d.role_tags || [],
-        min_staffing: d.min_staffing || 0,
-        pattern: d.pattern || (d.type === 'fixed' ? {} : []),
-        // Use the assignment count
-        active_count: countMap.get(d.id) || 0,
-        // Hydrate work_days from pattern for Fixed Shifts
-        work_days: (d.type === 'fixed' && d.pattern?.work_days)
-          ? d.pattern.work_days
-          : (d.work_days || [0, 1, 2, 3, 4, 5, 6]) // Fallback to safe default
-      }))
+      const safeData = (data || []).map((d: any) => {
+        const inferredType = d.type || (rotationMap.has(d.id) ? 'rotation' : 'fixed')
+        const rotationStepsForTemplate = rotationMap.get(d.id) || []
+
+        return {
+          ...d,
+          type: inferredType,
+          pattern: inferredType === 'rotation' ? rotationStepsForTemplate : (d.pattern || { work_days: d.work_days || [0, 1, 2, 3, 4, 5, 6] }),
+          rotation_steps: inferredType === 'rotation' ? rotationStepsForTemplate : [],
+          // Use the assignment count
+          active_count: countMap.get(d.id) || 0,
+          // Hydrate work_days from columns for Fixed Shifts
+          work_days: inferredType === 'fixed'
+            ? (d.work_days || d.pattern?.work_days || [0, 1, 2, 3, 4, 5, 6])
+            : (rotationStepsForTemplate[0]?.work_days || d.work_days || [0, 1, 2, 3, 4, 5, 6])
+        }
+      })
 
       setShifts(safeData)
       setFilteredShifts(safeData)
@@ -113,7 +150,7 @@ export default function ShiftManagerPage() {
     // Load rotation data if applicable
     if (shift.type === 'rotation') {
       setIsRotationMode(true)
-      setRotationSteps(shift.pattern || [])
+      setRotationSteps(shift.rotation_steps || shift.pattern || [])
     } else {
       setIsRotationMode(false)
       setRotationSteps([])
@@ -125,7 +162,7 @@ export default function ShiftManagerPage() {
     setSelectedShift(null)
     setIsRotationMode(mode === 'rotation')
     setRotationSteps([{
-      shift_name: 'Week 1', start_time: '09:00', end_time: '17:00',
+      shift_name: 'Week 1', base_shift_id: null, custom_name: '', start_time: '09:00', end_time: '17:00',
       work_days: [1, 2, 3, 4, 5] // Default Mon-Fri
     }])
 
@@ -137,13 +174,18 @@ export default function ShiftManagerPage() {
       grace_minutes: 10,
       overnight: false,
       type: mode,
-      work_days: [1, 2, 3, 4, 5] // Default Mon-Fri for Fixed
+      work_days: [1, 2, 3, 4, 5], // Default Mon-Fri for Fixed
+      notes: '',
+      overtime_threshold: undefined,
+      is_archived: false
     })
   }
 
   function addRotationStep() {
     setRotationSteps([...rotationSteps, {
       shift_name: `Week ${rotationSteps.length + 1}`,
+      base_shift_id: null,
+      custom_name: '',
       start_time: '09:00',
       end_time: '17:00',
       work_days: [1, 2, 3, 4, 5]
@@ -169,33 +211,53 @@ export default function ShiftManagerPage() {
 
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return alert("Please login first")
+
+      const rotationPayload = isRotationMode
+        ? rotationSteps.map((step, idx) => ({
+          base_shift_id: step.base_shift_id || null,
+          custom_name: step.shift_name === 'CUSTOM' ? (step.custom_name || 'Custom Shift') : (step.custom_name || null),
+          start_time: step.start_time,
+          end_time: step.end_time,
+          work_days: step.work_days || [0, 1, 2, 3, 4, 5, 6],
+          step_order: idx
+        }))
+        : []
+
       const payload = {
+        action: isCreating ? 'create' : 'update',
+        id: selectedShift?.id,
         name: formData.name,
-        // For rotations, main times ignore specific steps but we can keep defaults
-        start_time: isRotationMode ? '00:00' : formData.start_time,
-        end_time: isRotationMode ? '00:00' : formData.end_time,
+        type: isRotationMode ? 'rotation' : 'fixed',
+        // For rotations, main times are not used but keep safe defaults
+        start_time: isRotationMode ? undefined : formData.start_time,
+        end_time: isRotationMode ? undefined : formData.end_time,
         color: formData.color,
         grace_minutes: formData.grace_minutes,
         overnight: formData.overnight,
-        type: isRotationMode ? 'rotation' : 'fixed',
-        // STORE WORK_DAYS IN PATTERN (Zero-Migration Fix)
-        pattern: isRotationMode
-          ? rotationSteps
-          : { work_days: formData.work_days || [0, 1, 2, 3, 4, 5, 6] },
-        // Add direct work_days for the new schema
-        work_days: isRotationMode ? [0, 1, 2, 3, 4, 5, 6] : (formData.work_days || [0, 1, 2, 3, 4, 5, 6])
+        work_days: formData.work_days || [0, 1, 2, 3, 4, 5, 6],
+        notes: formData.notes,
+        overtime_threshold: formData.overtime_threshold,
+        is_archived: formData.is_archived,
+        rotation_steps: rotationPayload
       }
 
-      if (isCreating) {
-        const { error } = await supabase.from('shift_templates').insert(payload)
-        if (error) throw error
-      } else if (selectedShift) {
-        const { error } = await supabase
-          .from('shift_templates')
-          .update(payload)
-          .eq('id', selectedShift.id)
-        if (error) throw error
+      const response = await fetch('/api/shifts/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const result = await response.json()
+      if (!result.success) {
+        alert(result.error || 'Save failed')
+        return
       }
+
       await fetchShifts()
       setIsCreating(false)
       setSelectedShift(null)
@@ -211,7 +273,25 @@ export default function ShiftManagerPage() {
     if (!selectedShift || !confirm("Delete this?")) return
     setSubmitting(true)
     try {
-      await supabase.from('shift_templates').delete().eq('id', selectedShift.id)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return alert("Please login first")
+
+      const response = await fetch('/api/shifts/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          id: selectedShift.id
+        })
+      })
+      const result = await response.json()
+      if (!result.success) {
+        alert(result.error || 'Delete failed')
+        return
+      }
       await fetchShifts()
       setSelectedShift(null)
     } catch (e) { console.error(e) }
@@ -220,7 +300,7 @@ export default function ShiftManagerPage() {
 
 
   return (
-    <PermissionGuard module="tools_shift" item="Shift Manager">
+    <PermissionGuard module="tools_shift" item="Shift Management">
       <div className="h-full w-full p-6">
         <div className="flex h-[calc(100vh-140px)] gap-6 overflow-hidden">
           {/* Main List Area */}
@@ -269,6 +349,7 @@ export default function ShiftManagerPage() {
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-gray-900 dark:text-gray-100">{shift.name}</h3>
                           {shift.type === 'rotation' && <span className="text-[10px] uppercase font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200">Rotation</span>}
+                          {shift.is_archived && <span className="text-[10px] uppercase font-bold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded border border-gray-300">Archived</span>}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-500 font-mono mt-0.5">
                           <Clock className="w-3 h-3" />
@@ -317,7 +398,7 @@ export default function ShiftManagerPage() {
                     onClick={() => {
                       setIsRotationMode(true);
                       setFormData({ ...formData, type: 'rotation' });
-                      if (rotationSteps.length === 0) setRotationSteps([{ shift_name: 'Day 1', start_time: '09:00', end_time: '17:00' }]);
+                      if (rotationSteps.length === 0) setRotationSteps([{ shift_name: 'Day 1', base_shift_id: null, custom_name: '', start_time: '09:00', end_time: '17:00', work_days: [1, 2, 3, 4, 5] }]);
                     }}
                   >
                     <span className="flex items-center justify-center gap-1">
@@ -381,28 +462,40 @@ export default function ShiftManagerPage() {
                             <button onClick={() => removeRotationStep(idx)} className="text-red-400 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
                           </div>
                           <select
-                            value={step.shift_name || ''}
+                            value={step.base_shift_id || (step.shift_name ? 'CUSTOM' : '')}
                             onChange={(e) => {
-                              const selectedName = e.target.value;
-                              const baseShift = shifts.find(s => s.name === selectedName);
-                              if (baseShift) {
-                                const newSteps = [...rotationSteps];
+                              const selectedValue = e.target.value
+                              if (selectedValue === 'CUSTOM') {
+                                const newSteps = [...rotationSteps]
                                 newSteps[idx] = {
                                   ...newSteps[idx],
+                                  base_shift_id: null,
+                                  shift_name: 'CUSTOM',
+                                  custom_name: newSteps[idx].custom_name || '',
+                                }
+                                setRotationSteps(newSteps)
+                                return
+                              }
+
+                              const baseShift = shifts.find(s => s.id === selectedValue)
+                              if (baseShift) {
+                                const newSteps = [...rotationSteps]
+                                newSteps[idx] = {
+                                  ...newSteps[idx],
+                                  base_shift_id: baseShift.id,
                                   shift_name: baseShift.name,
-                                  start_time: baseShift.start_time.slice(0, 5),
-                                  end_time: baseShift.end_time.slice(0, 5)
-                                };
-                                setRotationSteps(newSteps);
-                              } else {
-                                updateRotationStep(idx, 'shift_name', selectedName);
+                                  custom_name: '',
+                                  start_time: baseShift.start_time?.slice(0, 5) || '',
+                                  end_time: baseShift.end_time?.slice(0, 5) || ''
+                                }
+                                setRotationSteps(newSteps)
                               }
                             }}
                             className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
                           >
                             <option value="">Select Base Shift...</option>
-                            {shifts.filter(s => s.type !== 'rotation' || s.id !== selectedShift?.id).map(s => (
-                              <option key={s.id} value={s.name}>{s.name} ({s.start_time.slice(0, 5)}-{s.end_time.slice(0, 5)})</option>
+                            {shifts.filter(s => s.type !== 'rotation').map(s => (
+                              <option key={s.id} value={s.id}>{s.name} ({s.start_time?.slice(0, 5) || '--'}-{s.end_time?.slice(0, 5) || '--'})</option>
                             ))}
                             <option value="CUSTOM">-- Custom Entry --</option>
                           </select>
@@ -483,6 +576,37 @@ export default function ShiftManagerPage() {
 
                 {/* Meta */}
                 <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-gray-500 mb-1.5 block">Grace Minutes</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.grace_minutes ?? 0}
+                      onChange={e => setFormData({ ...formData, grace_minutes: Number(e.target.value) })}
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-gray-500 mb-1.5 block">Overtime Threshold (hours)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={formData.overtime_threshold ?? ''}
+                      onChange={e => setFormData({ ...formData, overtime_threshold: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
+                      placeholder="e.g. 9"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-gray-500 mb-1.5 block">Notes</label>
+                    <textarea
+                      value={formData.notes || ''}
+                      onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm min-h-[80px]"
+                      placeholder="Optional notes..."
+                    />
+                  </div>
                   <div className="flex items-center justify-between">
                     <label className="text-sm text-gray-600 dark:text-gray-400">Shift Color</label>
                     <input type="color" value={formData.color || '#3B82F6'} onChange={e => setFormData({ ...formData, color: e.target.value })} className="h-8 w-16 rounded cursor-pointer" />
@@ -490,6 +614,10 @@ export default function ShiftManagerPage() {
                   <div className="flex items-center gap-2">
                     <input type="checkbox" checked={formData.overnight || false} onChange={e => setFormData({ ...formData, overnight: e.target.checked })} className="rounded text-blue-600" />
                     <span className="text-sm text-gray-600 dark:text-gray-400">Overnight Shift</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={formData.is_archived || false} onChange={e => setFormData({ ...formData, is_archived: e.target.checked })} className="rounded text-blue-600" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Archive Template</span>
                   </div>
                 </div>
               </div>

@@ -15,12 +15,15 @@ export function SectionToggle({ className = '' }: SectionToggleProps) {
     const isAnalytics = pathname === '/monitor/analytics-dashboard'
 
     return (
-        <div className={`flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-full w-fit ${className}`}>
+        <div
+            className={`inline-flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/80 p-1 shadow-sm backdrop-blur dark:border-slate-800/80 dark:bg-slate-900/80 ${className}`}
+        >
             <Link
                 href="/monitor/activity-feed"
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${isActivityFeed
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
+                aria-current={isActivityFeed ? 'page' : undefined}
+                className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${isActivityFeed
+                        ? 'bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white'
                     }`}
             >
                 <Activity className="h-4 w-4" />
@@ -28,9 +31,10 @@ export function SectionToggle({ className = '' }: SectionToggleProps) {
             </Link>
             <Link
                 href="/monitor/analytics-dashboard"
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${isAnalytics
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
+                aria-current={isAnalytics ? 'page' : undefined}
+                className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${isAnalytics
+                        ? 'bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white'
                     }`}
             >
                 <BarChart3 className="h-4 w-4" />

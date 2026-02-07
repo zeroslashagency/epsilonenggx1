@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     
     const permissions = roleData?.permissions_json
     const hasDashboardPermission = permissions?.main_dashboard?.items?.Dashboard?.view === true
-    const hasChartsPermission = permissions?.main_charts?.items?.Chart?.view === true
+    const hasChartsPermission = permissions?.main_analytics?.items?.Chart?.view === true
     const hasProductionPermission = permissions?.production?.items?.Orders?.view === true
     
     if (!hasDashboardPermission && !hasChartsPermission && !hasProductionPermission) {

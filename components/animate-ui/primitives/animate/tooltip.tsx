@@ -429,16 +429,31 @@ function TooltipContent({ asChild = false, ...props }: TooltipContentProps) {
 
 type TooltipTriggerProps = WithAsChild<HTMLMotionProps<'div'>>;
 
-function TooltipTrigger({
-  ref,
-  onMouseEnter,
-  onMouseLeave,
-  onFocus,
-  onBlur,
-  onPointerDown,
-  asChild = false,
-  ...props
-}: TooltipTriggerProps) {
+function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]): React.RefCallback<T> {
+  return (node) => {
+    refs.forEach((ref) => {
+      if (!ref) return;
+      if (typeof ref === 'function') {
+        ref(node);
+      } else {
+        (ref as React.MutableRefObject<T | null>).current = node;
+      }
+    });
+  };
+}
+
+const TooltipTrigger = React.forwardRef<HTMLDivElement, TooltipTriggerProps>(function TooltipTrigger(
+  {
+    onMouseEnter,
+    onMouseLeave,
+    onFocus,
+    onBlur,
+    onPointerDown,
+    asChild = false,
+    ...props
+  },
+  forwardedRef,
+) {
   const {
     props: contentProps,
     asChild: contentAsChild,
@@ -457,7 +472,6 @@ function TooltipTrigger({
   } = useGlobalTooltip();
 
   const triggerRef = React.useRef<HTMLDivElement>(null);
-  React.useImperativeHandle(ref as any, () => triggerRef.current as HTMLDivElement);
 
   const suppressNextFocusRef = React.useRef(false);
 
@@ -538,7 +552,7 @@ function TooltipTrigger({
 
   return (
     <Component
-      ref={triggerRef as any}
+      ref={mergeRefs(triggerRef, forwardedRef)}
       onPointerDown={handlePointerDown}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -551,7 +565,9 @@ function TooltipTrigger({
       {...props}
     />
   );
-}
+});
+
+TooltipTrigger.displayName = 'TooltipTrigger';
 
 export {
   TooltipProvider,

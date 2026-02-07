@@ -10,6 +10,7 @@ interface DashboardViewProps {
     onOpenModal: (type: 'GOOD' | 'BAD') => void;
     onSelectReport: (id: string) => void;
     onNavigateToReports: () => void;
+    canCreate?: boolean;
 }
 
 export function DashboardView({
@@ -17,6 +18,7 @@ export function DashboardView({
     onOpenModal,
     onSelectReport,
     onNavigateToReports,
+    canCreate = true,
 }: DashboardViewProps) {
     const handleReportClick = (reportId: string) => {
         onSelectReport(reportId);
@@ -36,20 +38,22 @@ export function DashboardView({
                             Overview of your error reports and pending actions
                         </p>
                     </div>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => onOpenModal('GOOD')}
-                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all active:scale-95"
-                        >
-                            <Plus size={16} /> Positive
-                        </button>
-                        <button
-                            onClick={() => onOpenModal('BAD')}
-                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all active:scale-95"
-                        >
-                            <Plus size={16} /> Negative
-                        </button>
-                    </div>
+                    {canCreate && (
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => onOpenModal('GOOD')}
+                                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all active:scale-95"
+                            >
+                                <Plus size={16} /> Positive
+                            </button>
+                            <button
+                                onClick={() => onOpenModal('BAD')}
+                                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all active:scale-95"
+                            >
+                                <Plus size={16} /> Negative
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Quick Actions / Stats */}
@@ -77,7 +81,7 @@ export function DashboardView({
                     </h2>
                     <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm overflow-hidden">
                         {reports.length === 0 ? (
-                            <EmptyState onOpenModal={onOpenModal} />
+                            <EmptyState onOpenModal={onOpenModal} canCreate={canCreate} />
                         ) : (
                             <div className="divide-y divide-slate-100 dark:divide-gray-700">
                                 {reports.slice(0, 5).map((report) => (
@@ -151,28 +155,31 @@ function ReportRow({ report, onClick }: ReportRowProps) {
 
 interface EmptyStateProps {
     onOpenModal: (type: 'GOOD' | 'BAD') => void;
+    canCreate: boolean;
 }
 
-function EmptyState({ onOpenModal }: EmptyStateProps) {
+function EmptyState({ onOpenModal, canCreate }: EmptyStateProps) {
     return (
         <div className="p-10 text-center">
             <p className="text-slate-500 dark:text-gray-400 mb-4">
-                No reports found. Create your first report!
+                {canCreate ? 'No reports found. Create your first report!' : 'No reports found.'}
             </p>
-            <div className="flex justify-center gap-3">
-                <button
-                    onClick={() => onOpenModal('GOOD')}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                >
-                    + Positive
-                </button>
-                <button
-                    onClick={() => onOpenModal('BAD')}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                >
-                    + Negative
-                </button>
-            </div>
+            {canCreate && (
+                <div className="flex justify-center gap-3">
+                    <button
+                        onClick={() => onOpenModal('GOOD')}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                    >
+                        + Positive
+                    </button>
+                    <button
+                        onClick={() => onOpenModal('BAD')}
+                        className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                    >
+                        + Negative
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

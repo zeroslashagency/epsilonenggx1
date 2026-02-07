@@ -10,6 +10,7 @@ interface ProtectedPageProps {
   module: string
   item: string
   permission?: string
+  anyOf?: Array<{ module: string; item: string; permission?: string }>
   fallbackUrl?: string
 }
 
@@ -27,6 +28,7 @@ export function ProtectedPage({
   module, 
   item, 
   permission = 'view',
+  anyOf = [],
   fallbackUrl = '/dashboard'
 }: ProtectedPageProps) {
   const { isAuthenticated, isLoading, userRole, userPermissions, hasPermission } = useAuth()
@@ -55,8 +57,10 @@ export function ProtectedPage({
       return
     }
 
-    // Check granular permission
-    const hasAccess = hasPermission(module, item, permission)
+    // Check granular permission (primary or any-of)
+    const hasAccess =
+      hasPermission(module, item, permission) ||
+      anyOf.some((entry) => hasPermission(entry.module, entry.item, entry.permission ?? permission))
     
     if (!hasAccess) {
       setIsAuthorized(false)

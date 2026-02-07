@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import PermissionGuard from '@/app/components/auth/PermissionGuard'
 // import removed
 import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
-import { ChevronLeft, ChevronRight, Download, Printer, Clock, Moon, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Clock, Moon } from 'lucide-react'
 import { DndContext, DragOverlay, useDraggable, useDroppable, DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 
 interface Employee {
@@ -135,12 +135,17 @@ export default function RosterBoardPage() {
     const [loading, setLoading] = useState(true)
     const [activeDragId, setActiveDragId] = useState<string | null>(null)
     const [isEditMode, setIsEditMode] = useState(false)
+    const [assignmentMode, setAssignmentMode] = useState<'persistent' | 'day'>('persistent')
+    const [departmentFilter, setDepartmentFilter] = useState('all')
+    const [availableDepartments, setAvailableDepartments] = useState<string[]>([])
+    const [coverageSummary, setCoverageSummary] = useState({ total: 0, onDuty: 0, off: 0 })
+    const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const supabase = getSupabaseBrowserClient()
 
     useEffect(() => {
         fetchRosterData()
-    }, [currentDate])
+    }, [currentDate, departmentFilter])
 
     const formatDate = (date: Date) => {
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -158,10 +163,36 @@ export default function RosterBoardPage() {
         setCurrentDate(newDate)
     }
 
+    const scheduleRefresh = () => {
+        if (refreshTimer.current) clearTimeout(refreshTimer.current)
+        refreshTimer.current = setTimeout(() => {
+            fetchRosterData()
+        }, 600)
+    }
+
+    useEffect(() => {
+        const channel = supabase
+            .channel('roster-board-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_daily_schedule' }, scheduleRefresh)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_shift_assignments' }, scheduleRefresh)
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [currentDate, departmentFilter])
+
     async function fetchRosterData() {
         try {
             setLoading(true)
             const dateStr = currentDate.toISOString().split('T')[0]
+
+            const params = new URLSearchParams({ date: dateStr })
+            if (departmentFilter && departmentFilter !== 'all') {
+                params.set('department', departmentFilter)
+            }
+            params.set('include_overrides', 'true')
+            params.set('include_holidays', 'true')
 
             // 1. Fetch Shift Templates (to define the board structure)
             const { data: templates, error: templateError } = await supabase
@@ -172,7 +203,7 @@ export default function RosterBoardPage() {
             if (templateError) throw templateError
 
             const columnsMap = new Map<string, ShiftColumn>()
-                ; (templates || []).forEach((t: any) => {
+                ; (templates || []).filter((t: any) => !t.is_archived).forEach((t: any) => {
                     columnsMap.set(t.name, {
                         id: t.id,
                         name: t.name,
@@ -188,7 +219,7 @@ export default function RosterBoardPage() {
             const { data: { session } } = await supabase.auth.getSession()
             if (!session) return
 
-            const response = await fetch(`/api/schedule/roster?date=${dateStr}`, {
+            const response = await fetch(`/api/schedule/roster?${params.toString()}`, {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`
                 }
@@ -225,7 +256,18 @@ export default function RosterBoardPage() {
                 }
             })
 
-            setShiftColumns(Array.from(columnsMap.values()))
+            const departmentSet = new Set<string>()
+            rosterData.forEach((item: any) => {
+                if (item.department) departmentSet.add(item.department)
+            })
+
+            const columns = Array.from(columnsMap.values())
+            const onDuty = columns.reduce((sum, col) => sum + col.employees.length, 0)
+            const offDuty = unassigned.length
+
+            setAvailableDepartments(Array.from(departmentSet).sort())
+            setCoverageSummary({ total: onDuty + offDuty, onDuty, off: offDuty })
+            setShiftColumns(columns)
             setUnassignedEmployees(unassigned)
 
         } catch (error) {
@@ -243,6 +285,7 @@ export default function RosterBoardPage() {
         const { active, over } = event
         setActiveDragId(null)
 
+        if (!isEditMode) return
         if (!over) return
 
         const employeeId = active.id as string
@@ -268,6 +311,11 @@ export default function RosterBoardPage() {
         if (sourceContainer === targetContainer) return
         if (!movedEmployee) return
 
+        if (movedEmployee.shiftId && targetContainer !== 'unassigned' && movedEmployee.shiftId !== targetContainer) {
+            const proceed = confirm('This will replace the existing shift assignment. Continue?')
+            if (!proceed) return
+        }
+
         // Optimistic UI updates
         if (sourceContainer === 'unassigned') {
             setUnassignedEmployees(prev => prev.filter(e => e.id !== employeeId))
@@ -289,10 +337,26 @@ export default function RosterBoardPage() {
                 color: undefined,
                 overnight: undefined
             }])
-            await updateSchedule(employeeId, 'unassign')
+            if (assignmentMode === 'day') {
+                await updateDailyOverride(employeeId, 'assign', undefined, {
+                    id: null,
+                    name: 'Unassigned',
+                    startTime: '00:00',
+                    endTime: '00:00',
+                    color: '#9CA3AF',
+                    overnight: false
+                })
+            } else {
+                await updateSchedule(employeeId, 'unassign')
+            }
         } else {
             const targetCol = shiftColumns.find(c => c.id === targetContainer)
             if (targetCol) {
+                if (assignmentMode === 'day' && (!targetCol.startTime?.includes(':') || !targetCol.endTime?.includes(':'))) {
+                    alert('Day-only assignments require a fixed shift with start/end times.')
+                    fetchRosterData()
+                    return
+                }
                 setShiftColumns(prev => prev.map(col => {
                     if (col.id === targetContainer) {
                         if (col.employees.find(e => e.id === employeeId)) return col;
@@ -310,7 +374,11 @@ export default function RosterBoardPage() {
                     }
                     return col
                 }))
-                await updateSchedule(employeeId, 'assign', targetCol.id)
+                if (assignmentMode === 'day') {
+                    await updateDailyOverride(employeeId, 'assign', targetCol)
+                } else {
+                    await updateSchedule(employeeId, 'assign', targetCol.id)
+                }
             }
         }
     }
@@ -341,8 +409,82 @@ export default function RosterBoardPage() {
         }
     }
 
+    async function updateDailyOverride(
+        employeeCode: string,
+        action: 'assign' | 'clear',
+        shift?: ShiftColumn,
+        overrideShift?: { id: string | null; name: string; startTime: string; endTime: string; color?: string; overnight?: boolean }
+    ) {
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) return
+
+            const payload: any = {
+                employee_code: employeeCode,
+                work_date: currentDate.toISOString().split('T')[0],
+                action
+            }
+
+            if (action === 'assign') {
+                const targetShift = overrideShift || shift
+                if (targetShift) {
+                    payload.shift_id = targetShift.id
+                    payload.shift_name = targetShift.name
+                    if (targetShift.startTime?.includes(':')) payload.shift_start = targetShift.startTime
+                    if (targetShift.endTime?.includes(':')) payload.shift_end = targetShift.endTime
+                    payload.color = targetShift.color
+                    payload.overnight = targetShift.overnight
+                }
+            }
+
+            await fetch('/api/schedule/override', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify(payload)
+            })
+        } catch (error) {
+            console.error('Failed to update daily override:', error)
+            fetchRosterData()
+        }
+    }
+
+    function exportRosterCsv() {
+        const dateStr = currentDate.toISOString().split('T')[0]
+        const rows = [['Date', 'Employee Code', 'Employee Name', 'Department', 'Shift', 'Start', 'End']]
+
+        shiftColumns.forEach(col => {
+            col.employees.forEach(emp => {
+                rows.push([
+                    dateStr,
+                    emp.code,
+                    emp.name,
+                    emp.department,
+                    col.name,
+                    col.startTime,
+                    col.endTime
+                ])
+            })
+        })
+
+        unassignedEmployees.forEach(emp => {
+            rows.push([dateStr, emp.code, emp.name, emp.department, 'Unassigned', '', ''])
+        })
+
+        const csv = rows.map(r => r.map(value => `"${String(value).replace(/\"/g, '\"\"')}"`).join(',')).join('\\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `roster-${dateStr}.csv`
+        link.click()
+        URL.revokeObjectURL(url)
+    }
+
     return (
-        <PermissionGuard module="tools_shift" item="Roster Board">
+        <PermissionGuard module="tools_shift" item="Shift Management">
             <DndContext
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
@@ -378,8 +520,32 @@ export default function RosterBoardPage() {
                                         />
                                     </button>
                                 </div>
+                                <div className="flex items-center gap-3 bg-white dark:bg-gray-800 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-tighter">Assignment Mode</span>
+                                        <span className={`text-sm font-bold ${assignmentMode === 'persistent' ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                            {assignmentMode === 'persistent' ? 'Persistent' : 'Day Only'}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => setAssignmentMode(assignmentMode === 'persistent' ? 'day' : 'persistent')}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${assignmentMode === 'persistent' ? 'bg-blue-600' : 'bg-amber-500'
+                                            }`}
+                                    >
+                                        <span
+                                            className={`${assignmentMode === 'persistent' ? 'translate-x-6' : 'translate-x-1'
+                                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                                        />
+                                    </button>
+                                </div>
 
                                 <div className="flex gap-2">
+                                    <button
+                                        onClick={exportRosterCsv}
+                                        className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                    </button>
                                     <button
                                         onClick={() => fetchRosterData()}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 active:scale-95"
@@ -407,6 +573,32 @@ export default function RosterBoardPage() {
                                 <button onClick={nextDay} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
                                     <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                                 </button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 px-4 py-3">
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-tighter">Department</span>
+                                <select
+                                    value={departmentFilter}
+                                    onChange={(e) => setDepartmentFilter(e.target.value)}
+                                    className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
+                                >
+                                    <option value="all">All</option>
+                                    {availableDepartments.map((dept) => (
+                                        <option key={dept} value={dept}>{dept}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex-1 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                                    Coverage Summary
+                                </div>
+                                <div className="flex gap-4 text-sm">
+                                    <div className="font-semibold text-gray-900 dark:text-white">Total: {coverageSummary.total}</div>
+                                    <div className="font-semibold text-green-600 dark:text-green-400">On Duty: {coverageSummary.onDuty}</div>
+                                    <div className="font-semibold text-gray-500 dark:text-gray-400">Off/Unassigned: {coverageSummary.off}</div>
+                                </div>
                             </div>
                         </div>
 

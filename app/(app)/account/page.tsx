@@ -393,7 +393,7 @@ function AccountPageContent() {
 
 export default function AccountPage() {
   return (
-    <ProtectedPage module="system_administration" item="Account" permission="view">
+    <ProtectedPage module="admin_account" item="Organization Settings" permission="view">
       <AccountPageContent />
     </ProtectedPage>
   )

@@ -266,7 +266,7 @@ function ActivityPageContent() {
 
 export default function ActivityPage() {
   return (
-    <ProtectedPage module="system_administration" item="Activity Logging" permission="view">
+    <ProtectedPage module="admin_activity" item="Activity Logging" permission="view">
       <ActivityPageContent />
     </ProtectedPage>
   )

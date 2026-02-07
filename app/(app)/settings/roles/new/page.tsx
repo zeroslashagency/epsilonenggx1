@@ -1,128 +1,179 @@
-"use client"
+'use client'
 
 import { useState, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, ChevronDown, Save, X, Info, User, UserPlus, Shield, ArrowUpDown, Zap } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Save,
+  X,
+  Info,
+  User,
+  UserPlus,
+  Shield,
+  ArrowUpDown,
+  Zap,
+} from 'lucide-react'
 import Link from 'next/link'
 import { initialPermissionModules, ModulePermission, PermissionModule } from '../permissionData'
+import {
+  buildPermissionCodes,
+  getModuleActionColumns,
+} from '@/app/lib/features/auth/permission-mapping'
+
+const ACTION_LABELS: Record<string, string> = {
+  full: 'Full',
+  view: 'View',
+  create: 'Create',
+  edit: 'Edit',
+  delete: 'Delete',
+  approve: 'Approve',
+  export: 'Export',
+}
 
 export default function NewRolePage() {
   const router = useRouter()
   const [roleName, setRoleName] = useState('')
   const [description, setDescription] = useState('')
   const [isManufacturingRole, setIsManufacturingRole] = useState(false)
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
-    // Dashboard
-    dashboard: true,
-    // Scheduling
-    schedule_generator: true,
-    schedule_dashboard: true,
-    // Charts & Analytics
-    chart: true,
-    analytics: true,
-    // Attendance
-    attendance: true,
-    standalone_attendance: true,
-    // Production
-    orders: true,
-    machines: true,
-    personnel: true,
-    tasks: true,
-    // Monitoring
-    alerts: true,
-    reports: true,
-    quality_control: true,
-    maintenance: true,
-    // Administration
-    user_management: true,
-    add_users: true,
-    role_profiles: true,
-    activity_logging: true,
-    system_settings: true,
-    account: true,
-    // Tools
-    shift_management: true,
-    leave_management: true,
-    device_monitor: true
-  })
-
-  // Initialize permission modules from imported data
-  const [permissionModules, setPermissionModules] = useState<Record<string, PermissionModule>>(initialPermissionModules)
-
-  // Toggle collapse state for parent items
-  const toggleCollapse = (itemKey: string) => {
-    setCollapsed(prev => ({
-      ...prev,
-      [itemKey]: !prev[itemKey]
-    }))
-  }
 
   // Helper to get collapse key from item name
   const getCollapseKey = (itemName: string): string => {
     return itemName.toLowerCase().replace(/[^a-z0-9]+/g, '_')
   }
 
-  const updatePermission = (moduleKey: string, itemKey: string, permission: keyof ModulePermission, value: boolean) => {
+  const buildInitialCollapsedState = (modules: Record<string, PermissionModule>) => {
+    const state: Record<string, boolean> = {}
+    Object.values(modules).forEach(module => {
+      Object.entries(module.items).forEach(([itemName, item]) => {
+        if (item.isCollapsible) {
+          state[getCollapseKey(itemName)] = true
+        }
+      })
+    })
+    return state
+  }
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() =>
+    buildInitialCollapsedState(initialPermissionModules)
+  )
+
+  // Initialize permission modules from imported data
+  const [permissionModules, setPermissionModules] =
+    useState<Record<string, PermissionModule>>(initialPermissionModules)
+
+  // Toggle collapse state for parent items
+  const toggleCollapse = (itemKey: string) => {
+    setCollapsed(prev => ({
+      ...prev,
+      [itemKey]: !prev[itemKey],
+    }))
+  }
+
+  const updatePermission = (
+    moduleKey: string,
+    itemKey: string,
+    permission: keyof ModulePermission,
+    value: boolean
+  ) => {
     setPermissionModules(prev => {
       const currentItem = prev[moduleKey].items[itemKey]
+      const isParent = currentItem.isCollapsible
+      const isChild = currentItem.isSubItem
 
-      // If "Full" is checked, automatically check all other permissions
-      if (permission === 'full' && value) {
-        return {
-          ...prev,
-          [moduleKey]: {
-            ...prev[moduleKey],
-            items: {
-              ...prev[moduleKey].items,
-              [itemKey]: {
-                full: true,
-                view: true,
-                create: true,
-                edit: true,
-                delete: true,
-                ...(currentItem.approve !== undefined && { approve: true })
+      // Create fresh copy
+      const updated: Record<string, PermissionModule> = JSON.parse(JSON.stringify(prev))
+
+      if (isParent) {
+        // Parent clicked: set this permission on parent AND all children
+        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
+        
+        // If 'full' toggled, also set all derived permissions on parent
+        if (permission === 'full') {
+          ;(updated[moduleKey].items[itemKey] as any).view = value
+          if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
+          if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
+          if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
+          if (currentItem.approve !== undefined) (updated[moduleKey].items[itemKey] as any).approve = value
+          if (currentItem.export !== undefined) (updated[moduleKey].items[itemKey] as any).export = value
+        }
+
+        // Sync to all children
+        Object.entries(updated[moduleKey].items).forEach(([childKey, childItem]) => {
+          if (childItem.isSubItem && childItem.parent === itemKey) {
+            ;(updated[moduleKey].items[childKey] as any)[permission] = value
+            
+            // If 'full' toggled, sync derived permissions to child too
+            if (permission === 'full') {
+              ;(updated[moduleKey].items[childKey] as any).view = value
+              if ('create' in childItem) (updated[moduleKey].items[childKey] as any).create = value
+              if ('edit' in childItem) (updated[moduleKey].items[childKey] as any).edit = value
+              if ('delete' in childItem) (updated[moduleKey].items[childKey] as any).delete = value
+              if (childItem.approve !== undefined) (updated[moduleKey].items[childKey] as any).approve = value
+              if (childItem.export !== undefined) (updated[moduleKey].items[childKey] as any).export = value
+            }
+          }
+        })
+      } else if (isChild) {
+        // Child clicked: update this child
+        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
+        
+        // If 'full' toggled, also set derived permissions on this child
+        if (permission === 'full') {
+          ;(updated[moduleKey].items[itemKey] as any).view = value
+          if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
+          if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
+          if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
+          if (currentItem.approve !== undefined) (updated[moduleKey].items[itemKey] as any).approve = value
+          if (currentItem.export !== undefined) (updated[moduleKey].items[itemKey] as any).export = value
+        }
+
+        // Recompute parent state from all its children
+        const parentKey = currentItem.parent
+        if (parentKey && updated[moduleKey].items[parentKey]) {
+          const siblings = Object.values(updated[moduleKey].items).filter(
+            item => item.isSubItem && item.parent === parentKey
+          )
+          
+          // Parent action is true only if ALL children have that action
+          const parentItem = updated[moduleKey].items[parentKey]
+          ;['full', 'view', 'create', 'edit', 'delete', 'approve', 'export'].forEach(action => {
+            if (parentItem[action as keyof ModulePermission] !== undefined) {
+              const relevantSiblings = siblings.filter(s => s[action as keyof ModulePermission] !== undefined)
+              if (relevantSiblings.length > 0) {
+                ;(parentItem as any)[action] = relevantSiblings.every(
+                  s => Boolean(s[action as keyof ModulePermission])
+                )
               }
             }
-          }
+          })
+        }
+      } else {
+        // Standalone item: just update it
+        ;(updated[moduleKey].items[itemKey] as any)[permission] = value
+        
+        // If 'full' toggled, sync derived permissions
+        if (permission === 'full') {
+          ;(updated[moduleKey].items[itemKey] as any).view = value
+          if ('create' in currentItem) (updated[moduleKey].items[itemKey] as any).create = value
+          if ('edit' in currentItem) (updated[moduleKey].items[itemKey] as any).edit = value
+          if ('delete' in currentItem) (updated[moduleKey].items[itemKey] as any).delete = value
+          if (currentItem.approve !== undefined) (updated[moduleKey].items[itemKey] as any).approve = value
+          if (currentItem.export !== undefined) (updated[moduleKey].items[itemKey] as any).export = value
         }
       }
 
-      // If "Full" is unchecked, uncheck all permissions
-      if (permission === 'full' && !value) {
-        return {
-          ...prev,
-          [moduleKey]: {
-            ...prev[moduleKey],
-            items: {
-              ...prev[moduleKey].items,
-              [itemKey]: {
-                full: false,
-                view: false,
-                create: false,
-                edit: false,
-                delete: false,
-                ...(currentItem.approve !== undefined && { approve: false })
-              }
-            }
-          }
-        }
-      }
-
-      // For other permissions, just update that specific permission
-      return {
-        ...prev,
-        [moduleKey]: {
-          ...prev[moduleKey],
-          items: {
-            ...prev[moduleKey].items,
-            [itemKey]: {
-              ...prev[moduleKey].items[itemKey],
-              [permission]: value
-            }
-          }
-        }
-      }
+      return updated
     })
+  }
+
+  const formatSubItemLabel = (label: string, parent: string) => {
+    const prefix = `${parent}: `
+    if (label.startsWith(prefix)) return label.slice(prefix.length)
+    const altPrefix = `${parent} - `
+    if (label.startsWith(altPrefix)) return label.slice(altPrefix.length)
+    return label
   }
 
   const handleSave = async () => {
@@ -132,54 +183,16 @@ export default function NewRolePage() {
     }
 
     try {
-
-      // Convert permission modules to simple permission codes for API
-      const permissionCodes: string[] = []
-
-      Object.entries(permissionModules).forEach(([moduleKey, module]) => {
-        Object.entries(module.items).forEach(([itemName, permissions]) => {
-          // Map UI permissions to database permission codes
-          if (permissions.view) {
-            // Add view permission based on item name
-            if (itemName === 'Dashboard') permissionCodes.push('view_dashboard')
-            if (itemName === 'Schedule Generator') permissionCodes.push('view_schedule')
-            if (itemName === 'Schedule Generator Dashboard') permissionCodes.push('view_schedule_dashboard')
-            if (itemName === 'Chart') permissionCodes.push('view_dashboard')
-            if (itemName === 'Analytics') permissionCodes.push('view_reports')
-            if (itemName === 'Attendance') permissionCodes.push('attendance_read')
-            if (itemName === 'Standalone Attendance') permissionCodes.push('attendance_read')
-            // Tools Mappings
-            if (itemName === 'Shift Manager') permissionCodes.push('view_schedule')
-            if (itemName === 'Roster Board') permissionCodes.push('view_schedule')
-            if (itemName === 'Calendar View') permissionCodes.push('view_schedule')
-            if (itemName === 'Employee Assignment') permissionCodes.push('view_schedule')
-            if (itemName === 'Leave Management') permissionCodes.push('leave_read')
-            if (itemName === 'Device Monitor') permissionCodes.push('view_devices')
-          }
-          if (permissions.create) {
-            if (itemName === 'Schedule Generator') permissionCodes.push('edit_schedule')
-            if (itemName === 'Attendance') permissionCodes.push('attendance_mark')
-          }
-          if (permissions.edit) {
-            if (itemName === 'Schedule Generator') permissionCodes.push('edit_schedule')
-          }
-          if (permissions.approve) {
-            // Add approve permissions if needed
-          }
-        })
-      })
-
-      // Remove duplicates
-      const uniquePermissions = Array.from(new Set(permissionCodes))
+      const uniquePermissions = buildPermissionCodes(permissionModules)
 
       const { apiPost } = await import('@/app/lib/utils/api-client')
       const roleData = {
         name: roleName,
         description: description,
         is_manufacturing_role: isManufacturingRole,
-        permissions: [], // Legacy permissions array
+        permissions: uniquePermissions,
         permissions_json: permissionModules, // New granular permissions
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       }
       const data = await apiPost('/api/admin/roles', roleData)
 
@@ -196,162 +209,176 @@ export default function NewRolePage() {
   }
 
   return (
-          <div className="space-y-6">
-        {/* Tab Navigation */}
-        <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
-          <div className="flex items-center gap-2 px-6">
-            <Link
-              href="/settings/users"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <User className="w-4 h-4" />
-              User Management
-            </Link>
-            <Link
-              href="/settings/add-users"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add Users
-            </Link>
-            <Link
-              href="/settings/roles"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-white bg-[#00A651] rounded-t transition-colors border-b-2 border-[#00A651]"
-            >
-              <Shield className="w-4 h-4" />
-              Role Profiles
-            </Link>
-            <Link
-              href="/settings/activity-logs"
-              className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
-            >
-              <Zap className="w-4 h-4" />
-              Activity Logging
-            </Link>
+    <div className="space-y-6">
+      {/* Tab Navigation */}
+      <div className="bg-white dark:bg-gray-900 border-b border-[#E3E6F0] dark:border-gray-700">
+        <div className="flex items-center gap-2 px-6">
+          <Link
+            href="/settings/users"
+            className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
+          >
+            <User className="w-4 h-4" />
+            User Management
+          </Link>
+          <Link
+            href="/settings/add-users"
+            className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Users
+          </Link>
+          <Link
+            href="/settings/roles"
+            className="flex items-center gap-2 px-4 py-3 text-sm text-white bg-[#00A651] rounded-t transition-colors border-b-2 border-[#00A651]"
+          >
+            <Shield className="w-4 h-4" />
+            Role Profiles
+          </Link>
+          <Link
+            href="/settings/activity-logs"
+            className="flex items-center gap-2 px-4 py-3 text-sm text-[#12263F] dark:text-gray-300 hover:text-[#2C7BE5] transition-colors border-b-2 border-transparent"
+          >
+            <Zap className="w-4 h-4" />
+            Activity Logging
+          </Link>
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.back()}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white">New Role</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Create a new role with custom permissions
+            </p>
           </div>
         </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-[#2C7BE5] text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            Save Role
+          </button>
+        </div>
+      </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.back()}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            </button>
+      {/* Content */}
+      <div className="w-full">
+        {/* Basic Information */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="grid grid-cols-1 gap-6">
             <div>
-              <h1 className="text-2xl font-semibold text-[#12263F] dark:text-white">New Role</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Create a new role with custom permissions</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Role Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={roleName}
+                onChange={e => setRoleName(e.target.value)}
+                className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Enter role name"
+              />
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-[#2C7BE5] text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Save Role
-            </button>
-          </div>
-        </div>
 
-        {/* Content */}
-        <div className="w-full">
-          {/* Basic Information */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="grid grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Role Name <span className="text-red-500">*</span>
-                </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={3}
+                className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Max. 500 characters"
+                maxLength={500}
+              />
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 max-w-2xl">
+              <div className="flex items-start gap-3">
                 <input
-                  type="text"
-                  value={roleName}
-                  onChange={(e) => setRoleName(e.target.value)}
-                  className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter role name"
+                  type="checkbox"
+                  id="manufacturingRole"
+                  checked={isManufacturingRole}
+                  onChange={e => setIsManufacturingRole(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Max. 500 characters"
-                  maxLength={500}
-                />
-              </div>
-
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 max-w-2xl">
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id="manufacturingRole"
-                    checked={isManufacturingRole}
-                    onChange={(e) => setIsManufacturingRole(e.target.checked)}
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
-                  />
-                  <div>
-                    <label htmlFor="manufacturingRole" className="text-sm font-medium text-gray-900 dark:text-white">
-                      This role is for Manufacturing users
-                    </label>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                      If you mark this option, all users who are added with this role will be a manufacturing user.
-                    </p>
-                  </div>
+                <div>
+                  <label
+                    htmlFor="manufacturingRole"
+                    className="text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    This role is for Manufacturing users
+                  </label>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    If you mark this option, all users who are added with this role will be a
+                    manufacturing user.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Permissions */}
-          {Object.entries(permissionModules).map(([moduleKey, module]) => (
-            <div key={moduleKey} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">{module.name}</h2>
+        {/* Permissions */}
+        {Object.entries(permissionModules).map(([moduleKey, module]) => {
+          const actionColumns = getModuleActionColumns(module)
+          const parentItems = Object.entries(module.items).filter(([_, item]) => !item.isSubItem)
+
+          return (
+            <div
+              key={moduleKey}
+              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6"
+            >
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">
+                {module.name}
+              </h2>
 
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
-                  {/* Header */}
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 dark:border-gray-600">Particulars</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 dark:border-gray-600 w-20">Full</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 dark:border-gray-600 w-20">View</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 dark:border-gray-600 w-20">Create</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 dark:border-gray-600 w-20">Edit</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 dark:border-gray-600 w-20">Delete</th>
-                      {Object.values(module.items).some(item => 'approve' in item) && (
-                        <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 w-20">Approve</th>
-                      )}
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">
+                        Particulars
+                      </th>
+                      {actionColumns.map(action => (
+                        <th
+                          key={action}
+                          className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-20"
+                        >
+                          {ACTION_LABELS[action]}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
 
-                  {/* Body */}
                   <tbody>
-                    {Object.entries(module.items).map(([itemKey, item]) => {
-                      // Skip sub-items here, they'll be rendered after their parent
-                      if (item.isSubItem) return null
-
+                    {parentItems.map(([itemKey, item]) => {
                       const collapseKey = getCollapseKey(itemKey)
                       const isCollapsed = collapsed[collapseKey] ?? true
                       const hasSubItems = item.isCollapsible
+                      const subItems = Object.entries(module.items).filter(
+                        ([_, subItem]) => subItem.isSubItem && subItem.parent === itemKey
+                      )
 
                       return (
                         <Fragment key={itemKey}>
-                          {/* Parent Row */}
-                          <tr key={itemKey} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <tr className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
                             <td className="py-4 px-4 text-sm font-medium text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600">
                               <div className="flex items-center gap-2">
                                 {hasSubItems && (
@@ -367,131 +394,80 @@ export default function NewRolePage() {
                                     )}
                                   </button>
                                 )}
-                                <span className={hasSubItems ? "font-semibold" : ""}>{itemKey}</span>
+                                <span className={hasSubItems ? 'font-semibold' : ''}>
+                                  {itemKey}
+                                </span>
                               </div>
                             </td>
 
-                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600 dark:border-gray-600">
-                              <input
-                                type="checkbox"
-                                checked={item.full ?? false}
-                                onChange={(e) => updatePermission(moduleKey, itemKey, 'full', e.target.checked)}
-                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-
-                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                              <input
-                                type="checkbox"
-                                checked={item.view ?? false}
-                                onChange={(e) => updatePermission(moduleKey, itemKey, 'view', e.target.checked)}
-                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-
-                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                              <input
-                                type="checkbox"
-                                checked={item.create ?? false}
-                                onChange={(e) => updatePermission(moduleKey, itemKey, 'create', e.target.checked)}
-                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-
-                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                              <input
-                                type="checkbox"
-                                checked={item.edit ?? false}
-                                onChange={(e) => updatePermission(moduleKey, itemKey, 'edit', e.target.checked)}
-                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-
-                            <td className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                              <input
-                                type="checkbox"
-                                checked={item.delete ?? false}
-                                onChange={(e) => updatePermission(moduleKey, itemKey, 'delete', e.target.checked)}
-                                className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-
-                            {item.approve !== undefined && (
-                              <td className="py-4 px-4 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={item.approve ?? false}
-                                  onChange={(e) => updatePermission(moduleKey, itemKey, 'approve', e.target.checked)}
-                                  className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
+                            {actionColumns.map(action => (
+                              <td
+                                key={`${itemKey}-${action}`}
+                                className="py-4 px-4 text-center border-r border-gray-200 dark:border-gray-600"
+                              >
+                                {item[action as keyof ModulePermission] !== undefined && (
+                                  <input
+                                    type="checkbox"
+                                    checked={item[action as keyof ModulePermission] ?? false}
+                                    ref={(el) => {
+                                      if (el && hasSubItems) {
+                                        // Calculate indeterminate state for parent
+                                        const children = Object.entries(module.items)
+                                          .filter(([_, subItem]) => subItem.isSubItem && subItem.parent === itemKey)
+                                          .map(([_, subItem]) => subItem[action as keyof ModulePermission] ?? false);
+                                        const allChecked = children.length > 0 && children.every(Boolean);
+                                        const someChecked = children.some(Boolean);
+                                        el.indeterminate = someChecked && !allChecked;
+                                      }
+                                    }}
+                                    onChange={e =>
+                                      updatePermission(
+                                        moduleKey,
+                                        itemKey,
+                                        action as keyof ModulePermission,
+                                        e.target.checked
+                                      )
+                                    }
+                                    className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 accent-blue-600 indeterminate:bg-blue-400 indeterminate:border-blue-400"
+                                  />
+                                )}
                               </td>
-                            )}
+                            ))}
                           </tr>
 
-                          {/* Sub-items (only shown when parent is expanded) */}
-                          {!isCollapsed && hasSubItems && Object.entries(module.items)
-                            .filter(([_, subItem]) => subItem.isSubItem && subItem.parent === itemKey)
-                            .map(([subItemKey, subItem]) => (
-                              <tr key={subItemKey} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                          {!isCollapsed &&
+                            hasSubItems &&
+                            subItems.map(([subItemKey, subItem]) => (
+                              <tr
+                                key={subItemKey}
+                                className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 bg-gray-50/50 dark:bg-gray-800/50"
+                              >
                                 <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 pl-12">
-                                  {subItemKey}
+                                  {formatSubItemLabel(subItemKey, itemKey)}
                                 </td>
 
-                                <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                                  <input
-                                    type="checkbox"
-                                    checked={subItem.full ?? false}
-                                    onChange={(e) => updatePermission(moduleKey, subItemKey, 'full', e.target.checked)}
-                                    className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                </td>
-
-                                <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                                  <input
-                                    type="checkbox"
-                                    checked={subItem.view ?? false}
-                                    onChange={(e) => updatePermission(moduleKey, subItemKey, 'view', e.target.checked)}
-                                    className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                </td>
-
-                                <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                                  <input
-                                    type="checkbox"
-                                    checked={subItem.create ?? false}
-                                    onChange={(e) => updatePermission(moduleKey, subItemKey, 'create', e.target.checked)}
-                                    className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                </td>
-
-                                <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                                  <input
-                                    type="checkbox"
-                                    checked={subItem.edit ?? false}
-                                    onChange={(e) => updatePermission(moduleKey, subItemKey, 'edit', e.target.checked)}
-                                    className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                </td>
-
-                                <td className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600">
-                                  <input
-                                    type="checkbox"
-                                    checked={subItem.delete ?? false}
-                                    onChange={(e) => updatePermission(moduleKey, subItemKey, 'delete', e.target.checked)}
-                                    className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                </td>
-
-                                {subItem.approve !== undefined && (
-                                  <td className="py-3 px-4 text-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={subItem.approve ?? false}
-                                      onChange={(e) => updatePermission(moduleKey, subItemKey, 'approve', e.target.checked)}
-                                      className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
+                                {actionColumns.map(action => (
+                                  <td
+                                    key={`${subItemKey}-${action}`}
+                                    className="py-3 px-4 text-center border-r border-gray-200 dark:border-gray-600"
+                                  >
+                                    {subItem[action as keyof ModulePermission] !== undefined && (
+                                      <input
+                                        type="checkbox"
+                                        checked={subItem[action as keyof ModulePermission] ?? false}
+                                        onChange={e =>
+                                          updatePermission(
+                                            moduleKey,
+                                            subItemKey,
+                                            action as keyof ModulePermission,
+                                            e.target.checked
+                                          )
+                                        }
+                                        className="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                    )}
                                   </td>
-                                )}
+                                ))}
                               </tr>
                             ))}
                         </Fragment>
@@ -501,7 +477,6 @@ export default function NewRolePage() {
                 </table>
               </div>
 
-              {/* Special Permissions */}
               {module.specialPermissions && module.specialPermissions.length > 0 && (
                 <div className="p-4 bg-gray-50 border-t border-gray-200">
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Additional Permissions</h4>
@@ -519,8 +494,9 @@ export default function NewRolePage() {
                 </div>
               )}
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
-      )
+    </div>
+  )
 }

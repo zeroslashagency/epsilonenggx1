@@ -94,12 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true
     }
 
+    const resolvedModuleKey =
+      (!userPermissions?.[moduleKey] && (moduleKey === 'web_user_attendance' || moduleKey === 'mobile_user_attendance') && userPermissions?.user_attendance)
+        ? 'user_attendance'
+        : moduleKey
+
     // Check if module exists
-    if (!userPermissions || !userPermissions[moduleKey]) {
+    if (!userPermissions || !userPermissions[resolvedModuleKey]) {
       return false
     }
 
-    const module = userPermissions[moduleKey]
+    const module = userPermissions[resolvedModuleKey]
     const item = module.items?.[itemKey]
 
     if (!item) {

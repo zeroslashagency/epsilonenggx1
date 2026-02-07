@@ -18,7 +18,7 @@ type WithAsChild<Base extends object> =
 type SlotProps<T extends HTMLElement = HTMLElement> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   children?: any;
-} & DOMMotionProps<T>;
+} & Omit<DOMMotionProps<T>, 'ref'>;
 
 function mergeRefs<T>(
   ...refs: (React.Ref<T> | undefined)[]
@@ -58,11 +58,10 @@ function mergeProps<T extends HTMLElement>(
   return merged;
 }
 
-function Slot<T extends HTMLElement = HTMLElement>({
-  children,
-  ref,
-  ...props
-}: SlotProps<T>) {
+const Slot = React.forwardRef<HTMLElement, SlotProps<HTMLElement>>(function Slot(
+  { children, ...props },
+  forwardedRef,
+) {
   const isAlreadyMotion =
     typeof children.type === 'object' &&
     children.type !== null &&
@@ -83,9 +82,14 @@ function Slot<T extends HTMLElement = HTMLElement>({
   const mergedProps = mergeProps(childProps, props);
 
   return (
-    <Base {...mergedProps} ref={mergeRefs(childRef as React.Ref<T>, ref)} />
+    <Base
+      {...mergedProps}
+      ref={mergeRefs(childRef as React.Ref<HTMLElement>, forwardedRef)}
+    />
   );
-}
+});
+
+Slot.displayName = 'Slot';
 
 export {
   Slot,

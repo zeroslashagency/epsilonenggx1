@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole } from '@/app/lib/features/auth/auth.middleware'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 /**
  * POST /api/admin/roles/[id]/clone
@@ -12,7 +12,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const authResult = await requireRole(request, ['Admin', 'Super Admin'])
+  const authResult = await requirePermission(request, 'roles.manage')
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 

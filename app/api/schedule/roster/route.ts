@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const dateStr = searchParams.get('date')
+    const department = searchParams.get('department')
+    const includeOverrides = searchParams.get('include_overrides') !== 'false'
+    const includeHolidays = searchParams.get('include_holidays') !== 'false'
 
     if (!dateStr) {
       return NextResponse.json(
@@ -28,10 +31,16 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdminClient()
 
     // 1. Fetch all employees
-    const { data: employees, error: empError } = await supabase
+    let employeeQuery = supabase
       .from('employee_master')
       .select('employee_code, employee_name, department')
       .order('employee_name')
+
+    if (department) {
+      employeeQuery = employeeQuery.eq('department', department)
+    }
+
+    const { data: employees, error: empError } = await employeeQuery
 
     if (empError) throw empError
 
@@ -40,11 +49,19 @@ export async function GET(request: NextRequest) {
       .from('shift_templates')
       .select('*')
 
+    const templateById = new Map<string, any>()
+    const templateByName = new Map<string, any>()
+    allTemplates?.forEach((t: any) => {
+      templateById.set(t.id, t)
+      templateByName.set(t.name, t)
+    })
+
     // 2. Fetch all daily overrides for this date
-    const { data: overrides, error: overrideError } = await supabase
+    const { data: overrides, error: overrideError } = includeOverrides ? await supabase
       .from('employee_daily_schedule')
       .select('*')
       .eq('work_date', dateStr)
+      : { data: [], error: null }
 
     if (overrideError) throw overrideError
 
@@ -70,11 +87,11 @@ export async function GET(request: NextRequest) {
       .limit(1)
 
     const holidays = settingsData?.[0]?.machine_data?.holidays || []
-    const isPublicHoliday = holidays.some((h: any) => {
+    const isPublicHoliday = includeHolidays ? holidays.some((h: any) => {
       const hStart = new Date(h.startDateTime).toISOString().split('T')[0]
       const hEnd = new Date(h.endDateTime).toISOString().split('T')[0]
       return dateStr >= hStart && dateStr <= hEnd
-    })
+    }) : false
 
     // 5. Pre-fetch rotation steps
     const rotationIds = Array.from(new Set(
@@ -92,6 +109,20 @@ export async function GET(request: NextRequest) {
         .order('step_order', { ascending: true })
       if (data) rotationSteps = data
     }
+
+    const rotationMap = new Map<string, any[]>()
+    rotationSteps.forEach((step: any) => {
+      if (!rotationMap.has(step.template_id)) rotationMap.set(step.template_id, [])
+      const baseShift = step.base_shift_id ? templateById.get(step.base_shift_id) : null
+      rotationMap.get(step.template_id)!.push({
+        ...step,
+        shift_name: baseShift?.name || step.custom_name,
+        start_time: step.start_time || baseShift?.start_time,
+        end_time: step.end_time || baseShift?.end_time,
+        color: baseShift?.color,
+        overnight: baseShift?.overnight
+      })
+    })
 
     // Resolve effective shift for each employee
     const roster = employees.map(emp => {
@@ -111,7 +142,7 @@ export async function GET(request: NextRequest) {
         let resolvedShiftId = override.shift_id
         if (!resolvedShiftId && allTemplates) {
             // Priority 1: Use name-based lookup (precise if name matches exactly)
-            const matchedTemplate = override.shift_name ? allTemplates.find(t => t.name === override.shift_name) : null
+            const matchedTemplate = override.shift_name ? templateByName.get(override.shift_name) : null
             resolvedShiftId = matchedTemplate?.id
 
             // Priority 2: Use base assignment template ID (best for rotation sub-shifts like "Day 1")
@@ -170,7 +201,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } else if (assignment.assignment_type === 'rotation' && t) {
-          const steps = rotationSteps.filter(s => s.template_id === assignment.shift_template_id)
+          const steps = rotationMap.get(assignment.shift_template_id) || []
           const pattern = steps.length > 0 ? steps : (Array.isArray(t.pattern) ? t.pattern : [])
           const weeks = t.weeks_pattern || pattern.length || 1
           
@@ -194,15 +225,16 @@ export async function GET(request: NextRequest) {
               return { ...emp, shift: { name: 'Weekly Off', is_off: true, color: '#9CA3AF', source: 'assignment' } }
             }
 
+            const baseShift = weekPattern.base_shift_id ? templateById.get(weekPattern.base_shift_id) : null
             return {
               ...emp,
               shift: {
-                id: t.id,
-                name: weekPattern.shift_name,
-                start_time: weekPattern.start_time,
-                end_time: weekPattern.end_time,
-                color: t.color || '#8B5CF6',
-                overnight: weekPattern.overnight,
+                id: baseShift?.id || t.id,
+                name: weekPattern.shift_name || baseShift?.name,
+                start_time: weekPattern.start_time || baseShift?.start_time,
+                end_time: weekPattern.end_time || baseShift?.end_time,
+                color: baseShift?.color || t.color || '#8B5CF6',
+                overnight: weekPattern.overnight ?? baseShift?.overnight,
                 source: 'assignment'
               }
             }

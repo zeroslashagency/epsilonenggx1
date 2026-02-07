@@ -11,6 +11,7 @@ export interface CallLog {
     duration_seconds: number
     file_url?: string
     upload_status?: string
+    device_id?: string
     created_at: string
     latitude?: number
     longitude?: number

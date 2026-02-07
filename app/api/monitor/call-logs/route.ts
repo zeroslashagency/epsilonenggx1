@@ -16,12 +16,17 @@ export async function GET(request: Request) {
         // Filter params
         const type_filter = searchParams.get('type') // 'incoming', 'outgoing', 'missed'
         const search = searchParams.get('search')
+        const userId = searchParams.get('userId')
 
         // Base query
         let query = supabase
             .from('call_recordings')
             .select('*', { count: 'exact' })
             .order('created_at', { ascending: false })
+
+        if (userId) {
+            query = query.eq('user_id', userId)
+        }
 
         // Apply filters
         if (type_filter && type_filter !== 'all') {
@@ -85,24 +90,38 @@ export async function GET(request: Request) {
         // For now, let's keep it simple and just run aggregate queries for the stats cards.
         // NOTE: This might be slow on large tables.
 
-        const { count: totalCalls } = await supabase.from('call_recordings').select('*', { count: 'exact', head: true })
-        const { count: incoming } = await supabase.from('call_recordings').select('*', { count: 'exact', head: true }).eq('direction', 'incoming')
-        const { count: outgoing } = await supabase.from('call_recordings').select('*', { count: 'exact', head: true }).eq('direction', 'outgoing')
-        const { count: missed } = await supabase.from('call_recordings').select('*', { count: 'exact', head: true }).eq('call_type', 'missed')
+        let totalCallsQuery = supabase.from('call_recordings').select('*', { count: 'exact', head: true })
+        let incomingQuery = supabase.from('call_recordings').select('*', { count: 'exact', head: true }).eq('direction', 'incoming')
+        let outgoingQuery = supabase.from('call_recordings').select('*', { count: 'exact', head: true }).eq('direction', 'outgoing')
+        let missedQuery = supabase.from('call_recordings').select('*', { count: 'exact', head: true }).eq('call_type', 'missed')
 
-        // Sum duration (requires RPC or client side calc on filtered data - client side on limited set is wrong for total)
-        // For MVP, we can omit total duration or use a rough estimate if no RPC exists.
-        // Let's just sum the current page duration or skip for now to save complexity?
-        // User asked for "Total Duration" in mockup. Without RPC sum, we'd need to fetch all `duration_seconds`.
-        // Let's omit or mock total duration for safety to avoid fetching 1M rows. 
-        const totalDurationMock = 0
+        if (userId) {
+            totalCallsQuery = totalCallsQuery.eq('user_id', userId)
+            incomingQuery = incomingQuery.eq('user_id', userId)
+            outgoingQuery = outgoingQuery.eq('user_id', userId)
+            missedQuery = missedQuery.eq('user_id', userId)
+        }
+
+        const { count: totalCalls } = await totalCallsQuery
+        const { count: incoming } = await incomingQuery
+        const { count: outgoing } = await outgoingQuery
+        const { count: missed } = await missedQuery
+
+        let totalDurationMinutes = 0
+        const { data: totalDurationSeconds, error: durationError } = await supabase.rpc('call_recordings_total_duration', userId ? { user_uuid: userId } : undefined)
+        if (durationError) {
+            console.error('Supabase RPC error:', durationError)
+        } else if (typeof totalDurationSeconds === 'number' || typeof totalDurationSeconds === 'string') {
+            const durationValue = typeof totalDurationSeconds === 'string' ? parseInt(totalDurationSeconds, 10) : totalDurationSeconds
+            totalDurationMinutes = Math.round(durationValue / 60)
+        }
 
         const stats = {
             totalCalls: totalCalls || 0,
             incoming: incoming || 0,
             outgoing: outgoing || 0,
             missed: missed || 0,
-            totalDuration: totalDurationMock
+            totalDuration: totalDurationMinutes
         }
 
         return NextResponse.json({
