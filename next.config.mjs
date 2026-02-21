@@ -4,6 +4,8 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const deviceApiOrigin = process.env.NEXT_PUBLIC_DEVICE_API_ORIGIN || 'https://app.epsilonengg.in'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -53,7 +55,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live https://va.vercel-scripts.com;"
+            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live https://va.vercel-scripts.com ${deviceApiOrigin};`
           },
         ],
       },
@@ -63,6 +65,15 @@ const nextConfig = {
         headers: [
           { key: 'Cache-Control', value: 'no-store, must-revalidate, max-age=0' },
         ],
+      },
+    ]
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/v2/:path*',
+        destination: 'https://app.epsilonengg.in/api/v2/:path*',
       },
     ]
   },

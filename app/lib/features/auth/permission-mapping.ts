@@ -1,3 +1,9 @@
+import {
+  MAIN_DASHBOARD_CHILD_ITEMS,
+  MAIN_DASHBOARD_ITEMS,
+  MAIN_DASHBOARD_PARENT_ITEM,
+} from './dashboard-permissions'
+
 export type PermissionFlag = 'full' | 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'export'
 
 export type PermissionItem = Record<PermissionFlag, boolean | undefined> & {
@@ -249,12 +255,38 @@ const applyUserAttendanceCodeOverlay = (
   })
 }
 
+const applyMainDashboardCodeOverlay = (
+  module: PermissionModule | undefined,
+  permissionCodes: string[]
+) => {
+  if (!module) return
+
+  const hasDashboardView = permissionCodes.includes('dashboard.view')
+  const hasDashboardCreate = permissionCodes.includes('dashboard.create')
+  if (!hasDashboardView && !hasDashboardCreate) return
+
+  MAIN_DASHBOARD_ITEMS.forEach(itemKey => {
+    const current = module.items[itemKey]
+    if (!current) return
+
+    const next: PermissionItem = {
+      ...current,
+      ...(hasDashboardView && current.view !== undefined ? { view: true } : {}),
+      ...(hasDashboardCreate && current.export !== undefined ? { export: true } : {}),
+    }
+
+    module.items[itemKey] = next
+  })
+}
+
 export function applyPermissionCodesToModules(
   permissionModules: PermissionModules,
   permissionCodes: string[]
 ): PermissionModules {
   const cloned = shallowCloneModules(permissionModules)
   if (!permissionCodes.length) return cloned
+
+  applyMainDashboardCodeOverlay(cloned.main_dashboard, permissionCodes)
 
   Object.entries(USER_ATTENDANCE_MAP_BY_MODULE).forEach(([moduleKey, moduleMap]) => {
     applyUserAttendanceCodeOverlay(cloned[moduleKey], moduleMap, permissionCodes)
@@ -464,7 +496,10 @@ export function buildPermissionCodes(permissionModules: PermissionModules): stri
 
   const mainDashboard = permissionModules.main_dashboard
   if (mainDashboard) {
-    const merged = mergePermissions([mainDashboard.items['Dashboard']])
+    const merged = mergePermissions([
+      mainDashboard.items[MAIN_DASHBOARD_PARENT_ITEM],
+      ...MAIN_DASHBOARD_CHILD_ITEMS.map(itemKey => mainDashboard.items[itemKey]),
+    ])
     if (merged.full) {
       codes.add('dashboard.view')
       codes.add('dashboard.create')
@@ -524,8 +559,9 @@ export function buildPermissionCodes(permissionModules: PermissionModules): stri
   const adminUsers = permissionModules.admin_users
   if (adminUsers) {
     const merged = mergePermissions([adminUsers.items['User Management']])
-    if (merged.view || merged.full) codes.add('manage_users')
+    if (merged.view || merged.full) codes.add('users.view')
     if (merged.create || merged.edit || merged.delete || merged.full) {
+      codes.add('users.view')
       codes.add('manage_users')
       codes.add('users.edit')
     }
@@ -535,8 +571,10 @@ export function buildPermissionCodes(permissionModules: PermissionModules): stri
   const adminAddUsers = permissionModules.admin_add_users
   if (adminAddUsers) {
     const merged = mergePermissions([adminAddUsers.items['Add Users']])
-    if (anyPermissionSet(merged)) codes.add('manage_users')
+    if (merged.view || merged.full) codes.add('users.view')
     if (merged.create || merged.edit || merged.delete || merged.full) {
+      codes.add('users.view')
+      codes.add('manage_users')
       codes.add('users.edit')
     }
   }

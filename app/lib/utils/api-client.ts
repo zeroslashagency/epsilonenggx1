@@ -5,6 +5,42 @@
 
 import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
 
+const CSRF_COOKIE_NAME = 'csrf_token'
+const CSRF_HEADER_NAME = 'x-csrf-token'
+
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null
+
+  const cookie = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(`${name}=`))
+
+  if (!cookie) return null
+  return decodeURIComponent(cookie.split('=').slice(1).join('='))
+}
+
+function generateTokenHex(byteLength: number = 32): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = new Uint8Array(byteLength)
+    crypto.getRandomValues(bytes)
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+  }
+
+  return `${Date.now().toString(16)}${Math.random().toString(16).slice(2).padEnd(byteLength * 2, '0')}`.slice(0, byteLength * 2)
+}
+
+function ensureCsrfToken(): string | null {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null
+
+  let token = getCookieValue(CSRF_COOKIE_NAME)
+  if (token) return token
+
+  token = generateTokenHex(32)
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${CSRF_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=86400; SameSite=Strict${secure}`
+  return token
+}
+
 /**
  * Make an authenticated API request
  * Automatically includes JWT token from Supabase session
@@ -12,6 +48,7 @@ import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
 export async function apiClient(url: string, options: RequestInit = {}) {
   const supabase = getSupabaseBrowserClient()
   const { data: { session } } = await supabase.auth.getSession()
+  const method = (options.method || 'GET').toUpperCase()
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -20,6 +57,13 @@ export async function apiClient(url: string, options: RequestInit = {}) {
   // Add authorization header if user is logged in
   if (session?.access_token) {
     headers['Authorization'] = `Bearer ${session.access_token}`
+  }
+
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const csrfToken = ensureCsrfToken()
+    if (csrfToken) {
+      headers[CSRF_HEADER_NAME] = csrfToken
+    }
   }
   
   // Merge with existing headers

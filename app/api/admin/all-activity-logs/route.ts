@@ -4,6 +4,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { requireRole } from '@/app/lib/features/auth/auth.middleware'
 
+const DEFAULT_PAGE = 1
+const DEFAULT_LIMIT = 50
+const MAX_LIMIT = 100
+
+function parsePositiveInt(value: string | null, fallback: number): number {
+  if (!value) return fallback
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
 export async function GET(request: NextRequest) {
   // Require Admin or Super Admin
   const authResult = await requireRole(request, ['Admin', 'Super Admin'])
@@ -14,13 +24,77 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
+    const searchParams = request.nextUrl.searchParams
+    const page = parsePositiveInt(searchParams.get('page'), DEFAULT_PAGE)
+    const requestedLimit = parsePositiveInt(searchParams.get('limit'), DEFAULT_LIMIT)
+    const limit = Math.min(requestedLimit, MAX_LIMIT)
+    const actionFilter = searchParams.get('action')
+    const userFilter = searchParams.get('user')
+    const fromDate = searchParams.get('from_date')
+    const toDate = searchParams.get('to_date')
+    const offset = (page - 1) * limit
 
     // Get all audit logs from audit_logs table
-    const { data: realAuditLogs, error } = await supabase
+    let actorIdsFilter: string[] | null = null
+    if (userFilter && userFilter !== 'all') {
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userFilter)) {
+        actorIdsFilter = [userFilter]
+      } else {
+        const normalizedFilter = userFilter.trim()
+        const { data: matchingProfiles } = await supabase
+          .from('profiles')
+          .select('id')
+          .or(`full_name.ilike.%${normalizedFilter}%,email.ilike.%${normalizedFilter}%`)
+          .limit(200)
+
+        actorIdsFilter = (matchingProfiles || []).map((profile: any) => profile.id)
+      }
+    }
+
+    if (actorIdsFilter && actorIdsFilter.length === 0) {
+      return NextResponse.json({
+        success: true,
+        logs: [],
+        stats: {
+          totalActivities: 0,
+          activeUsers: 0,
+          deletions: 0,
+          permissionChanges: 0,
+          recentActivities: 0,
+        },
+        pagination: {
+          page,
+          limit,
+          totalCount: 0,
+          totalPages: 1,
+        },
+        message: 'Retrieved 0 activity logs',
+      })
+    }
+
+    let query = supabase
       .from('audit_logs')
-      .select('*')
+      .select('*', { count: 'exact' })
+
+    if (actionFilter && actionFilter !== 'all') {
+      query = query.eq('action', actionFilter)
+    }
+
+    if (fromDate) {
+      query = query.gte('created_at', `${fromDate}T00:00:00.000Z`)
+    }
+
+    if (toDate) {
+      query = query.lte('created_at', `${toDate}T23:59:59.999Z`)
+    }
+
+    if (actorIdsFilter && actorIdsFilter.length > 0) {
+      query = query.in('actor_id', actorIdsFilter)
+    }
+
+    const { data: realAuditLogs, error, count } = await query
       .order('created_at', { ascending: false })
-      .limit(500)
+      .range(offset, offset + limit - 1)
 
     if (error) {
       console.error('❌ Error fetching audit logs:', error)
@@ -48,8 +122,10 @@ export async function GET(request: NextRequest) {
     const enhancedLogs = await enhanceLogsWithUserInfo(supabase, logs)
 
     // Calculate statistics
+    const totalCount = count ?? enhancedLogs.length
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit))
     const stats = {
-      totalActivities: enhancedLogs.length,
+      totalActivities: totalCount,
       activeUsers: new Set(enhancedLogs.map(log => log.user_id).filter(Boolean)).size,
       deletions: enhancedLogs.filter(log => log.action === 'user_deletion').length,
       permissionChanges: enhancedLogs.filter(log =>
@@ -68,6 +144,12 @@ export async function GET(request: NextRequest) {
       success: true,
       logs: enhancedLogs,
       stats: stats,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+      },
       message: `Retrieved ${enhancedLogs.length} activity logs`
     })
 

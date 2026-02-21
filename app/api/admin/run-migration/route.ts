@@ -12,8 +12,8 @@ import path from 'path'
  * ADMIN ONLY
  */
 export async function POST(request: NextRequest) {
-  // Require admin permission
-  const authResult = await requirePermission(request, 'manage_users')
+  // Restrict migration execution to high-privilege role managers
+  const authResult = await requirePermission(request, 'roles.manage')
   if (authResult instanceof NextResponse) return authResult
 
   try {

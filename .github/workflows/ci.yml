@@ -91,7 +91,48 @@ jobs:
           path: .next
           retention-days: 7
 
-  # Job 4: Security Audit
+  # Job 4: RBAC Health Gate (blocks promotion when role mapping drifts)
+  rbac-health-gate:
+    name: RBAC Health Gate
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate RBAC gate configuration
+        env:
+          RBAC_HEALTHCHECK_URL: ${{ secrets.RBAC_HEALTHCHECK_URL }}
+          RBAC_HEALTHCHECK_TOKEN: ${{ secrets.RBAC_HEALTHCHECK_TOKEN }}
+        run: |
+          if [ -z "$RBAC_HEALTHCHECK_URL" ]; then
+            echo "Missing required secret: RBAC_HEALTHCHECK_URL"
+            exit 1
+          fi
+          if [ -z "$RBAC_HEALTHCHECK_TOKEN" ]; then
+            echo "Missing required secret: RBAC_HEALTHCHECK_TOKEN"
+            exit 1
+          fi
+
+      - name: Run RBAC mapping health gate
+        env:
+          RBAC_HEALTHCHECK_URL: ${{ secrets.RBAC_HEALTHCHECK_URL }}
+          RBAC_HEALTHCHECK_TOKEN: ${{ secrets.RBAC_HEALTHCHECK_TOKEN }}
+          RBAC_HEALTHCHECK_TIMEOUT_MS: 20000
+        run: npm run rbac:gate
+
+  # Job 5: Security Audit
   security:
     name: Security Audit
     runs-on: ubuntu-latest

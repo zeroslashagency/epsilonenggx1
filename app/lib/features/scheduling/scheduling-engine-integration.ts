@@ -142,7 +142,7 @@ export class SchedulingEngineIntegration {
       this.engine.setGlobalSettings(globalSettings)
 
       // Run the scheduling using the modular engine
-      let results: any[] = []
+      const results: any[] = []
       
       // Process each order individually (same as original)
       for (const orderData of ordersData) {
@@ -241,16 +241,34 @@ export class SchedulingEngineIntegration {
     const results: SchedulingResult[] = []
     let operationIndex = 0
     
-    orders.forEach((order, orderIndex) => {
-      // Generate multiple operations per order (like the real engine)
-      const operationCount = Math.floor(Math.random() * 3) + 2 // 2-4 operations
-      const batchCount = Math.ceil(order.orderQuantity / 200) // Split into batches
+    orders.forEach((order) => {
+      const operationSequence = String(order.operationSeq || '')
+        .split(',')
+        .map((value) => Number(value.trim()))
+        .filter((value) => Number.isFinite(value) && value > 0)
+      const operations = operationSequence.length > 0 ? operationSequence : [1]
+
+      const totalQuantity = Math.max(1, Number(order.orderQuantity) || 1)
+      const customBatchSize = Math.max(0, Number(order.customBatchSize) || 0)
+      const batchMode = order.batchMode || 'auto-split'
+
+      const targetBatchSize =
+        batchMode === 'single-batch'
+          ? totalQuantity
+          : batchMode === 'custom-batch-size' && customBatchSize > 0
+            ? customBatchSize
+            : Math.min(totalQuantity, 200)
+
+      const batchCount = Math.max(1, Math.ceil(totalQuantity / targetBatchSize))
+      let remainingQuantity = totalQuantity
       
       for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
         const batchId = `B${String(batchIndex + 1).padStart(2, '0')}`
-        const batchQty = Math.ceil(order.orderQuantity / batchCount)
+        const batchQty =
+          batchIndex === batchCount - 1 ? remainingQuantity : Math.min(targetBatchSize, remainingQuantity)
+        remainingQuantity -= batchQty
         
-        for (let opIndex = 0; opIndex < operationCount; opIndex++) {
+        for (const operationSeq of operations) {
           const setupStart = new Date(Date.now() + operationIndex * 2 * 3600000)
           const setupEnd = new Date(setupStart.getTime() + 90 * 60000) // 1.5 hours setup
           const runStart = setupEnd
@@ -263,8 +281,8 @@ export class SchedulingEngineIntegration {
             priority: order.priority,
             batchId: batchId,
             batchQty: batchQty,
-            operationSeq: opIndex + 1,
-            operationName: 'Facing',
+            operationSeq: operationSeq,
+            operationName: `Operation ${operationSeq}`,
             machine: `VMC ${(operationIndex % 7) + 1}`,
             person: ['A', 'B', 'C', 'D'][operationIndex % 4],
             setupStart: this.formatDateTime(setupStart),

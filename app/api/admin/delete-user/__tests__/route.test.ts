@@ -1,6 +1,18 @@
 // Mock content for replacement
 import { POST } from '../route'
 
+const mockDeleteUser = jest.fn(() => Promise.resolve({ error: null }))
+const mockUpdateUserById = jest.fn(() => Promise.resolve({ error: null }))
+const mockFrom = jest.fn(() => ({
+  update: jest.fn(() => ({
+    eq: jest.fn(() => Promise.resolve({ error: null })),
+  })),
+  delete: jest.fn(() => ({
+    eq: jest.fn(() => Promise.resolve({ error: null })),
+  })),
+  insert: jest.fn(() => Promise.resolve({ error: null })),
+}))
+
 // Mock next/server to handle NextResponse.json
 // Mock next/server to handle NextResponse.json
 jest.mock('next/server', () => {
@@ -43,19 +55,21 @@ jest.mock('@/app/lib/services/supabase-client', () => ({
   getSupabaseAdminClient: jest.fn(() => ({
     auth: {
       admin: {
-        deleteUser: jest.fn(() => Promise.resolve({ error: null }))
+        deleteUser: mockDeleteUser,
+        updateUserById: mockUpdateUserById,
       }
     },
-    from: jest.fn(() => ({
-      delete: jest.fn(() => ({
-        eq: jest.fn(() => Promise.resolve({ error: null })),
-      })),
-      insert: jest.fn(() => Promise.resolve({ error: null })),
-    })),
+    from: mockFrom,
   })),
 }))
 
 describe('DELETE /api/admin/delete-user', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockDeleteUser.mockResolvedValue({ error: null })
+    mockUpdateUserById.mockResolvedValue({ error: null })
+  })
+
   it('should delete user successfully', async () => {
     const requestBody = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
@@ -81,6 +95,65 @@ describe('DELETE /api/admin/delete-user', () => {
 
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
+  })
+
+  it('should fallback to anonymization when auth hard-delete fails', async () => {
+    mockDeleteUser.mockResolvedValue({
+      error: { message: 'Database error deleting user' },
+    })
+
+    const requestBody = {
+      userId: '123e4567-e89b-12d3-a456-426614174001',
+      userEmail: 'fallback@example.com',
+      userName: 'Fallback User',
+    }
+
+    const request = new Request('http://localhost:3000/api/admin/delete-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    const response = await POST(request as any)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.data.authDeletionMode).toBe('anonymized')
+    expect(mockUpdateUserById).toHaveBeenCalledTimes(1)
+  })
+
+  it('should return 500 when both hard-delete and anonymization fail', async () => {
+    mockDeleteUser.mockResolvedValue({
+      error: { message: 'Database error deleting user' },
+    })
+    mockUpdateUserById.mockResolvedValue({
+      error: { message: 'Update failed' },
+    })
+
+    const requestBody = {
+      userId: '123e4567-e89b-12d3-a456-426614174002',
+      userEmail: 'fallback-fail@example.com',
+      userName: 'Fallback Fail User',
+    }
+
+    const request = new Request('http://localhost:3000/api/admin/delete-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    const response = await POST(request as any)
+    const data = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(data.error).toContain('Failed to delete auth user')
+    expect(data.details).toContain('Fallback anonymization also failed')
+    expect(mockUpdateUserById).toHaveBeenCalledTimes(1)
   })
 
   it('should reject request without userId', async () => {

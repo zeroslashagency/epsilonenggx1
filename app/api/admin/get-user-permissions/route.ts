@@ -1,14 +1,13 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 export async function GET(request: NextRequest) {
-  // ✅ PERMISSION CHECK: Require manage_users permission
-  const authResult = await requirePermission(request, 'manage_users')
+  // ✅ PERMISSION CHECK: Require read access to users
+  const authResult = await requirePermission(request, 'users.view')
   if (authResult instanceof NextResponse) return authResult
-  const user = authResult
 
   try {
     const { searchParams } = new URL(request.url)
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseAdminClient()
 
     // Get user's profile info first
     const { data: userProfile } = await supabase
@@ -35,18 +34,49 @@ export async function GET(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Get user's custom permissions (only works for users with auth entries)
-    const { data: userPermissions } = await supabase
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', userId)
+
+    const roleIds = (userRoles || []).map((row: { role_id: string }) => row.role_id)
+
+    let rolePermissionCodes: string[] = []
+    if (roleIds.length > 0) {
+      const { data: rolePermissions } = await supabase
+        .from('role_permissions')
+        .select(`
+          permissions (
+            code
+          )
+        `)
+        .in('role_id', roleIds)
+
+      rolePermissionCodes = (rolePermissions || [])
+        .map((row: any) => {
+          const permissionData = Array.isArray(row.permissions) ? row.permissions[0] : row.permissions
+          return permissionData?.code
+        })
+        .filter((code: unknown): code is string => typeof code === 'string' && code.length > 0)
+    }
+
+    const { data: userPermissionOverrides } = await supabase
       .from('user_permissions')
       .select(`
-        permission_id,
         effect,
         permissions (
-          code,
-          description
+          code
         )
       `)
       .eq('user_id', userId)
+      .eq('effect', 'grant')
+
+    const customPermissionCodes = (userPermissionOverrides || [])
+      .map((row: any) => {
+        const permissionData = Array.isArray(row.permissions) ? row.permissions[0] : row.permissions
+        return permissionData?.code
+      })
+      .filter((code: unknown): code is string => typeof code === 'string' && code.length > 0)
 
     // Map database permission codes back to frontend codes
     const dbToFrontendMap: Record<string, string> = {
@@ -60,17 +90,8 @@ export async function GET(request: NextRequest) {
       'manage_users': 'manage_users'
     }
 
-    // Convert permissions to frontend format
-    const frontendPermissions: string[] = []
-    
-    // Add custom permissions (if user has auth entry)
-    userPermissions?.forEach(up => {
-      if (up.effect === 'grant' && up.permissions && typeof up.permissions === 'object' && !Array.isArray(up.permissions)) {
-        const permission = up.permissions as { code: string; description: string }
-        const frontendCode = dbToFrontendMap[permission.code] || permission.code
-        frontendPermissions.push(frontendCode)
-      }
-    })
+    const allPermissionCodes = Array.from(new Set([...rolePermissionCodes, ...customPermissionCodes]))
+    const frontendPermissions = allPermissionCodes.map(code => dbToFrontendMap[code] || code)
 
     // ALWAYS add standalone_attendance if enabled in profile (works for all users)
     if (userProfile.standalone_attendance === 'YES') {
@@ -79,13 +100,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // For users without auth entries, provide basic default permissions
-    if (!userPermissions || userPermissions.length === 0) {
-      // Add default dashboard permission for users without custom permissions
-      if (!frontendPermissions.includes('dashboard')) {
-        frontendPermissions.push('dashboard')
-      }
-      
+    if (frontendPermissions.length === 0 && !frontendPermissions.includes('dashboard')) {
+      frontendPermissions.push('dashboard')
     }
 
     return NextResponse.json({

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's role information
-    const { data: userRole } = await supabase
+    const { data: userRoles } = await supabase
       .from('user_roles')
       .select(`
         role_id,
@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('user_id', user.id)
-      .single()
+
+    const roleDetails = (userRoles || [])
+      .map((row: any) => (Array.isArray(row.roles) ? row.roles[0] : row.roles))
+      .filter(Boolean)
 
     // Get user's custom permissions
     const { data: customPermissions } = await supabase
@@ -65,7 +68,8 @@ export async function GET(request: NextRequest) {
     return successResponse({
       user: {
         ...profile,
-        role_details: userRole?.roles || null,
+        role_details: roleDetails[0] || null,
+        role_details_all: roleDetails,
         custom_permissions: customPermissions || []
       }
     })

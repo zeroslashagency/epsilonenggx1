@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient, getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { requireAuth, requireGranularPermission } from '@/app/lib/features/auth/auth.middleware'
+import { hasMainDashboardPermission } from '@/app/lib/features/auth/dashboard-permissions'
 
 export async function GET(request: NextRequest) {
   // ✅ SECURITY FIX: Check if user has dashboard OR attendance permission
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     const permissions = roleData?.permissions_json
-    const hasDashboardPermission = permissions?.main_dashboard?.items?.Dashboard?.view === true
+    const hasDashboardPermission = hasMainDashboardPermission(permissions, 'view')
     const hasAttendancePermission = permissions?.main_attendance?.items?.Attendance?.view === true
 
     if (!hasDashboardPermission && !hasAttendancePermission) {

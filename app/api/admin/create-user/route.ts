@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requireRole, requirePermission } from '@/app/lib/features/auth/auth.middleware'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
 import { createUserSchema } from '@/app/lib/features/auth/schemas'
 import { checkRateLimit, strictRateLimit } from '@/app/lib/middleware/rate-limit.middleware'
@@ -29,10 +29,39 @@ export async function POST(request: NextRequest) {
     const validation = await validateRequestBody(request, createUserSchema)
     if (!validation.success) return validation.response
     
-    const { email, password, roleId, customPermissions } = validation.data
+    const { email, password, roleId, role, customPermissions } = validation.data
 
-    if (!email || !password || !roleId) {
+    if (!email || !password || (!roleId && !role)) {
       return NextResponse.json({ error: 'Email, password, and role are required' }, { status: 400 })
+    }
+
+    let selectedRole: { id: string; name: string } | null = null
+    if (roleId) {
+      const { data: roleById, error: roleByIdError } = await supabase
+        .from('roles')
+        .select('id, name')
+        .eq('id', roleId)
+        .single()
+
+      if (roleByIdError || !roleById) {
+        return NextResponse.json({ error: 'Invalid role selected' }, { status: 400 })
+      }
+      selectedRole = roleById
+    } else if (role) {
+      const { data: roleByName, error: roleByNameError } = await supabase
+        .from('roles')
+        .select('id, name')
+        .eq('name', role)
+        .single()
+
+      if (roleByNameError || !roleByName) {
+        return NextResponse.json({ error: 'Invalid role selected' }, { status: 400 })
+      }
+      selectedRole = roleByName
+    }
+
+    if (!selectedRole) {
+      return NextResponse.json({ error: 'Invalid role selected' }, { status: 400 })
     }
 
     // Create the user in Supabase Auth
@@ -57,8 +86,8 @@ export async function POST(request: NextRequest) {
         id: authUser.user.id,
         email: authUser.user.email,
         full_name: validation.data.full_name || email.split('@')[0],
-        role: 'Operator',
-        role_badge: 'Operator'
+        role: selectedRole.name,
+        role_badge: selectedRole.name
       })
 
     if (profileError) {
@@ -72,7 +101,7 @@ export async function POST(request: NextRequest) {
       .from('user_roles')
       .insert({
         user_id: authUser.user.id,
-        role_id: roleId
+        role_id: selectedRole.id
       })
 
     if (roleError) {
@@ -82,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     // If custom permissions are provided, add them
-    if (customPermissions && customPermissions.length > 0) {
+    if (Array.isArray(customPermissions) && customPermissions.length > 0) {
       const permissionInserts = customPermissions.map((permissionId: string) => ({
         user_id: authUser.user.id,
         permission_id: permissionId,
@@ -109,7 +138,8 @@ export async function POST(request: NextRequest) {
           created_user: {
             email: email,
             full_name: validation.data.full_name || email.split('@')[0],
-            role_id: roleId
+            role_id: selectedRole.id,
+            role_name: selectedRole.name
           },
           created_by: user.email,
           created_at: new Date().toISOString(),

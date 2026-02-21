@@ -101,7 +101,7 @@ function AddUsersPage() {
     try {
       
       // Fetch real employee data from API
-      const data = await apiGet('/api/get-employees')
+      const data = await apiGet('/api/admin/available-employees')
       
       if (data.success && data.employees) {
         // Transform the data to match our interface
@@ -680,7 +680,7 @@ function AddUsersPage() {
 // Wrap with ProtectedRoute to require authentication
 function ProtectedAddUsersPage() {
   return (
-    <ProtectedRoute requireRole={['Super Admin', 'Admin']}>
+    <ProtectedRoute requirePermission="manage_users">
       <AddUsersPage />
     </ProtectedRoute>
   )

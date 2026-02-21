@@ -241,9 +241,11 @@ function UsersPageZoho() {
       // Check if standalone_attendance permission is enabled
       const hasStandaloneAttendance = permissions.includes('standalone_attendance')
 
+      const roleToSave = editedRole?.trim() || selectedUser.role || 'Operator'
+
       const payload = {
         userId: selectedUser.id,
-        role: editedRole,
+        role: roleToSave,
         permissions,
         standalone_attendance: hasStandaloneAttendance ? 'YES' : 'NO'
       }
@@ -268,7 +270,7 @@ function UsersPageZoho() {
           employee_code: editedEmployeeCode,
           department: editedDepartment,
           designation: editedDesignation,
-          role: editedRole
+          role: roleToSave
         })
         // Refresh user list to show updated data
         await fetchUsers()
@@ -394,7 +396,12 @@ function UsersPageZoho() {
 
 
       if (result.success) {
-        alert('✅ User deleted successfully!')
+        const authDeletionMode = result?.data?.authDeletionMode
+        if (authDeletionMode === 'anonymized') {
+          alert('⚠️ User removed from app records, but auth account was anonymized (not hard-deleted) because database references still exist.')
+        } else {
+          alert('✅ User deleted successfully!')
+        }
       } else {
         throw new Error(result.error || 'Failed to delete user')
       }
@@ -1167,7 +1174,7 @@ function UsersPageZoho() {
 // Wrap with ProtectedRoute to require authentication
 function ProtectedUsersPage() {
   return (
-    <ProtectedRoute requireRole={['Super Admin', 'Admin']}>
+    <ProtectedRoute requirePermission="users.view">
       <UsersPageZoho />
     </ProtectedRoute>
   )

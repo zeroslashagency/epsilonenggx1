@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button'
 import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 import { useToast } from '@/components/ui/use-toast'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 interface Employee {
   id: string
@@ -24,7 +25,7 @@ interface Role {
   description: string
 }
 
-export default function AddUsersPage() {
+function AddUsersPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [activeMethod, setActiveMethod] = useState<'manual' | 'employees'>('employees')
@@ -183,7 +184,7 @@ export default function AddUsersPage() {
   const fetchEmployees = async () => {
     setLoading(true)
     try {
-      const data = await apiGet('/api/get-employees')
+      const data = await apiGet('/api/admin/available-employees')
 
       if (data.success && data.employees) {
         const transformedEmployees = data.employees.map((emp: any) => ({
@@ -1661,3 +1662,13 @@ export default function AddUsersPage() {
     </>
   )
 }
+
+function ProtectedAddUsersPage() {
+  return (
+    <ProtectedRoute requirePermission="manage_users">
+      <AddUsersPage />
+    </ProtectedRoute>
+  )
+}
+
+export default ProtectedAddUsersPage

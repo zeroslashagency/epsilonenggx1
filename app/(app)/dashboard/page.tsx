@@ -43,6 +43,28 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Shield } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { MachineStatusHub } from "@/components/dashboard/machine-status-hub"
+import { DeviceLogViewer } from "@/components/dashboard/device-log-viewer"
+
+// ✅ Helper to map machine data for the table
+function linkMachinesTableData(machines: any[]) {
+  if (!Array.isArray(machines)) return []
+  return machines.map((m: any) => ({
+    machine: m.name || m.machine_id,
+    machineId: m.machine_id,
+    status: m.status || 'idle',
+    order: m.current_order?.order_number || '—',
+    operator: '—',
+    utilization: m.efficiency || 0
+  }))
+}
 
 interface DashboardStats {
   totalEmployees: number
@@ -72,6 +94,13 @@ interface RecentActivity {
 function DashboardPageContent() {
   const auth = useAuth()
   const router = useRouter()
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
+  const [isLogsOpen, setIsLogsOpen] = useState(false)
+
+  const handleViewLogs = (deviceId: string) => {
+    setSelectedDeviceId(deviceId)
+    setIsLogsOpen(true)
+  }
 
   // ⚡ PERFORMANCE: Use React Query with the aggregate summary API
   // Replaces 4-7 separate API calls and 200+ lines of manual state management
@@ -93,16 +122,59 @@ function DashboardPageContent() {
     refetchInterval: 30000, // Auto-refresh every 30s
   })
 
+  // 1. Fetch Machines Data
+  const {
+    data: machinesData,
+    isLoading: machinesLoading,
+    refetch: refetchMachines
+  } = useQuery({
+    queryKey: ['machines-list'],
+    queryFn: async () => {
+      const response = await apiGet('/api/production/machines')
+      if (!response.success) throw new Error(response.error || 'Failed to fetch machines')
+      return response.data
+    },
+    enabled: auth.isAuthenticated,
+    staleTime: 30000,
+    refetchInterval: 30000,
+  })
+
+  // 2. Fetch Alerts Data
+  const {
+    data: alertsData,
+    isLoading: alertsLoading,
+    refetch: refetchAlerts
+  } = useQuery({
+    queryKey: ['system-alerts'],
+    queryFn: async () => {
+      const response = await apiGet('/api/monitoring/alerts?acknowledged=false')
+      if (!response.success) throw new Error(response.error || 'Failed to fetch alerts')
+      return response.data
+    },
+    enabled: auth.isAuthenticated,
+    staleTime: 30000,
+    refetchInterval: 30000,
+  })
+
   // Map query data to UI components
-  const stats = useMemo<DashboardStats>(() => ({
-    totalEmployees: dashboardData?.summary?.totalEmployees || 0,
-    presentToday: dashboardData?.summary?.presentToday || 0,
-    attendancePercentage: dashboardData?.summary?.attendancePercentage || 0,
-    activeOrders: 0,
-    machinesRunning: 0,
-    totalMachines: 10,
-    utilizationRate: 0
-  }), [dashboardData])
+  const stats = useMemo<DashboardStats>(() => {
+    // Calculate machines running from real data
+    const machines = machinesData?.data || machinesData || []
+    const runningCount = Array.isArray(machines) ? machines.filter((m: any) => m.status === 'running').length : 0
+    const activeOrdersCount = Array.isArray(machines) ? machines.filter((m: any) => m.current_order).length : 0
+    const totalMacs = Array.isArray(machines) ? machines.length : 7
+    const utilization = totalMacs > 0 ? Math.round((runningCount / totalMacs) * 100) : 0
+
+    return {
+      totalEmployees: dashboardData?.summary?.totalEmployees || 0,
+      presentToday: dashboardData?.summary?.presentToday || 0,
+      attendancePercentage: dashboardData?.summary?.attendancePercentage || 0,
+      activeOrders: activeOrdersCount,
+      machinesRunning: runningCount,
+      totalMachines: totalMacs,
+      utilizationRate: utilization
+    }
+  }, [dashboardData, machinesData])
 
   const attendanceTrend = dashboardData?.trends || []
   const recentActivity = dashboardData?.recentActivity || []
@@ -138,7 +210,11 @@ function DashboardPageContent() {
   const hasAnyDashboardPermission = canViewOverview || canViewMetrics || canViewActivity || canViewMachines || canViewAlerts
 
   // Map refresh button to refetch
-  const fetchDashboardData = () => refetch()
+  const fetchDashboardData = () => {
+    refetch()
+    refetchMachines()
+    refetchAlerts()
+  }
 
 
   // Show loading while checking auth (single check, not duplicate)
@@ -210,10 +286,14 @@ function DashboardPageContent() {
                     <span className="text-xs text-blue-100 hidden sm:inline">{lastUpdate.toLocaleTimeString()}</span>
                   </div>
 
-                  {/* Notifications - Hidden on mobile */}
+                  {/* Notifications - Using Alerts Data */}
                   <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 relative hidden sm:flex">
                     <Bell className="w-5 h-5" />
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">3</span>
+                    {alertsData?.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                        {alertsData.length > 9 ? '9+' : alertsData.length}
+                      </span>
+                    )}
                   </Button>
 
                   {/* Refresh */}
@@ -402,6 +482,18 @@ function DashboardPageContent() {
               </div>
             )}
 
+            {/* Live Machine Production Hub */}
+            <section className="mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="w-5 h-5 text-blue-500" />
+                <h2 className="text-xl font-bold tracking-tight">Live Production Pulse</h2>
+                <Badge variant="outline" className="ml-2 animate-pulse bg-emerald-50 text-emerald-700 border-emerald-200">
+                  Live Tracking
+                </Badge>
+              </div>
+              <MachineStatusHub machines={machinesData?.data || machinesData || []} />
+            </section>
+
             {/* ROW B: Main Chart + Right Rail */}
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-start">
               {canViewMetrics && (
@@ -511,30 +603,39 @@ function DashboardPageContent() {
                     <div className="flex items-center gap-2 mb-4">
                       <Bell className="w-5 h-5 text-red-600" />
                       <h3 className="font-bold text-gray-900 dark:text-white">Alerts</h3>
-                      <span className="ml-auto bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-1 rounded-full">3</span>
+                      {alertsData?.length > 0 && (
+                        <span className="ml-auto bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-1 rounded-full">
+                          {alertsData.length}
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-3">
-                      <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
-                        <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Machine VMC-3 Down</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">2 hours ago</p>
+                      {alertsLoading ? (
+                        <div className="space-y-2">
+                          {[1, 2, 3].map(i => (
+                            <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                          ))}
                         </div>
-                      </div>
-                      <div className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                        <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Low Attendance</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">32% present</p>
+                      ) : alertsData?.length > 0 ? (
+                        alertsData.slice(0, 5).map((alert: any) => (
+                          <div key={alert.id} className={`flex items-start gap-3 p-3 rounded-lg border ${alert.severity === 'critical' || alert.severity === 'error'
+                            ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+                            : 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800'
+                            }`}>
+                            <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${alert.severity === 'critical' || alert.severity === 'error' ? 'text-red-600' : 'text-yellow-600'
+                              }`} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{alert.title}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{alert.message}</p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-50 text-green-500" />
+                          <p className="text-sm">All systems normal</p>
                         </div>
-                      </div>
-                      <div className="flex items-start gap-3 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
-                        <Clock className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Order Delayed</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">ORD-1234</p>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -699,15 +800,9 @@ function DashboardPageContent() {
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        { machine: 'VMC-1', status: 'running', order: 'ORD-1234', operator: 'John Smith', utilization: 95 },
-                        { machine: 'VMC-2', status: 'running', order: 'ORD-1235', operator: 'Sarah Johnson', utilization: 87 },
-                        { machine: 'VMC-3', status: 'down', order: '—', operator: '—', utilization: 0 },
-                        { machine: 'CNC-1', status: 'idle', order: '—', operator: 'Mike Davis', utilization: 15 },
-                        { machine: 'CNC-2', status: 'running', order: 'ORD-1236', operator: 'Emily Brown', utilization: 92 }
-                      ].map((row, idx) => (
+                      {Array.isArray(machinesData?.data || machinesData) ? (linkMachinesTableData(machinesData?.data || machinesData).map((row: any, idx: number) => (
                         <tr key={idx} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                          <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">{row.machine}</td>
+                          <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white font-mono">{row.machine}</td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${row.status === 'running' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                               row.status === 'down' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
@@ -719,23 +814,40 @@ function DashboardPageContent() {
                               {row.status.toUpperCase()}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{row.order}</td>
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
+                            {row.order !== '—' ? (
+                              <Badge variant="outline" className="font-mono text-[10px]">{row.order}</Badge>
+                            ) : '—'}
+                          </td>
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{row.operator}</td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
-                              <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden max-w-[100px]">
-                                <div className={`h-full ${row.utilization > 80 ? 'bg-green-500' : row.utilization > 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${row.utilization}%` }}></div>
+                              <div className="flex-1 h-1.5 w-16 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div className={`h-full ${row.utilization > 80 ? 'bg-green-500' : row.utilization > 50 ? 'bg-yellow-500' : 'bg-gray-400'}`} style={{ width: `${row.utilization}%` }}></div>
                               </div>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{row.utilization}%</span>
+                              <span className="text-xs font-medium">{row.utilization}%</span>
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <Button variant="ghost" size="sm" className="h-8 px-2">
-                              <Settings className="w-4 h-4" />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              onClick={() => handleViewLogs(row.machineId)}
+                            >
+                              <Activity className="w-3.5 h-3.5 mr-1" />
+                              Live Logs
                             </Button>
                           </td>
                         </tr>
-                      ))}
+                      ))) : (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center text-gray-500">
+                            <Activity className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                            <p>No real machine data connected yet.</p>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -743,6 +855,15 @@ function DashboardPageContent() {
             )}
           </>
         )}
+
+        <Dialog open={isLogsOpen} onOpenChange={setIsLogsOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Device Logs: {selectedDeviceId}</DialogTitle>
+            </DialogHeader>
+            {selectedDeviceId && <DeviceLogViewer deviceId={selectedDeviceId} />}
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   )
@@ -755,3 +876,4 @@ export default function DashboardPage() {
     </ProtectedPage>
   )
 }
+

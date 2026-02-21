@@ -5,6 +5,8 @@
 
 import { NextResponse } from 'next/server'
 
+const deviceApiOrigin = process.env.NEXT_PUBLIC_DEVICE_API_ORIGIN || 'https://app.epsilonengg.in'
+
 /**
  * Security headers configuration
  */
@@ -32,7 +34,7 @@ export const SECURITY_HEADERS = {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live https://va.vercel-scripts.com",
+    `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live https://va.vercel-scripts.com ${deviceApiOrigin}`,
     "frame-ancestors 'none'",
   ].join('; '),
 }

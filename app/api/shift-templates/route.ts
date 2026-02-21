@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requireRole } from '@/app/lib/features/auth/auth.middleware'
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireRole(request, ['Admin', 'Super Admin'])
+  if (authResult instanceof NextResponse) return authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     const body = await request.json()
@@ -49,7 +53,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authResult = await requireRole(request, ['Admin', 'Super Admin'])
+  if (authResult instanceof NextResponse) return authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     

@@ -167,13 +167,20 @@ export default function UserDetailPage() {
   }
 
   const handleSaveChanges = async () => {
+    if (!user?.id) {
+      alert('Unable to save changes: user id is missing.')
+      return
+    }
+
     try {
 
       // Determine standalone_attendance based on permissions
       const standalone_attendance = permissions.includes('standalone_attendance') ? 'YES' : 'NO'
+      const roleToSave = selectedRole?.trim() || user.role || 'Operator'
 
       const data = await apiPost('/api/admin/update-user-permissions', {
-        userId: user?.id,
+        userId: user.id,
+        role: roleToSave,
         permissions,
         standalone_attendance
       })

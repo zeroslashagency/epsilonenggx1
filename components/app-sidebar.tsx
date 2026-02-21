@@ -203,6 +203,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
     if (isSuperAdmin || canUserAttendanceDeviceMonitoring) {
       monitorPersonItems.push({ id: 'monitor-device', label: 'Mobile Device Logs', href: '/monitor/device-logs', icon: Smartphone })
+      monitorPersonItems.push({ id: 'monitor-excal-dashboard', label: 'Excal Dashboard', href: '/monitor/excal-dashboard', icon: Activity })
     }
     if (isSuperAdmin || canUserAttendanceFir) {
       monitorPersonItems.push({ id: 'monitor-fir', label: 'FIR Status', href: '/fir', icon: Shield })

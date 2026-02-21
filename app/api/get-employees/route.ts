@@ -2,8 +2,21 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/app/lib/services/supabase-server'
+import { optionalAuth } from '@/app/lib/features/auth/auth.middleware'
 
 export async function GET(request: NextRequest) {
+  const user = await optionalAuth(request)
+  if (!user) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Unauthorized',
+        message: 'Authentication required.',
+      },
+      { status: 401 }
+    )
+  }
+
   try {
     const supabase = await getSupabaseServerClient()
     

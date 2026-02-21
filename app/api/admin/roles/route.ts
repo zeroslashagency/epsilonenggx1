@@ -16,6 +16,15 @@ import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
 import { createRoleSchema, updateRoleSchema } from '@/app/lib/features/auth/schemas'
 import { z } from 'zod'
 
+const INACTIVE_PROFILE_ROLES = new Set(['deactivated', 'inactive', 'deleted'])
+
+const isActiveProfileRole = (role: unknown): boolean => {
+  if (typeof role !== 'string') return true
+  const normalizedRole = role.trim().toLowerCase()
+  if (!normalizedRole) return true
+  return !INACTIVE_PROFILE_ROLES.has(normalizedRole)
+}
+
 const toPermissionCodes = (permissions: unknown, permissionsJson: unknown): string[] => {
   if (permissionsJson && typeof permissionsJson === 'object' && !Array.isArray(permissionsJson)) {
     return buildPermissionCodes(permissionsJson as any)
@@ -112,8 +121,8 @@ const syncRolePermissionsIfChanged = async (
  * @security Requires Admin or Super Admin role
  */
 export async function GET(request: NextRequest) {
-  // ✅ PERMISSION CHECK: Require roles.manage permission
-  const authResult = await requirePermission(request, 'roles.manage')
+  // ✅ PERMISSION CHECK: Require roles.view permission
+  const authResult = await requirePermission(request, 'roles.view')
   if (authResult instanceof NextResponse) return authResult
 
   try {
@@ -146,8 +155,82 @@ export async function GET(request: NextRequest) {
 
     if (rpError) throw rpError
 
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, role')
+
+    if (profilesError) throw profilesError
+
+    const { data: userRoles, error: userRolesError } = await supabase
+      .from('user_roles')
+      .select('role_id, user_id')
+
+    if (userRolesError) throw userRolesError
+
+    const activeProfiles = (profiles ?? []).filter((profile: { role: unknown }) =>
+      isActiveProfileRole(profile.role)
+    )
+
+    const activeUserIds = new Set(activeProfiles.map((profile: { id: string }) => profile.id))
+
+    const activeRoleUserSets = new Map<string, Set<string>>()
+    const usersWithRoleAssignments = new Set<string>()
+    for (const userRole of userRoles ?? []) {
+      if (!activeUserIds.has(userRole.user_id)) continue
+      usersWithRoleAssignments.add(userRole.user_id)
+      if (!activeRoleUserSets.has(userRole.role_id)) {
+        activeRoleUserSets.set(userRole.role_id, new Set())
+      }
+      activeRoleUserSets.get(userRole.role_id)!.add(userRole.user_id)
+    }
+
+    // Legacy fallback: if a user has no user_roles row yet, derive assignment from profiles.role.
+    // This keeps Active Users accurate while older accounts are being backfilled.
+    const roleIdByExactName = new Map<string, string>()
+    const roleIdsByNormalizedName = new Map<string, string[]>()
+
+    for (const role of roles ?? []) {
+      const roleName = typeof role.name === 'string' ? role.name.trim() : ''
+      if (!roleName) continue
+
+      roleIdByExactName.set(roleName, role.id)
+
+      const normalizedRoleName = roleName.toLowerCase()
+      const normalizedMatches = roleIdsByNormalizedName.get(normalizedRoleName) ?? []
+      normalizedMatches.push(role.id)
+      roleIdsByNormalizedName.set(normalizedRoleName, normalizedMatches)
+    }
+
+    for (const profile of activeProfiles) {
+      if (usersWithRoleAssignments.has(profile.id)) continue
+      if (typeof profile.role !== 'string') continue
+
+      const profileRoleName = profile.role.trim()
+      if (!profileRoleName) continue
+
+      let resolvedRoleId = roleIdByExactName.get(profileRoleName)
+      if (!resolvedRoleId) {
+        const normalizedMatches = roleIdsByNormalizedName.get(profileRoleName.toLowerCase()) ?? []
+        if (normalizedMatches.length === 1) {
+          resolvedRoleId = normalizedMatches[0]
+        }
+      }
+
+      if (!resolvedRoleId) continue
+
+      if (!activeRoleUserSets.has(resolvedRoleId)) {
+        activeRoleUserSets.set(resolvedRoleId, new Set())
+      }
+      activeRoleUserSets.get(resolvedRoleId)!.add(profile.id)
+    }
+
+    const rolesWithActiveCounts = (roles ?? []).map((role: any) => ({
+      ...role,
+      active_user_count: activeRoleUserSets.get(role.id)?.size ?? 0,
+    }))
+
     // Build permission matrix
-    const permissionMatrix = roles?.map(role => ({
+    const permissionMatrix = rolesWithActiveCounts.map((role: any) => ({
       ...role,
       permissions:
         rolePermissions?.filter(rp => rp.role_id === role.id)?.map(rp => rp.permissions) || [],
@@ -157,7 +240,7 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         data: {
-          roles,
+          roles: rolesWithActiveCounts,
           permissions,
           permissionMatrix,
           rolePermissions,

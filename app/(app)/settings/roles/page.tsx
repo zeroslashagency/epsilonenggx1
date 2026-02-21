@@ -13,6 +13,7 @@ interface Role {
   name: string
   description: string
   default_permissions?: string[]
+  active_user_count?: number
 }
 
 interface RoleProfile {
@@ -187,15 +188,16 @@ function RolesPage() {
                 <tr className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                   <th className="text-left py-4 px-6 font-medium text-gray-700 dark:text-gray-300">ROLE NAME</th>
                   <th className="text-left py-4 px-6 font-medium text-gray-700 dark:text-gray-300">DESCRIPTION</th>
+                  <th className="text-left py-4 px-6 font-medium text-gray-700 dark:text-gray-300">ACTIVE USERS</th>
                   <th className="text-right py-4 px-6 font-medium text-gray-700 dark:text-gray-300">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <TableLoading colSpan={3} text="Loading roles" />
+                  <TableLoading colSpan={4} text="Loading roles" />
                 ) : roles.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">
                       No roles found
                     </td>
                   </tr>
@@ -207,6 +209,12 @@ function RolesPage() {
                       </td>
                       <td className="py-4 px-6">
                         <div className="text-sm text-gray-900 dark:text-gray-100">{role.description}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="inline-flex items-center gap-2 rounded-lg bg-emerald-100/60 dark:bg-emerald-900/25 px-3 py-1.5 text-sm font-semibold text-emerald-600 dark:text-emerald-300">
+                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                          {role.active_user_count ?? 0} Active
+                        </div>
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -395,7 +403,7 @@ function RolesPage() {
 // Wrap with ProtectedRoute to require authentication
 function ProtectedRolesPage() {
   return (
-    <ProtectedRoute requireRole={['Super Admin', 'Admin']}>
+    <ProtectedRoute requirePermission="roles.view">
       <RolesPage />
     </ProtectedRoute>
   )

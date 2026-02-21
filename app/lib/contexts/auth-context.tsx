@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowserClient } from '../services/supabase-client'
+import { hasMainDashboardPermission } from '@/app/lib/features/auth/dashboard-permissions'
 
 const supabase = getSupabaseBrowserClient()
 
@@ -10,6 +11,59 @@ interface PermissionModule {
   name: string
   items: Record<string, any>
   specialPermissions?: string[]
+}
+
+const PERMISSION_FLAGS = ['full', 'view', 'create', 'edit', 'delete', 'approve', 'export'] as const
+
+const mergePermissionModules = (sources: unknown[]): Record<string, PermissionModule> => {
+  const merged: Record<string, PermissionModule> = {}
+
+  sources.forEach(source => {
+    if (!source || typeof source !== 'object' || Array.isArray(source)) return
+
+    Object.entries(source).forEach(([moduleKey, moduleValue]) => {
+      if (!moduleValue || typeof moduleValue !== 'object' || Array.isArray(moduleValue)) return
+
+      const typedModule = moduleValue as PermissionModule
+      const currentModule = merged[moduleKey] || {
+        name: typedModule.name || moduleKey,
+        items: {},
+        specialPermissions: []
+      }
+
+      currentModule.name = typedModule.name || currentModule.name
+
+      if (typedModule.items && typeof typedModule.items === 'object') {
+        Object.entries(typedModule.items).forEach(([itemKey, itemValue]) => {
+          if (!itemValue || typeof itemValue !== 'object' || Array.isArray(itemValue)) return
+
+          const existingItem = currentModule.items[itemKey] || {}
+          const mergedItem = { ...existingItem, ...itemValue }
+
+          PERMISSION_FLAGS.forEach(flag => {
+            mergedItem[flag] = Boolean(existingItem[flag] || (itemValue as any)[flag])
+          })
+
+          currentModule.items[itemKey] = mergedItem
+        })
+      }
+
+      const existingSpecialPermissions = Array.isArray(currentModule.specialPermissions)
+        ? currentModule.specialPermissions
+        : []
+      const incomingSpecialPermissions = Array.isArray(typedModule.specialPermissions)
+        ? typedModule.specialPermissions
+        : []
+
+      currentModule.specialPermissions = Array.from(
+        new Set([...existingSpecialPermissions, ...incomingSpecialPermissions])
+      )
+
+      merged[moduleKey] = currentModule
+    })
+  })
+
+  return merged
 }
 
 interface AuthContextType {
@@ -41,48 +95,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Function to fetch user profile and permissions from database
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Get user's role
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role, standalone_attendance')
         .eq('id', userId)
         .single()
 
+      const { data: userRoleRows } = await supabase
+        .from('user_roles')
+        .select(`
+          role_id,
+          roles (
+            name,
+            permissions_json
+          )
+        `)
+        .eq('user_id', userId)
+
+      const assignedRoles: Array<{ name: string | undefined; permissionsJson: unknown }> = []
+      for (const row of userRoleRows || []) {
+        const roleData = Array.isArray(row.roles) ? row.roles[0] : row.roles
+        if (!roleData || typeof roleData !== 'object') continue
+        assignedRoles.push({
+          name: roleData.name as string | undefined,
+          permissionsJson: roleData.permissions_json
+        })
+      }
+
+      const assignedRoleNames = assignedRoles
+        .map(role => role.name)
+        .filter((name): name is string => typeof name === 'string' && name.length > 0)
+
+      const hasSuperAdminRole = assignedRoleNames.some(
+        name => name === 'Super Admin' || name === 'super_admin'
+      ) || profile?.role === 'Super Admin' || profile?.role === 'super_admin'
+
+      if (hasSuperAdminRole) {
+        setUserRole('Super Admin')
+        setUserPermissions({}) // Empty object = all permissions for Super Admin
+        return
+      }
+
+      if (assignedRoles.length > 0) {
+        const mergedPermissions = mergePermissionModules(
+          assignedRoles.map(role => role.permissionsJson)
+        )
+
+        const resolvedRole =
+          (profile?.role && assignedRoleNames.includes(profile.role) ? profile.role : null) ||
+          assignedRoleNames[0] ||
+          profile?.role ||
+          'User'
+
+        setUserRole(resolvedRole)
+        setUserPermissions(mergedPermissions)
+        return
+      }
+
       if (profileError || !profile) {
-        // Don't block - set defaults and continue
         setUserRole('User')
         setUserPermissions({})
         return
       }
 
-      setUserRole(profile.role)
-
-      // Super Admin gets all permissions
-      if (profile.role === 'Super Admin' || profile.role === 'super_admin') {
-        setUserPermissions({}) // Empty object = all permissions for Super Admin
-        return
-      }
-
-      // Fetch role's permissions_json from roles table
-      const { data: roleData, error: roleError } = await supabase
+      const { data: fallbackRole, error: fallbackRoleError } = await supabase
         .from('roles')
         .select('permissions_json')
         .eq('name', profile.role)
         .single()
 
-      if (roleError) {
-        // Don't block - set empty permissions and continue
-        setUserPermissions({})
-        return
-      }
-
-      if (roleData?.permissions_json) {
-        setUserPermissions(roleData.permissions_json)
+      setUserRole(profile.role || 'User')
+      if (!fallbackRoleError && fallbackRole?.permissions_json) {
+        setUserPermissions(mergePermissionModules([fallbackRole.permissions_json]))
       } else {
         setUserPermissions({})
       }
 
     } catch (error) {
+      setUserRole('User')
       setUserPermissions({})
     }
   }
@@ -104,8 +194,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false
     }
 
-    const module = userPermissions[resolvedModuleKey]
-    const item = module.items?.[itemKey]
+    if (resolvedModuleKey === 'main_dashboard') {
+      return hasMainDashboardPermission(
+        userPermissions,
+        action as 'full' | 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'export',
+        itemKey
+      )
+    }
+
+    const permissionModule = userPermissions[resolvedModuleKey]
+    const item = permissionModule.items?.[itemKey]
 
     if (!item) {
       return false
@@ -127,6 +225,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true
     }
 
+    if (permissionCode === 'manage_users') {
+      return (
+        hasPermission('admin_users', 'User Management', 'create') ||
+        hasPermission('admin_users', 'User Management', 'edit') ||
+        hasPermission('admin_users', 'User Management', 'delete') ||
+        hasPermission('admin_users', 'User Management', 'full')
+      )
+    }
+
+    if (permissionCode === 'roles.manage' || permissionCode === 'assign_roles') {
+      return (
+        hasPermission('admin_roles', 'Role Profiles', 'create') ||
+        hasPermission('admin_roles', 'Role Profiles', 'edit') ||
+        hasPermission('admin_roles', 'Role Profiles', 'delete') ||
+        hasPermission('admin_roles', 'Role Profiles', 'full')
+      )
+    }
+
     // For now, map backend codes to frontend permission structure
     // This is a transitional approach until full migration
     const codeMap: Record<string, { module: string; item: string; action: string }> = {
@@ -135,6 +251,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'schedule.edit': { module: 'main_scheduling', item: 'Schedule Generator', action: 'edit' },
       'schedule.delete': { module: 'main_scheduling', item: 'Schedule Generator', action: 'delete' },
       'schedule.approve': { module: 'main_scheduling', item: 'Schedule Generator', action: 'approve' },
+      'users.view': { module: 'admin_users', item: 'User Management', action: 'view' },
+      'users.edit': { module: 'admin_users', item: 'User Management', action: 'edit' },
+      'users.permissions': { module: 'admin_users', item: 'User Management', action: 'full' },
+      'manage_users': { module: 'admin_users', item: 'User Management', action: 'edit' },
+      'roles.view': { module: 'admin_roles', item: 'Role Profiles', action: 'view' },
+      'roles.manage': { module: 'admin_roles', item: 'Role Profiles', action: 'edit' },
+      'assign_roles': { module: 'admin_roles', item: 'Role Profiles', action: 'edit' },
     }
 
     const mapping = codeMap[permissionCode]

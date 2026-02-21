@@ -54,8 +54,12 @@ export async function getUserFromRequest(request: NextRequest): Promise<User | n
       return defaultUser
     }
 
+    const normalizedRoleBadge = typeof profile.role_badge === 'string'
+      ? profile.role_badge.toLowerCase().replace(/\s+/g, '_')
+      : ''
+
     // Prioritize role_badge for super_admin (workaround for CHECK constraint)
-    const userRole = profile.role_badge === 'super_admin'
+    const userRole = normalizedRoleBadge === 'super_admin'
       ? 'Super Admin'
       : (profile.role || profile.role_badge || 'Employee')
 
@@ -63,7 +67,8 @@ export async function getUserFromRequest(request: NextRequest): Promise<User | n
       id: profile.id,
       email: profile.email,
       full_name: profile.full_name,
-      role: userRole
+      role: userRole,
+      role_badge: profile.role_badge
     }
 
     // Cache the session
@@ -180,10 +185,14 @@ export async function requireMinRole(
  * Pure RBAC: Checks only role-based permissions
  */
 export async function hasPermission(user: User, permission: string): Promise<boolean> {
+  const normalizedRoleBadge = typeof user.role_badge === 'string'
+    ? user.role_badge.toLowerCase().replace(/\s+/g, '_')
+    : ''
+
   // Super Admin has all permissions (check multiple variations for compatibility)
   if (user.role === 'Super Admin' ||
     user.role === 'super_admin' ||
-    user.role_badge === 'super_admin') {
+    normalizedRoleBadge === 'super_admin') {
     return true
   }
 
@@ -236,8 +245,17 @@ export async function hasPermission(user: User, permission: string): Promise<boo
       })
     }
 
-    // Check if user has the required permission
-    return allPermissions.includes(permission)
+    const permissionSet = new Set(allPermissions)
+    if (permissionSet.has(permission)) {
+      return true
+    }
+
+    // Backward-compatibility aliases during permission migration windows.
+    if (permission === 'users.view' && permissionSet.has('manage_users')) return true
+    if (permission === 'users.edit' && permissionSet.has('manage_users')) return true
+    if (permission === 'roles.view' && permissionSet.has('roles.manage')) return true
+
+    return false
 
   } catch {
     return false
@@ -374,7 +392,10 @@ export async function requireGranularPermission(
   console.log(`🔍 Checking permission: ${module}.${item}.${permission} for user: ${user.email} (${user.role})`)
 
   // Step 2: Super Admin bypass
-  if (user.role === 'Super Admin' || user.role === 'super_admin' || user.role_badge === 'super_admin') {
+  const normalizedRoleBadge = typeof user.role_badge === 'string'
+    ? user.role_badge.toLowerCase().replace(/\s+/g, '_')
+    : ''
+  if (user.role === 'Super Admin' || user.role === 'super_admin' || normalizedRoleBadge === 'super_admin') {
     return user
   }
 

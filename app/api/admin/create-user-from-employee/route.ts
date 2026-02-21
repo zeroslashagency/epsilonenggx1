@@ -12,12 +12,24 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    const { employee_code, employee_name, email, password, role, department, designation, standalone_attendance, avatar_url, force_password_reset, actorId } = await request.json()
+    const { employee_code, employee_name, email, password, role, department, designation, standalone_attendance, avatar_url, force_password_reset } = await request.json()
 
     // Validate required fields
     if (!employee_code || !employee_name || !email || !password || !role) {
       return NextResponse.json({ 
         error: 'Missing required fields: employee_code, employee_name, email, password, role' 
+      }, { status: 400 })
+    }
+
+    const { data: selectedRole, error: roleLookupError } = await supabase
+      .from('roles')
+      .select('id, name')
+      .eq('name', role)
+      .single()
+
+    if (roleLookupError || !selectedRole) {
+      return NextResponse.json({
+        error: `Invalid role selected: ${role}`
       }, { status: 400 })
     }
 
@@ -101,7 +113,6 @@ export async function POST(request: NextRequest) {
       .eq('id', authUser.user.id)
       .single()
 
-    let profileData
     if (existingProfile) {
       // Profile exists (created by trigger), update it
       const { data: updatedProfile, error: updateError } = await supabase
@@ -112,7 +123,8 @@ export async function POST(request: NextRequest) {
           employee_code,
           department: department || 'Default',
           designation: designation || 'Employee',
-          role: role || 'Operator',
+          role: selectedRole.name,
+          role_badge: selectedRole.name,
           standalone_attendance: standalone_attendance || 'NO',
           avatar_url: avatar_url || null
         })
@@ -125,7 +137,6 @@ export async function POST(request: NextRequest) {
           error: `Failed to update user profile: ${updateError.message}` 
         }, { status: 500 })
       }
-      profileData = updatedProfile
     } else {
       // Profile doesn't exist, create it
       const { data: newProfile, error: profileError } = await supabase
@@ -137,7 +148,8 @@ export async function POST(request: NextRequest) {
           employee_code,
           department: department || 'Default',
           designation: designation || 'Employee',
-          role: role || 'Operator',
+          role: selectedRole.name,
+          role_badge: selectedRole.name,
           standalone_attendance: standalone_attendance || 'NO',
           avatar_url: avatar_url || null
         })
@@ -149,7 +161,32 @@ export async function POST(request: NextRequest) {
           error: `Failed to create user profile: ${profileError.message}` 
         }, { status: 500 })
       }
-      profileData = newProfile
+    }
+
+    const { error: clearUserRolesError } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', authUser.user.id)
+
+    if (clearUserRolesError) {
+      await supabase.auth.admin.deleteUser(authUser.user.id)
+      return NextResponse.json({
+        error: `Failed to clear existing user roles: ${clearUserRolesError.message}`
+      }, { status: 500 })
+    }
+
+    const { error: assignRoleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: authUser.user.id,
+        role_id: selectedRole.id
+      })
+
+    if (assignRoleError) {
+      await supabase.auth.admin.deleteUser(authUser.user.id)
+      return NextResponse.json({
+        error: `Failed to assign role: ${assignRoleError.message}`
+      }, { status: 500 })
     }
 
     
@@ -165,7 +202,8 @@ export async function POST(request: NextRequest) {
             email: email,
             full_name: employee_name,
             employee_code: employee_code,
-            role: role || 'Operator'
+            role: selectedRole.name,
+            role_id: selectedRole.id
           },
           created_by: user.email,
           created_at: new Date().toISOString(),
@@ -181,7 +219,7 @@ export async function POST(request: NextRequest) {
         email,
         full_name: employee_name,
         employee_code,
-        role: role || 'Operator'
+        role: selectedRole.name
       }
     })
 

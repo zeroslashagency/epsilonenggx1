@@ -4,6 +4,7 @@ import {
   PermissionModules,
   recomputeParentFlagsFromChildren,
 } from '@/app/lib/features/auth/permission-mapping'
+import { MAIN_DASHBOARD_CHILD_ITEMS } from '@/app/lib/features/auth/dashboard-permissions'
 
 const buildWebUserAttendanceFixture = (): PermissionModules => ({
   web_user_attendance: {
@@ -155,5 +156,71 @@ describe('permission-mapping helpers', () => {
     expect(codes).toContain('fir.category.create')
     expect(codes).not.toContain('fir.dashboard.create')
     expect(codes).not.toContain('fir.dashboard.edit')
+  })
+
+  test('applyPermissionCodesToModules overlays dashboard codes to dashboard children', () => {
+    const fixture: PermissionModules = {
+      main_dashboard: {
+        name: 'MAIN - Dashboard',
+        items: {
+          Dashboard: { full: false, view: false, export: false, isCollapsible: true },
+          'Overview Widget': {
+            full: false,
+            view: false,
+            export: false,
+            isSubItem: true,
+            parent: 'Dashboard',
+          },
+          'Production Metrics': {
+            full: false,
+            view: false,
+            export: false,
+            isSubItem: true,
+            parent: 'Dashboard',
+          },
+          'Recent Activity': { full: false, view: false, isSubItem: true, parent: 'Dashboard' },
+          'Machine Status Table': {
+            full: false,
+            view: false,
+            export: false,
+            isSubItem: true,
+            parent: 'Dashboard',
+          },
+          'Alerts Panel': { full: false, view: false, isSubItem: true, parent: 'Dashboard' },
+        },
+      },
+    }
+
+    const mapped = applyPermissionCodesToModules(fixture, ['dashboard.view', 'dashboard.create'])
+
+    expect(mapped.main_dashboard.items.Dashboard.view).toBe(true)
+    expect(mapped.main_dashboard.items.Dashboard.export).toBe(true)
+    MAIN_DASHBOARD_CHILD_ITEMS.forEach(itemKey => {
+      expect(mapped.main_dashboard.items[itemKey].view).toBe(true)
+    })
+    expect(mapped.main_dashboard.items['Overview Widget'].export).toBe(true)
+    expect(mapped.main_dashboard.items['Machine Status Table'].export).toBe(true)
+  })
+
+  test('buildPermissionCodes emits dashboard codes when dashboard child is selected', () => {
+    const fixture: PermissionModules = {
+      main_dashboard: {
+        name: 'MAIN - Dashboard',
+        items: {
+          Dashboard: { full: false, view: false, export: false, isCollapsible: true },
+          'Overview Widget': {
+            full: false,
+            view: true,
+            export: true,
+            isSubItem: true,
+            parent: 'Dashboard',
+          },
+        },
+      },
+    }
+
+    const codes = buildPermissionCodes(fixture)
+    expect(codes).toContain('dashboard.view')
+    expect(codes).toContain('dashboard.create')
   })
 })

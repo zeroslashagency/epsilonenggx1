@@ -18,6 +18,8 @@ import { format } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { cn } from "@/app/lib/utils/utils"
 import { getSupabaseBrowserClient } from "@/app/lib/services/supabase-client"
+import { apiClient } from "@/app/lib/utils/api-client"
+import * as XLSX from "xlsx"
 import {
   Settings,
   Calendar as CalendarIcon,
@@ -53,6 +55,7 @@ interface Order {
   priority: string
   dueDate?: string
   batchMode: string
+  customBatchSize?: number
   breakdownMachine?: string
   breakdownDateTime?: string
   startDateTime?: string
@@ -106,6 +109,11 @@ function SchedulerPageContent() {
   const [operationSearch, setOperationSearch] = useState('')
   const [availableOperations, setAvailableOperations] = useState<string[]>([])
   const [filteredOperations, setFilteredOperations] = useState<string[]>([])
+  const [importedExcelMeta, setImportedExcelMeta] = useState<{
+    fileName: string
+    partCount: number
+    rowCount: number
+  } | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -121,7 +129,8 @@ function SchedulerPageContent() {
     startDateTime: "",
     holidayStart: "",
     holidayEnd: "",
-    setupWindow: "06:00-22:00"
+    setupWindow: "06:00-22:00",
+    customBatchSize: 0
   })
 
   // Advanced settings state
@@ -170,7 +179,7 @@ function SchedulerPageContent() {
 
     const loadSavedSettings = async () => {
       try {
-        const response = await fetch('/api/save-advanced-settings', {
+        const response = await apiClient('/api/save-advanced-settings', {
           method: 'GET',
           headers: {
             'X-User-Email': userEmail || 'default@user.com',
@@ -191,9 +200,10 @@ function SchedulerPageContent() {
               globalSetupWindow: savedData.global_setup_window || "",
               shift1: savedData.shift_1 || "",
               shift2: savedData.shift_2 || "",
-              productionShift1: savedData.production_shift_1 || "",
-              productionShift2: savedData.production_shift_2 || "",
-              productionShift3: savedData.production_shift_3 || "",
+              shift3: savedData.shift_3 || "",
+              productionWindowShift1: savedData.production_shift_1 || "",
+              productionWindowShift2: savedData.production_shift_2 || "",
+              productionWindowShift3: savedData.production_shift_3 || "",
             }))
 
             // Load holidays and breakdowns
@@ -220,6 +230,10 @@ function SchedulerPageContent() {
 
   // Initialize backend services and load part numbers on component mount
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      ;(window as any).XLSX = XLSX
+    }
+
     initializeBackendServices()
 
     // Check if XLSX library is available
@@ -429,6 +443,10 @@ function SchedulerPageContent() {
       priority: formData.priority,
       dueDate: formData.dueDate || undefined,
       batchMode: formData.batchMode,
+      customBatchSize:
+        formData.batchMode === "custom-batch-size" && formData.customBatchSize > 0
+          ? formData.customBatchSize
+          : undefined,
       breakdownMachine: formData.breakdownMachine || undefined,
       breakdownDateTime: formData.breakdownStart && formData.breakdownEnd
         ? `${formData.breakdownStart} - ${formData.breakdownEnd}` : undefined,
@@ -454,7 +472,8 @@ function SchedulerPageContent() {
       startDateTime: "",
       holidayStart: "",
       holidayEnd: "",
-      setupWindow: "06:00-22:00"
+      setupWindow: "06:00-22:00",
+      customBatchSize: 0
     })
   }
 
@@ -476,7 +495,8 @@ function SchedulerPageContent() {
       startDateTime: "",
       holidayStart: "",
       holidayEnd: "",
-      setupWindow: "06:00-22:00"
+      setupWindow: "06:00-22:00",
+      customBatchSize: 0
     })
     setSelectedPartNumber(null)
     setPartNumberSearch("")
@@ -546,10 +566,9 @@ function SchedulerPageContent() {
           is_locked: false
         }
 
-        const response = await fetch('/api/save-advanced-settings', {
+        const response = await apiClient('/api/save-advanced-settings', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'X-User-Email': userEmail || 'default@user.com',
           },
           body: JSON.stringify(unlockData)
@@ -578,10 +597,9 @@ function SchedulerPageContent() {
           role: 'operator'
         }
 
-        const response = await fetch('/api/save-advanced-settings', {
+        const response = await apiClient('/api/save-advanced-settings', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'X-User-Email': userEmail || 'default@user.com',
           },
           body: JSON.stringify(settingsData)
@@ -608,7 +626,12 @@ function SchedulerPageContent() {
   }
 
   const handleRunSchedule = async () => {
-    if (orders.length === 0 || !backendService) return
+    if (orders.length === 0) return
+
+    if (!backendService) {
+      alert('Scheduling engine is still initializing. Please wait a moment and try again.')
+      return
+    }
 
     setLoading(true)
     setShowResults(false)
@@ -639,26 +662,66 @@ function SchedulerPageContent() {
       setResults(scheduleResults)
       setShowResults(true)
     } catch (error) {
-      // Fallback to mock results
-      const mockResults = orders.map((order: Order, index: number) => ({
-        id: order.id,
-        partNumber: order.partNumber,
-        orderQty: order.orderQuantity,
-        priority: order.priority,
-        batchId: `B${index + 1}`,
-        batchQty: Math.ceil(order.orderQuantity / 2),
-        operationSeq: order.operationSeq,
-        operationName: `Operation ${order.operationSeq}`,
-        machine: `VMC ${(index % 6) + 1}`,
-        person: `Operator ${(index % 3) + 1}`,
-        setupStart: new Date(Date.now() + index * 3600000).toISOString(),
-        setupEnd: new Date(Date.now() + index * 3600000 + 1800000).toISOString(),
-        runStart: new Date(Date.now() + index * 3600000 + 1800000).toISOString(),
-        runEnd: new Date(Date.now() + index * 3600000 + 3600000).toISOString(),
-        timing: "2.5h",
-        dueDate: order.dueDate || "N/A",
-        status: index % 3 === 0 ? "Scheduled" : "Completed"
-      }))
+      const mockResults: any[] = []
+      let sequenceIndex = 0
+
+      orders.forEach((order: Order, index: number) => {
+        const totalQty = Math.max(1, Number(order.orderQuantity) || 1)
+        const customBatchSize = Math.max(0, Number(order.customBatchSize) || 0)
+        const selectedOperationSeqs = String(order.operationSeq || '')
+          .split(',')
+          .map((value: string) => Number(value.trim()))
+          .filter((value: number) => Number.isFinite(value) && value > 0)
+        const operationRows =
+          selectedOperationSeqs.length > 0
+            ? selectedOperationSeqs.map((operationSeq: number) => ({
+              operationSeq,
+              operationName: `Operation ${operationSeq}`
+            }))
+            : [{ operationSeq: 1, operationName: 'Facing' }]
+
+        const targetBatchSize =
+          order.batchMode === 'single-batch'
+            ? totalQty
+            : order.batchMode === 'custom-batch-size' && customBatchSize > 0
+              ? customBatchSize
+              : Math.min(totalQty, 200)
+
+        const batchCount = Math.max(1, Math.ceil(totalQty / targetBatchSize))
+        let remainingQty = totalQty
+
+        for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+          const batchQty =
+            batchIndex === batchCount - 1 ? remainingQty : Math.min(targetBatchSize, remainingQty)
+          remainingQty -= batchQty
+
+          const batchId = `B${String(batchIndex + 1).padStart(2, '0')}`
+
+          operationRows.forEach((operation) => {
+            mockResults.push({
+              id: `${order.id}-fallback-${batchId}-op-${operation.operationSeq}`,
+              partNumber: order.partNumber,
+              orderQty: order.orderQuantity,
+              priority: order.priority,
+              batchId,
+              batchQty,
+              operationSeq: operation.operationSeq,
+              operationName: operation.operationName,
+              machine: `VMC ${(sequenceIndex % 6) + 1}`,
+              person: `Operator ${(sequenceIndex % 3) + 1}`,
+              setupStart: new Date(Date.now() + sequenceIndex * 3600000).toISOString(),
+              setupEnd: new Date(Date.now() + sequenceIndex * 3600000 + 1800000).toISOString(),
+              runStart: new Date(Date.now() + sequenceIndex * 3600000 + 1800000).toISOString(),
+              runEnd: new Date(Date.now() + sequenceIndex * 3600000 + 3600000).toISOString(),
+              timing: "2.5h",
+              dueDate: order.dueDate || "N/A",
+              status: sequenceIndex % 3 === 0 ? "Scheduled" : "Completed"
+            })
+
+            sequenceIndex++
+          })
+        }
+      })
 
       setResults(mockResults)
       setShowResults(true)
@@ -673,17 +736,211 @@ function SchedulerPageContent() {
   }
 
   const handleImportExcel = () => {
-    // Create a file input element
+    const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
+    const normalizeBatchMode = (value: string): string => {
+      const normalized = normalizeKey(value)
+      if (normalized.includes('single')) return 'single-batch'
+      if (normalized.includes('custom')) return 'custom-batch-size'
+      if (normalized.includes('autosplit') || normalized === 'auto' || normalized.includes('split')) return 'auto-split'
+      return 'auto-split'
+    }
+    const toPositiveInt = (value: string): number | null => {
+      const numericValue = Number(String(value ?? '').replace(/,/g, '').trim())
+      if (!Number.isFinite(numericValue) || numericValue <= 0) return null
+      return Math.round(numericValue)
+    }
+
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.xlsx,.xls'
-    input.onchange = (e: any) => {
-      const file = e.target.files[0]
-      if (file) {
-        // Handle Excel import logic here
-        // You can add actual Excel parsing logic here
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+
+      try {
+        const buffer = await file.arrayBuffer()
+        const workbook = XLSX.read(buffer, { type: 'array' })
+        const firstSheetName = workbook.SheetNames[0]
+        if (!firstSheetName) {
+          alert('No sheet found in the selected Excel file.')
+          return
+        }
+
+        const sheet = workbook.Sheets[firstSheetName]
+        const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+          defval: '',
+          raw: false
+        })
+        if (rawRows.length === 0) {
+          alert('The selected Excel file is empty.')
+          return
+        }
+
+        const readValue = (row: Record<string, unknown>, aliases: string[]): string => {
+          const normalizedAliases = aliases.map(normalizeKey)
+          const matchedKey = Object.keys(row).find((key) =>
+            normalizedAliases.includes(normalizeKey(key))
+          )
+          const value = matchedKey ? row[matchedKey] : ''
+          return String(value ?? '').trim()
+        }
+
+        // Format A: direct order import (part/op/qty row-wise)
+        const directOrders: Order[] = rawRows
+          .map((row, index) => {
+            const partNumber = readValue(row, [
+              'partNumber',
+              'part_number',
+              'part no',
+              'partno',
+              'pn'
+            ])
+            const operationSeqRaw = readValue(row, [
+              'operationSeq',
+              'operation_seq',
+              'operation',
+              'op',
+              'operation no'
+            ])
+            const quantityRaw = readValue(row, [
+              'orderQuantity',
+              'order_qty',
+              'orderqty',
+              'quantity',
+              'qty'
+            ])
+
+            const orderQuantity = toPositiveInt(quantityRaw)
+            if (!partNumber || !operationSeqRaw || !orderQuantity) return null
+
+            const priority = readValue(row, ['priority']) || 'Normal'
+            const dueDate = readValue(row, ['dueDate', 'due_date', 'duedate'])
+            const batchMode = normalizeBatchMode(
+              readValue(row, ['batchMode', 'batch_mode', 'batch split', 'batch type'])
+            )
+            const customBatchSize = toPositiveInt(
+              readValue(row, ['customBatchSize', 'custom_batch_size', 'batchSize', 'batch_size'])
+            )
+
+            return {
+              id: `${Date.now()}-${index}`,
+              partNumber,
+              operationSeq: operationSeqRaw.replace(/OP/gi, '').trim(),
+              orderQuantity,
+              priority,
+              dueDate: dueDate || undefined,
+              batchMode,
+              customBatchSize: batchMode === 'custom-batch-size' ? customBatchSize || undefined : undefined
+            } as Order
+          })
+          .filter((order): order is Order => Boolean(order))
+
+        let importedOrders: Order[] = directOrders
+
+        // Format B: master operations import (your current Excel format)
+        if (importedOrders.length === 0) {
+          const groupedByPart = new Map<string, { operations: Set<number>; minBatchSizes: number[] }>()
+
+          for (const row of rawRows) {
+            const partNumber = readValue(row, ['partNumber', 'part_number', 'part no', 'partno', 'pn'])
+            const operationSeqRaw = readValue(row, ['operationSeq', 'operation_seq', 'operation', 'op'])
+            const minBatchRaw = readValue(row, [
+              'minimum_batchsize',
+              'minimum batch size',
+              'minimum_batch_size',
+              'min batch size'
+            ])
+
+            const opNumberMatch = operationSeqRaw.match(/\d+/)
+            const operationNumber = opNumberMatch ? Number(opNumberMatch[0]) : NaN
+
+            if (!partNumber || !Number.isFinite(operationNumber) || operationNumber <= 0) {
+              continue
+            }
+
+            const group = groupedByPart.get(partNumber) || {
+              operations: new Set<number>(),
+              minBatchSizes: []
+            }
+
+            group.operations.add(operationNumber)
+
+            const minBatchSize = toPositiveInt(minBatchRaw)
+            if (minBatchSize) {
+              group.minBatchSizes.push(minBatchSize)
+            }
+
+            groupedByPart.set(partNumber, group)
+          }
+
+          importedOrders = Array.from(groupedByPart.entries()).map(([partNumber, group], index) => {
+            const operationSeq = Array.from(group.operations).sort((a, b) => a - b).join(', ')
+            const inferredQuantity = group.minBatchSizes.length > 0 ? Math.max(...group.minBatchSizes) : 1
+
+            return {
+              id: `${Date.now()}-master-${index}`,
+              partNumber,
+              operationSeq,
+              orderQuantity: inferredQuantity,
+              priority: 'Normal',
+              batchMode: 'auto-split'
+            }
+          })
+        }
+
+        if (importedOrders.length === 0) {
+          alert('No valid rows found. Supported formats: order file (Part/Operation/Quantity) or master file (PartNumber/OperationSeq/Minimum_BatchSize).')
+          return
+        }
+
+        const importedPartMap = new Map<string, Set<string>>()
+        importedOrders.forEach((order) => {
+          const operations = order.operationSeq
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean)
+            .map((value) => `OP${value.replace(/OP/gi, '')}`)
+          if (!importedPartMap.has(order.partNumber)) {
+            importedPartMap.set(order.partNumber, new Set<string>())
+          }
+          operations.forEach((op) => importedPartMap.get(order.partNumber)?.add(op))
+        })
+
+        const importedPartNumbers: PartNumber[] = Array.from(importedPartMap.entries()).map(
+          ([partnumber, operations]) => ({
+            partnumber,
+            operations: Array.from(operations).sort((a, b) => {
+              const aNum = Number(a.replace('OP', ''))
+              const bNum = Number(b.replace('OP', ''))
+              return aNum - bNum
+            })
+          })
+        )
+
+        setPartNumbers(importedPartNumbers)
+        setImportedExcelMeta({
+          fileName: file.name,
+          partCount: importedPartNumbers.length,
+          rowCount: rawRows.length
+        })
+        setSelectedPartNumber(null)
+        setPartNumberSearch('')
+        setShowPartNumberDropdown(false)
+        setShowOperationDropdown(false)
+        setAvailableOperations([])
+        setFilteredOperations([])
+        setFormData((prev: any) => ({
+          ...prev,
+          partNumber: '',
+          operationSeq: ''
+        }))
+        setActiveTab('orders')
+        alert(`Imported ${importedPartNumbers.length} part numbers from ${file.name}. Data loaded into Part Number search only.`)
+      } catch (error) {
+        alert(`Failed to import Excel file: ${(error as Error).message}`)
       }
     }
+
     input.click()
   }
 
@@ -904,10 +1161,10 @@ function SchedulerPageContent() {
       }
 
       // Store exact scheduling results to dedicated table
-      const schedulingResponse = await fetch('/api/store-scheduling-results', {
+      const schedulingResponse = await apiClient('/api/store-scheduling-results', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'X-User-Email': userEmail || 'default@user.com'
         },
         body: JSON.stringify({
           schedulingResults: results // Store the exact scheduling output data
@@ -918,10 +1175,10 @@ function SchedulerPageContent() {
       }
 
       // Store to Supabase cloud via API with complete scheduling results
-      const response = await fetch('/api/store-chart-data', {
+      const response = await apiClient('/api/store-chart-data', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'X-User-Email': userEmail || 'default@user.com'
         },
         body: JSON.stringify({
           ...chartData,
@@ -959,7 +1216,8 @@ function SchedulerPageContent() {
         startDateTime: "",
         holidayStart: "",
         holidayEnd: "",
-        setupWindow: "06:00-22:00"
+        setupWindow: "06:00-22:00",
+        customBatchSize: 0
       })
       setSelectedPartNumber(null)
       setPartNumberSearch("")
@@ -979,6 +1237,15 @@ function SchedulerPageContent() {
       case "Low": return "bg-green-100 text-green-800 border-green-200"
       default: return "bg-gray-100 text-gray-800 border-gray-200"
     }
+  }
+
+  const formatOperationSeqDisplay = (operationSeq: string) => {
+    return String(operationSeq || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((value) => `Op ${value.replace(/^op\s*/i, '')}`)
+      .join(', ')
   }
 
   return (
@@ -1057,6 +1324,16 @@ function SchedulerPageContent() {
                 {/* Mandatory Fields */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Mandatory Fields</h3>
+                  {importedExcelMeta && (
+                    <div className="mb-4">
+                      <Badge variant="outline" className="border-cyan-200 bg-cyan-50 text-cyan-700">
+                        Import Excel: {importedExcelMeta.fileName}
+                      </Badge>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Local imported database active ({importedExcelMeta.partCount} part numbers, {importedExcelMeta.rowCount} rows).
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2 relative part-number-dropdown">
                       <Label htmlFor="partNumber">Part Number</Label>
@@ -1342,6 +1619,22 @@ function SchedulerPageContent() {
                           Custom
                         </button>
                       </div>
+                      {formData.batchMode === "custom-batch-size" && (
+                        <div className="mt-2">
+                          <Label htmlFor="customBatchSize">Custom Batch Size</Label>
+                          <Input
+                            id="customBatchSize"
+                            type="number"
+                            min="1"
+                            value={formData.customBatchSize || ""}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                              handleInputChange("customBatchSize", parseInt(e.target.value || "0", 10))
+                            }
+                            placeholder="Enter custom batch size"
+                            className="border-gray-200 focus:border-blue-500 mt-1"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1424,7 +1717,7 @@ function SchedulerPageContent() {
                         {orders.map((order: Order) => (
                           <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4 text-gray-900">{order.partNumber}</td>
-                            <td className="py-3 px-4 text-gray-600">{order.operationSeq}</td>
+                            <td className="py-3 px-4 text-gray-600">{formatOperationSeqDisplay(order.operationSeq)}</td>
                             <td className="py-3 px-4 text-gray-600">{order.orderQuantity}</td>
                             <td className="py-3 px-4">
                               <Badge className={getPriorityColor(order.priority)}>

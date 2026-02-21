@@ -50,7 +50,9 @@ export default function NewRolePage() {
     Object.values(modules).forEach(module => {
       Object.entries(module.items).forEach(([itemName, item]) => {
         if (item.isCollapsible) {
-          state[getCollapseKey(itemName)] = true
+          const isMainDashboardParent =
+            module.name === 'MAIN - Dashboard' && itemName === 'Dashboard'
+          state[getCollapseKey(itemName)] = !isMainDashboardParent
         }
       })
     })

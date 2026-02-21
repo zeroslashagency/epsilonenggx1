@@ -7,6 +7,52 @@ import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { requireCSRFToken } from '@/app/lib/middleware/csrf-protection'
 import { validateRequest, deleteUserSchema } from '@/app/lib/features/auth/schemas'
 
+const isMissingRelationError = (message: string) =>
+  message.toLowerCase().includes('relation') && message.toLowerCase().includes('does not exist')
+
+async function safeNullReference(
+  supabaseAdmin: any,
+  table: string,
+  column: string,
+  userId: string
+) {
+  const { error } = await supabaseAdmin.from(table).update({ [column]: null }).eq(column, userId)
+  if (!error) return
+  if (isMissingRelationError(error.message || '')) return
+  throw new Error(`Failed to clear ${table}.${column} references: ${error.message}`)
+}
+
+async function safeDeleteReference(
+  supabaseAdmin: any,
+  table: string,
+  column: string,
+  userId: string
+) {
+  const { error } = await supabaseAdmin.from(table).delete().eq(column, userId)
+  if (!error) return
+  if (isMissingRelationError(error.message || '')) return
+  throw new Error(`Failed to delete ${table}.${column} references: ${error.message}`)
+}
+
+async function safeNullifyAuthReferences(supabaseAdmin: any, userId: string) {
+  // Clear NO ACTION FK blockers before deleting from auth.users.
+  await safeNullReference(supabaseAdmin, 'audit_logs', 'actor_id', userId)
+  await safeNullReference(supabaseAdmin, 'call_recordings', 'user_id', userId)
+  await safeNullReference(supabaseAdmin, 'global_settings', 'user_id', userId)
+  await safeNullReference(supabaseAdmin, 'schedule_outputs', 'user_id', userId)
+  await safeNullReference(supabaseAdmin, 'security_audit_logs', 'user_id', userId)
+  await safeNullReference(supabaseAdmin, 'task_assignments', 'assigned_by', userId)
+  await safeNullReference(supabaseAdmin, 'tasks', 'created_by', userId)
+  await safeNullReference(supabaseAdmin, 'temp_schedule_sessions', 'user_id', userId)
+  await safeNullReference(supabaseAdmin, 'timeline_data', 'user_id', userId)
+  await safeNullReference(supabaseAdmin, 'timeline_sessions', 'user_id', userId)
+  await safeNullReference(supabaseAdmin, 'production_orders', 'created_by', userId)
+
+  // These columns are NOT NULL and cannot be nulled.
+  await safeDeleteReference(supabaseAdmin, 'saved_orders', 'user_id', userId)
+  await safeDeleteReference(supabaseAdmin, 'user_activity', 'user_id', userId)
+}
+
 // Handle both DELETE and POST methods for backwards compatibility
 async function handleDeleteUser(request: NextRequest) {
   // ✅ SECURITY FIX: Check CSRF token first
@@ -25,19 +71,22 @@ async function handleDeleteUser(request: NextRequest) {
     const { userId, userEmail } = await validateRequest(deleteUserSchema, body)
     const userName = body.userName // Extract optional field not in strict schema
 
-
-
     const supabaseAdmin = getSupabaseAdminClient()
+    await safeNullifyAuthReferences(supabaseAdmin, userId)
 
-    // Delete from auth.users using admin client
-    try {
-      const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
-      // Continue with profile deletion even if auth deletion fails
-    } catch {
-      // Continue with profile deletion
+    // Remove role bindings first to prevent stale assignments.
+    const { error: userRolesDeleteError } = await supabaseAdmin
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId)
+
+    if (userRolesDeleteError) {
+      return NextResponse.json({
+        error: `Failed to delete user roles: ${userRolesDeleteError.message}`
+      }, { status: 500 })
     }
 
-    // Delete from profiles table
+    // Delete from profiles table so user disappears from app user lists.
     const { error: profileDeleteError } = await supabaseAdmin
       .from('profiles')
       .delete()
@@ -49,6 +98,46 @@ async function handleDeleteUser(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // Best effort auth cleanup. Some projects have FK dependencies on auth.users that
+    // prevent hard delete and raise "Database error deleting user".
+    let authDeletionMode: 'deleted' | 'already_deleted' | 'anonymized'
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+    if (!authDeleteError) {
+      authDeletionMode = 'deleted'
+    } else {
+      const message = authDeleteError.message?.toLowerCase() || ''
+      const alreadyDeleted = message.includes('not found') || message.includes('user not found')
+
+      if (alreadyDeleted) {
+        authDeletionMode = 'already_deleted'
+      } else {
+        const fallbackEmail = `deleted_${Date.now()}_${userId.slice(0, 8)}@deleted.local`
+        const { error: fallbackAuthError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          email: fallbackEmail,
+          email_confirm: true,
+          user_metadata: {
+            full_name: 'Deleted User',
+            deleted_at: new Date().toISOString(),
+            deleted_by: user.email
+          },
+          app_metadata: {
+            deleted: true
+          },
+          // effectively blocks sign-in on this account
+          ban_duration: '876000h'
+        })
+
+        if (fallbackAuthError) {
+          return NextResponse.json({
+            error: `Failed to delete auth user: ${authDeleteError.message}`,
+            details: `Fallback anonymization also failed: ${fallbackAuthError.message}`
+          }, { status: 500 })
+        }
+
+        authDeletionMode = 'anonymized'
+      }
+    }
 
     // Log audit trail
     await supabaseAdmin
@@ -62,6 +151,7 @@ async function handleDeleteUser(request: NextRequest) {
             email: userEmail,
             full_name: userName
           },
+          auth_deletion_mode: authDeletionMode,
           deleted_by: user.email,
           deleted_at: new Date().toISOString()
         }
@@ -73,6 +163,7 @@ async function handleDeleteUser(request: NextRequest) {
       data: {
         userId,
         userEmail,
+        authDeletionMode,
         deletedAt: new Date().toISOString()
       }
     })

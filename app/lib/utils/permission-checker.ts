@@ -2,6 +2,7 @@
  * Permission Checker Utility for 82-item Dual-Mode Permission System
  * Handles granular permission checks for parent and sub-item permissions
  */
+import { hasMainDashboardPermission } from '@/app/lib/features/auth/dashboard-permissions'
 
 export interface PermissionModuleItem {
   full: boolean
@@ -55,8 +56,12 @@ export function hasPermission(
     return false
   }
 
-  const module = permissions[resolvedModuleKey]
-  const item = module.items[itemKey]
+  if (resolvedModuleKey === 'main_dashboard') {
+    return hasMainDashboardPermission(permissions, action, itemKey)
+  }
+
+  const permissionModule = permissions[resolvedModuleKey]
+  const item = permissionModule.items[itemKey]
 
   if (!item) {
     return false

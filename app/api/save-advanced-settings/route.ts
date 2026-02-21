@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       role
     } = body
 
-    const userEmail = request.headers.get('X-User-Email') || user_email || 'default@user.com'
+    const userEmail = request.headers.get('X-User-Email') || user_email || user.email || 'default@user.com'
     
     if (is_locked) {
       // LOCKING: Save locked settings to Supabase
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient()
     
-    const userEmail = request.headers.get('X-User-Email') || 'default@user.com'
+    const userEmail = request.headers.get('X-User-Email') || user.email || 'default@user.com'
     
     // Get the most recent active settings for this user from dashboard_data
     const { data, error } = await supabase

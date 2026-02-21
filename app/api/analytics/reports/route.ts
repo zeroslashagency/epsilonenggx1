@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { requireAuth } from '@/app/lib/features/auth/auth.middleware'
+import { hasMainDashboardPermission } from '@/app/lib/features/auth/dashboard-permissions'
 
 export async function GET(request: NextRequest) {
   // ✅ Check: dashboard OR analytics permission
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
       .single()
     
     const permissions = roleData?.permissions_json
-    const hasDashboardPermission = permissions?.main_dashboard?.items?.Dashboard?.view === true
+    const hasDashboardPermission = hasMainDashboardPermission(permissions, 'view')
     const hasAnalyticsPermission = permissions?.main_analytics?.items?.Analytics?.view === true
     
     if (!hasDashboardPermission && !hasAnalyticsPermission) {

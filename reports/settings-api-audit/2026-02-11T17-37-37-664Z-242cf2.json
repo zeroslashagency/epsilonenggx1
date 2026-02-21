@@ -1,0 +1,1021 @@
+{
+  "summary": {
+    "runId": "2026-02-11T17-37-37-664Z-242cf2",
+    "startedAt": "2026-02-11T17:37:37.663Z",
+    "finishedAt": "2026-02-11T17:37:51.103Z",
+    "baseUrl": "http://localhost:3000",
+    "users": {
+      "superAdmin": "codex.settings.super.2026-02-11T17-37-37-664Z-242cf2@example.com",
+      "operator": "codex.settings.operator.2026-02-11T17-37-37-664Z-242cf2@example.com"
+    },
+    "totals": {
+      "checks": 57,
+      "passed": 15,
+      "failed": 42,
+      "findings": 43
+    }
+  },
+  "results": [
+    {
+      "id": "UM-01",
+      "area": "User Management",
+      "name": "List users",
+      "actor": "noAuth",
+      "method": "GET",
+      "path": "/api/admin/users",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-01",
+      "area": "User Management",
+      "name": "List users",
+      "actor": "superAdmin",
+      "method": "GET",
+      "path": "/api/admin/users",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-01",
+      "area": "User Management",
+      "name": "List users",
+      "actor": "operator",
+      "method": "GET",
+      "path": "/api/admin/users",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-02",
+      "area": "User Management",
+      "name": "Get user permissions",
+      "actor": "noAuth",
+      "method": "GET",
+      "path": "/api/admin/get-user-permissions?userId=1f616f73-372d-4acc-8086-04a69a849974",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-02",
+      "area": "User Management",
+      "name": "Get user permissions",
+      "actor": "superAdmin",
+      "method": "GET",
+      "path": "/api/admin/get-user-permissions?userId=1f616f73-372d-4acc-8086-04a69a849974",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-02",
+      "area": "User Management",
+      "name": "Get user permissions",
+      "actor": "operator",
+      "method": "GET",
+      "path": "/api/admin/get-user-permissions?userId=1f616f73-372d-4acc-8086-04a69a849974",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-03",
+      "area": "User Management",
+      "name": "Get user activity logs",
+      "actor": "noAuth",
+      "method": "GET",
+      "path": "/api/admin/user-activity-logs?userId=1f616f73-372d-4acc-8086-04a69a849974",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-03",
+      "area": "User Management",
+      "name": "Get user activity logs",
+      "actor": "superAdmin",
+      "method": "GET",
+      "path": "/api/admin/user-activity-logs?userId=1f616f73-372d-4acc-8086-04a69a849974",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-03",
+      "area": "User Management",
+      "name": "Get user activity logs",
+      "actor": "operator",
+      "method": "GET",
+      "path": "/api/admin/user-activity-logs?userId=1f616f73-372d-4acc-8086-04a69a849974",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-04",
+      "area": "User Management",
+      "name": "Update user contact",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/update-user-contact",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-04",
+      "area": "User Management",
+      "name": "Update user contact",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/update-user-contact",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-04",
+      "area": "User Management",
+      "name": "Update user contact",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/update-user-contact",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-05",
+      "area": "User Management",
+      "name": "Update user permissions",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/update-user-permissions",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-05",
+      "area": "User Management",
+      "name": "Update user permissions",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/update-user-permissions",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-05",
+      "area": "User Management",
+      "name": "Update user permissions",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/update-user-permissions",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-06",
+      "area": "User Management",
+      "name": "Send password reset (invalid payload)",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/send-password-reset",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-06",
+      "area": "User Management",
+      "name": "Send password reset (invalid payload)",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/send-password-reset",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [400]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-06",
+      "area": "User Management",
+      "name": "Send password reset (invalid payload)",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/send-password-reset",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-07",
+      "area": "User Management",
+      "name": "Change user email (invalid payload)",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/change-user-email",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-07",
+      "area": "User Management",
+      "name": "Change user email (invalid payload)",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/change-user-email",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [400]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-07",
+      "area": "User Management",
+      "name": "Change user email (invalid payload)",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/change-user-email",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-08",
+      "area": "User Management",
+      "name": "Toggle user status (invalid payload)",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/toggle-user-status",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-08",
+      "area": "User Management",
+      "name": "Toggle user status (invalid payload)",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/toggle-user-status",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [400]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-08",
+      "area": "User Management",
+      "name": "Toggle user status (invalid payload)",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/toggle-user-status",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-09",
+      "area": "User Management",
+      "name": "Set user password (invalid payload)",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/set-user-password",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-09",
+      "area": "User Management",
+      "name": "Set user password (invalid payload)",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/set-user-password",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [400]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-09",
+      "area": "User Management",
+      "name": "Set user password (invalid payload)",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/set-user-password",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "UM-10",
+      "area": "User Management",
+      "name": "Delete user without CSRF token",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/delete-user",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": "CSRF protection is expected to block API-token-only requests.",
+      "responseError": null
+    },
+    {
+      "id": "UM-10",
+      "area": "User Management",
+      "name": "Delete user without CSRF token",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/delete-user",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": "CSRF protection is expected to block API-token-only requests.",
+      "responseError": null
+    },
+    {
+      "id": "UM-10",
+      "area": "User Management",
+      "name": "Delete user without CSRF token",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/delete-user",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": "CSRF protection is expected to block API-token-only requests.",
+      "responseError": null
+    },
+    {
+      "id": "AU-01",
+      "area": "Add Users",
+      "name": "List roles for add-user flow",
+      "actor": "noAuth",
+      "method": "GET",
+      "path": "/api/admin/roles",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AU-01",
+      "area": "Add Users",
+      "name": "List roles for add-user flow",
+      "actor": "superAdmin",
+      "method": "GET",
+      "path": "/api/admin/roles",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AU-01",
+      "area": "Add Users",
+      "name": "List roles for add-user flow",
+      "actor": "operator",
+      "method": "GET",
+      "path": "/api/admin/roles",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AU-02",
+      "area": "Add Users",
+      "name": "Get employees list",
+      "actor": "noAuth",
+      "method": "GET",
+      "path": "/api/get-employees",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401|403]",
+      "note": "This endpoint powers /settings/add-users and should not be publicly accessible.",
+      "responseError": null
+    },
+    {
+      "id": "AU-02",
+      "area": "Add Users",
+      "name": "Get employees list",
+      "actor": "superAdmin",
+      "method": "GET",
+      "path": "/api/get-employees",
+      "status": 200,
+      "pass": true,
+      "expected": "status is not 401/403",
+      "note": "This endpoint powers /settings/add-users and should not be publicly accessible.",
+      "responseError": null
+    },
+    {
+      "id": "AU-02",
+      "area": "Add Users",
+      "name": "Get employees list",
+      "actor": "operator",
+      "method": "GET",
+      "path": "/api/get-employees",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401|403]",
+      "note": "This endpoint powers /settings/add-users and should not be publicly accessible.",
+      "responseError": null
+    },
+    {
+      "id": "AU-03",
+      "area": "Add Users",
+      "name": "Get shift templates",
+      "actor": "noAuth",
+      "method": "GET",
+      "path": "/api/shift-templates",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401|403]",
+      "note": "This endpoint powers /settings/add-users and should be protected.",
+      "responseError": null
+    },
+    {
+      "id": "AU-03",
+      "area": "Add Users",
+      "name": "Get shift templates",
+      "actor": "superAdmin",
+      "method": "GET",
+      "path": "/api/shift-templates",
+      "status": 200,
+      "pass": true,
+      "expected": "status is not 401/403",
+      "note": "This endpoint powers /settings/add-users and should be protected.",
+      "responseError": null
+    },
+    {
+      "id": "AU-03",
+      "area": "Add Users",
+      "name": "Get shift templates",
+      "actor": "operator",
+      "method": "GET",
+      "path": "/api/shift-templates",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401|403]",
+      "note": "This endpoint powers /settings/add-users and should be protected.",
+      "responseError": null
+    },
+    {
+      "id": "AU-04",
+      "area": "Add Users",
+      "name": "Create user from employee (invalid payload)",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/create-user-from-employee",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AU-04",
+      "area": "Add Users",
+      "name": "Create user from employee (invalid payload)",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/create-user-from-employee",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [400]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AU-04",
+      "area": "Add Users",
+      "name": "Create user from employee (invalid payload)",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/create-user-from-employee",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AU-05",
+      "area": "Add Users",
+      "name": "Bulk assignment (invalid payload)",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/assignments/bulk",
+      "status": 401,
+      "pass": true,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": "Unauthorized"
+    },
+    {
+      "id": "AU-05",
+      "area": "Add Users",
+      "name": "Bulk assignment (invalid payload)",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/assignments/bulk",
+      "status": 400,
+      "pass": true,
+      "expected": "status in [400]",
+      "note": null,
+      "responseError": "No employees provided"
+    },
+    {
+      "id": "AU-05",
+      "area": "Add Users",
+      "name": "Bulk assignment (invalid payload)",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/assignments/bulk",
+      "status": 403,
+      "pass": true,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": "Forbidden"
+    },
+    {
+      "id": "RP-01",
+      "area": "Role Profiles",
+      "name": "List roles",
+      "actor": "noAuth",
+      "method": "GET",
+      "path": "/api/admin/roles",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "RP-01",
+      "area": "Role Profiles",
+      "name": "List roles",
+      "actor": "superAdmin",
+      "method": "GET",
+      "path": "/api/admin/roles",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "RP-01",
+      "area": "Role Profiles",
+      "name": "List roles",
+      "actor": "operator",
+      "method": "GET",
+      "path": "/api/admin/roles",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "RP-02",
+      "area": "Role Profiles",
+      "name": "Clone role with unknown id",
+      "actor": "noAuth",
+      "method": "POST",
+      "path": "/api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb/clone",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "RP-02",
+      "area": "Role Profiles",
+      "name": "Clone role with unknown id",
+      "actor": "superAdmin",
+      "method": "POST",
+      "path": "/api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb/clone",
+      "status": 200,
+      "pass": true,
+      "expected": "status is not 401/403",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "RP-02",
+      "area": "Role Profiles",
+      "name": "Clone role with unknown id",
+      "actor": "operator",
+      "method": "POST",
+      "path": "/api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb/clone",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "RP-03",
+      "area": "Role Profiles",
+      "name": "Delete role with unknown id",
+      "actor": "noAuth",
+      "method": "DELETE",
+      "path": "/api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "RP-03",
+      "area": "Role Profiles",
+      "name": "Delete role with unknown id",
+      "actor": "superAdmin",
+      "method": "DELETE",
+      "path": "/api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "RP-03",
+      "area": "Role Profiles",
+      "name": "Delete role with unknown id",
+      "actor": "operator",
+      "method": "DELETE",
+      "path": "/api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AL-01",
+      "area": "Activity Logging",
+      "name": "List activity logs",
+      "actor": "noAuth",
+      "method": "GET",
+      "path": "/api/admin/all-activity-logs?page=1&limit=20",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [401]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AL-01",
+      "area": "Activity Logging",
+      "name": "List activity logs",
+      "actor": "superAdmin",
+      "method": "GET",
+      "path": "/api/admin/all-activity-logs?page=1&limit=20",
+      "status": 200,
+      "pass": true,
+      "expected": "status in [200]",
+      "note": null,
+      "responseError": null
+    },
+    {
+      "id": "AL-01",
+      "area": "Activity Logging",
+      "name": "List activity logs",
+      "actor": "operator",
+      "method": "GET",
+      "path": "/api/admin/all-activity-logs?page=1&limit=20",
+      "status": 200,
+      "pass": false,
+      "expected": "status in [403]",
+      "note": null,
+      "responseError": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "CONTRACT-PERMISSIONS-SHAPE",
+      "severity": "medium",
+      "message": "/api/admin/get-user-permissions response is missing `permissions` array.",
+      "evidence": "Response keys: "
+    },
+    {
+      "id": "EXPECTATION-UM-01-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-01 (noAuth).",
+      "evidence": "GET /api/admin/users -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-01-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-01 (operator).",
+      "evidence": "GET /api/admin/users -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-02-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-02 (noAuth).",
+      "evidence": "GET /api/admin/get-user-permissions?userId=1f616f73-372d-4acc-8086-04a69a849974 -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-02-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-02 (operator).",
+      "evidence": "GET /api/admin/get-user-permissions?userId=1f616f73-372d-4acc-8086-04a69a849974 -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-03-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-03 (noAuth).",
+      "evidence": "GET /api/admin/user-activity-logs?userId=1f616f73-372d-4acc-8086-04a69a849974 -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-03-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-03 (operator).",
+      "evidence": "GET /api/admin/user-activity-logs?userId=1f616f73-372d-4acc-8086-04a69a849974 -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-04-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-04 (noAuth).",
+      "evidence": "POST /api/admin/update-user-contact -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-04-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-04 (operator).",
+      "evidence": "POST /api/admin/update-user-contact -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-05-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-05 (noAuth).",
+      "evidence": "POST /api/admin/update-user-permissions -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-05-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-05 (operator).",
+      "evidence": "POST /api/admin/update-user-permissions -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-06-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-06 (noAuth).",
+      "evidence": "POST /api/admin/send-password-reset -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-06-superAdmin",
+      "severity": "high",
+      "message": "Unexpected status for UM-06 (superAdmin).",
+      "evidence": "POST /api/admin/send-password-reset -> 200, expected status in [400]"
+    },
+    {
+      "id": "EXPECTATION-UM-06-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-06 (operator).",
+      "evidence": "POST /api/admin/send-password-reset -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-07-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-07 (noAuth).",
+      "evidence": "POST /api/admin/change-user-email -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-07-superAdmin",
+      "severity": "high",
+      "message": "Unexpected status for UM-07 (superAdmin).",
+      "evidence": "POST /api/admin/change-user-email -> 200, expected status in [400]"
+    },
+    {
+      "id": "EXPECTATION-UM-07-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-07 (operator).",
+      "evidence": "POST /api/admin/change-user-email -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-08-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-08 (noAuth).",
+      "evidence": "POST /api/admin/toggle-user-status -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-08-superAdmin",
+      "severity": "high",
+      "message": "Unexpected status for UM-08 (superAdmin).",
+      "evidence": "POST /api/admin/toggle-user-status -> 200, expected status in [400]"
+    },
+    {
+      "id": "EXPECTATION-UM-08-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-08 (operator).",
+      "evidence": "POST /api/admin/toggle-user-status -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-09-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-09 (noAuth).",
+      "evidence": "POST /api/admin/set-user-password -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-UM-09-superAdmin",
+      "severity": "high",
+      "message": "Unexpected status for UM-09 (superAdmin).",
+      "evidence": "POST /api/admin/set-user-password -> 200, expected status in [400]"
+    },
+    {
+      "id": "EXPECTATION-UM-09-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-09 (operator).",
+      "evidence": "POST /api/admin/set-user-password -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-10-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for UM-10 (noAuth).",
+      "evidence": "POST /api/admin/delete-user -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-10-superAdmin",
+      "severity": "high",
+      "message": "Unexpected status for UM-10 (superAdmin).",
+      "evidence": "POST /api/admin/delete-user -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-UM-10-operator",
+      "severity": "high",
+      "message": "Unexpected status for UM-10 (operator).",
+      "evidence": "POST /api/admin/delete-user -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-AU-01-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for AU-01 (noAuth).",
+      "evidence": "GET /api/admin/roles -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-AU-01-operator",
+      "severity": "high",
+      "message": "Unexpected status for AU-01 (operator).",
+      "evidence": "GET /api/admin/roles -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-AU-02-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for AU-02 (noAuth).",
+      "evidence": "GET /api/get-employees -> 200, expected status in [401|403]"
+    },
+    {
+      "id": "EXPECTATION-AU-02-operator",
+      "severity": "high",
+      "message": "Unexpected status for AU-02 (operator).",
+      "evidence": "GET /api/get-employees -> 200, expected status in [401|403]"
+    },
+    {
+      "id": "EXPECTATION-AU-03-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for AU-03 (noAuth).",
+      "evidence": "GET /api/shift-templates -> 200, expected status in [401|403]"
+    },
+    {
+      "id": "EXPECTATION-AU-03-operator",
+      "severity": "high",
+      "message": "Unexpected status for AU-03 (operator).",
+      "evidence": "GET /api/shift-templates -> 200, expected status in [401|403]"
+    },
+    {
+      "id": "EXPECTATION-AU-04-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for AU-04 (noAuth).",
+      "evidence": "POST /api/admin/create-user-from-employee -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-AU-04-superAdmin",
+      "severity": "high",
+      "message": "Unexpected status for AU-04 (superAdmin).",
+      "evidence": "POST /api/admin/create-user-from-employee -> 200, expected status in [400]"
+    },
+    {
+      "id": "EXPECTATION-AU-04-operator",
+      "severity": "high",
+      "message": "Unexpected status for AU-04 (operator).",
+      "evidence": "POST /api/admin/create-user-from-employee -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-RP-01-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for RP-01 (noAuth).",
+      "evidence": "GET /api/admin/roles -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-RP-01-operator",
+      "severity": "high",
+      "message": "Unexpected status for RP-01 (operator).",
+      "evidence": "GET /api/admin/roles -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-RP-02-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for RP-02 (noAuth).",
+      "evidence": "POST /api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb/clone -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-RP-02-operator",
+      "severity": "high",
+      "message": "Unexpected status for RP-02 (operator).",
+      "evidence": "POST /api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb/clone -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-RP-03-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for RP-03 (noAuth).",
+      "evidence": "DELETE /api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-RP-03-operator",
+      "severity": "high",
+      "message": "Unexpected status for RP-03 (operator).",
+      "evidence": "DELETE /api/admin/roles/7e0b967e-b96e-42f2-a9a6-c7566ec493fb -> 200, expected status in [403]"
+    },
+    {
+      "id": "EXPECTATION-AL-01-noAuth",
+      "severity": "high",
+      "message": "Unexpected status for AL-01 (noAuth).",
+      "evidence": "GET /api/admin/all-activity-logs?page=1&limit=20 -> 200, expected status in [401]"
+    },
+    {
+      "id": "EXPECTATION-AL-01-operator",
+      "severity": "high",
+      "message": "Unexpected status for AL-01 (operator).",
+      "evidence": "GET /api/admin/all-activity-logs?page=1&limit=20 -> 200, expected status in [403]"
+    }
+  ]
+}

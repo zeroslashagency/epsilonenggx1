@@ -6,11 +6,21 @@ import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 import { userListLimiter } from '@/app/lib/rate-limiter'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
+const DEFAULT_PAGE = 1
+const DEFAULT_LIMIT = 50
+const MAX_LIMIT = 100
+
+function parsePositiveInt(value: string | null, fallback: number): number {
+  if (!value) return fallback
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
 // Admin API for user management - FIXED VERSION
 export async function GET(request: NextRequest) {
   try {
     // ✅ SECURITY FIX: Require authentication before anything else
-    const authResult = await requirePermission(request, 'manage_users')
+    const authResult = await requirePermission(request, 'users.view')
     if (authResult instanceof NextResponse) return authResult
 
     // RATE LIMITING: Check if user is making too many requests
@@ -38,7 +48,9 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdminClient()
-
+    const page = parsePositiveInt(request.nextUrl.searchParams.get('page'), DEFAULT_PAGE)
+    const requestedLimit = parsePositiveInt(request.nextUrl.searchParams.get('limit'), DEFAULT_LIMIT)
+    const limit = Math.min(requestedLimit, MAX_LIMIT)
 
     // Get all users from auth.users (the real authenticated users)
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
@@ -58,8 +70,11 @@ export async function GET(request: NextRequest) {
     // Combine auth users with their profiles
     const users = authUsers.users
       .filter(authUser => !authUser.email?.startsWith('deleted_'))
+      // Only include app users that still have a profile row.
+      // This prevents ghost auth users from appearing if profile cleanup already happened.
+      .filter(authUser => profileMap.has(authUser.id))
       .map(authUser => {
-        const profile = profileMap.get(authUser.id)
+        const profile = profileMap.get(authUser.id)!
         return {
           id: authUser.id,
           email: authUser.email || '',
@@ -97,12 +112,23 @@ export async function GET(request: NextRequest) {
       status: 'active' // You can add status logic here
     }))
 
+    const totalCount = enhancedUsers?.length || 0
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit))
+    const offset = (page - 1) * limit
+    const paginatedUsers = (enhancedUsers || []).slice(offset, offset + limit)
+
     return NextResponse.json({
       success: true,
       data: {
-        users: enhancedUsers,
-        totalCount: users?.length || 0
-      }
+        users: paginatedUsers,
+        totalCount,
+      },
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+      },
     })
 
   } catch (error) {
