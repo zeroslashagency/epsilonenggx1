@@ -46,6 +46,7 @@
     "node_modules",
     "supabase/functions/**/*",
     "fir/vite.config.ts",
-    "fir/**/*.test.ts"
+    "fir/**/*.test.ts",
+    "test-api.ts"
   ]
 }
