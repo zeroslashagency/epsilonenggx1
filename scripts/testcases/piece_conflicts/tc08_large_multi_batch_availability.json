@@ -1,0 +1,70 @@
+{
+  "setup_window": "06:00-22:00",
+  "production_window": "00:00-23:59",
+  "operators_by_shift": {
+    "shift1": ["A", "B"],
+    "shift2": ["C", "D"]
+  },
+  "shifts": {
+    "A": "06:00-14:00",
+    "B": "06:00-14:00",
+    "C": "14:00-22:00",
+    "D": "14:00-22:00"
+  },
+  "holidays": [],
+  "breakdowns": [],
+  "machine_availability": [
+    {
+      "machine": "VMC 7",
+      "type": "RANGE",
+      "start": "2026-02-22 00:00",
+      "end": "2026-03-01 00:00"
+    }
+  ],
+  "batches": [
+    {
+      "part_number": "PN4001",
+      "batch_id": "B03",
+      "batch_qty": 449,
+      "start_datetime": "2026-02-22 06:00",
+      "operations": [
+        {
+          "operation_seq": 1,
+          "operation_name": "Facing",
+          "setup_time_min": 60,
+          "cycle_time_min": 10,
+          "machine": "VMC 7"
+        },
+        {
+          "operation_seq": 2,
+          "operation_name": "Facing",
+          "setup_time_min": 60,
+          "cycle_time_min": 9,
+          "machine": "VMC 4"
+        }
+      ]
+    },
+    {
+      "part_number": "PN4001",
+      "batch_id": "B04",
+      "batch_qty": 449,
+      "start_datetime": "2026-02-22 06:00",
+      "operations": [
+        {
+          "operation_seq": 1,
+          "operation_name": "Facing",
+          "setup_time_min": 60,
+          "cycle_time_min": 10,
+          "machine": "VMC 5"
+        },
+        {
+          "operation_seq": 2,
+          "operation_name": "Facing",
+          "setup_time_min": 60,
+          "cycle_time_min": 9,
+          "machine": "VMC 6"
+        }
+      ]
+    }
+  ]
+}

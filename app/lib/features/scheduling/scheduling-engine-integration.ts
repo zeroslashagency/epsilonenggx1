@@ -67,10 +67,10 @@ export class SchedulingEngineIntegration {
       // Load all scheduling modules first
       const modulesLoader = SchedulingModulesLoader.getInstance()
       await modulesLoader.loadModules()
-      
+
       // Wait for the scheduling engine to be loaded in the global scope
       await this.waitForSchedulingEngine()
-      
+
       // Create instance of the modular scheduling engine
       if (typeof window !== 'undefined' && (window as any).ModularSchedulingEngine) {
         this.engine = new (window as any).ModularSchedulingEngine()
@@ -90,7 +90,7 @@ export class SchedulingEngineIntegration {
 
       const checkEngine = () => {
         attempts++
-        
+
         if (typeof window !== 'undefined' && (window as any).ModularSchedulingEngine) {
           resolve()
         } else if (attempts >= maxAttempts) {
@@ -104,7 +104,7 @@ export class SchedulingEngineIntegration {
     })
   }
 
-  async runSchedule(orders: OrderData[], settings: GlobalSettings): Promise<SchedulingResult[]> {
+  async runSchedule(orders: OrderData[], settings: GlobalSettings): Promise<{ rows: SchedulingResult[], pieceTimeline?: any[], setupTimeline?: any[] }> {
     if (!this.initialized) {
       await this.initialize()
     }
@@ -143,15 +143,19 @@ export class SchedulingEngineIntegration {
 
       // Run the scheduling using the modular engine
       const results: any[] = []
-      
+      const pieceTimeline: any[] = []
+
       // Process each order individually (same as original)
       for (const orderData of ordersData) {
         try {
-          const orderResults = this.engine.scheduleOrder(orderData, [])
-          
-          if (orderResults && orderResults.length > 0) {
+          // Pass true to get detailed output if available
+          const orderResults: any = this.engine.scheduleOrder(orderData, [])
+
+          if (Array.isArray(orderResults)) {
             results.push(...orderResults)
-          } else {
+          } else if (orderResults && orderResults.rows) {
+            results.push(...orderResults.rows)
+            if (orderResults.pieceTimeline) pieceTimeline.push(...orderResults.pieceTimeline)
           }
         } catch (orderError) {
         }
@@ -178,34 +182,33 @@ export class SchedulingEngineIntegration {
         status: result.Status || result.status || '✅'
       }))
 
-      return formattedResults
+      return { rows: formattedResults, pieceTimeline: pieceTimeline.length > 0 ? pieceTimeline : undefined }
 
     } catch (error) {
-      
-      // Fallback to detailed mock results that match the expected format
-      return this.generateDetailedMockResults(orders)
+      const message = error instanceof Error ? error.message : 'Unknown scheduling engine error'
+      throw new Error(`Legacy scheduling engine failed: ${message}`)
     }
   }
 
   private formatDateTime(dateTime: any): string {
     if (!dateTime) return 'Not set'
-    
+
     // If it's already a formatted string, return it as is
     if (typeof dateTime === 'string') {
       return dateTime
     }
-    
+
     try {
       const date = new Date(dateTime)
       if (isNaN(date.getTime())) return 'Not set'
-      
+
       // Format as MM/DD/YYYY, HH:MM
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
       const year = date.getFullYear()
       const hours = String(date.getHours()).padStart(2, '0')
       const minutes = String(date.getMinutes()).padStart(2, '0')
-      
+
       return `${month}/${day}/${year}, ${hours}:${minutes}`
     } catch (error) {
       return 'Not set'
@@ -214,17 +217,17 @@ export class SchedulingEngineIntegration {
 
   private calculateTiming(startTime: any, endTime: any): string {
     if (!startTime || !endTime) return '0H'
-    
+
     try {
       const start = new Date(startTime)
       const end = new Date(endTime)
-      
+
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return '0H'
-      
+
       const diffMs = end.getTime() - start.getTime()
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
       const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-      
+
       if (diffHours >= 24) {
         const days = Math.floor(diffHours / 24)
         const remainingHours = diffHours % 24
@@ -235,71 +238,6 @@ export class SchedulingEngineIntegration {
     } catch (error) {
       return '0H'
     }
-  }
-
-  private generateDetailedMockResults(orders: OrderData[]): SchedulingResult[] {
-    const results: SchedulingResult[] = []
-    let operationIndex = 0
-    
-    orders.forEach((order) => {
-      const operationSequence = String(order.operationSeq || '')
-        .split(',')
-        .map((value) => Number(value.trim()))
-        .filter((value) => Number.isFinite(value) && value > 0)
-      const operations = operationSequence.length > 0 ? operationSequence : [1]
-
-      const totalQuantity = Math.max(1, Number(order.orderQuantity) || 1)
-      const customBatchSize = Math.max(0, Number(order.customBatchSize) || 0)
-      const batchMode = order.batchMode || 'auto-split'
-
-      const targetBatchSize =
-        batchMode === 'single-batch'
-          ? totalQuantity
-          : batchMode === 'custom-batch-size' && customBatchSize > 0
-            ? customBatchSize
-            : Math.min(totalQuantity, 200)
-
-      const batchCount = Math.max(1, Math.ceil(totalQuantity / targetBatchSize))
-      let remainingQuantity = totalQuantity
-      
-      for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
-        const batchId = `B${String(batchIndex + 1).padStart(2, '0')}`
-        const batchQty =
-          batchIndex === batchCount - 1 ? remainingQuantity : Math.min(targetBatchSize, remainingQuantity)
-        remainingQuantity -= batchQty
-        
-        for (const operationSeq of operations) {
-          const setupStart = new Date(Date.now() + operationIndex * 2 * 3600000)
-          const setupEnd = new Date(setupStart.getTime() + 90 * 60000) // 1.5 hours setup
-          const runStart = setupEnd
-          const runEnd = new Date(runStart.getTime() + (Math.random() * 48 + 12) * 3600000) // 12-60 hours run
-          
-          results.push({
-            id: `result_${operationIndex}`,
-            partNumber: order.partNumber,
-            orderQty: order.orderQuantity,
-            priority: order.priority,
-            batchId: batchId,
-            batchQty: batchQty,
-            operationSeq: operationSeq,
-            operationName: `Operation ${operationSeq}`,
-            machine: `VMC ${(operationIndex % 7) + 1}`,
-            person: ['A', 'B', 'C', 'D'][operationIndex % 4],
-            setupStart: this.formatDateTime(setupStart),
-            setupEnd: this.formatDateTime(setupEnd),
-            runStart: this.formatDateTime(runStart),
-            runEnd: this.formatDateTime(runEnd),
-            timing: this.calculateTiming(setupStart, runEnd),
-            dueDate: order.dueDate || 'Not set',
-            status: '✅'
-          })
-          
-          operationIndex++
-        }
-      }
-    })
-    
-    return results
   }
 
   isInitialized(): boolean {

@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "name": "piece-conflict-suite",
+  "description": "Small-to-big batch validation for machine/person/PN/holiday/machine-availability conflicts.",
+  "cases": [
+    {
+      "id": "TC01_SMALL_NOMINAL",
+      "size": "small",
+      "description": "Single batch, clean OP chain, no holidays/breakdowns.",
+      "input": "scripts/testcases/piece_conflicts/tc01_small_nominal.json",
+      "person_conflict_mode": "setup_only",
+      "expected_present": [],
+      "expected_absent": [
+        "MACHINE_CONFLICT",
+        "PERSON_CONFLICT",
+        "PN_CONFLICT",
+        "HOLIDAY_CONFLICT",
+        "MACHINE_AVAILABILITY_CONFLICT"
+      ]
+    },
+    {
+      "id": "TC02_SMALL_MACHINE_AVAILABILITY_BLOCK",
+      "size": "small",
+      "description": "Fixed machine used before its AVAILABLE_FROM timestamp.",
+      "input": "scripts/testcases/piece_conflicts/tc02_small_machine_availability_block.json",
+      "person_conflict_mode": "setup_only",
+      "expected_present": [
+        "MACHINE_AVAILABILITY_CONFLICT"
+      ],
+      "expected_absent": [
+        "MACHINE_CONFLICT",
+        "PERSON_CONFLICT",
+        "PN_CONFLICT"
+      ]
+    },
+    {
+      "id": "TC03_SMALL_PERSON_RUN_OVERLAP",
+      "size": "small",
+      "description": "Single operator A handles two machines; run intervals overlap under strict person policy.",
+      "input": "scripts/testcases/piece_conflicts/tc03_small_person_run_overlap.json",
+      "person_conflict_mode": "setup_and_run",
+      "expected_present": [
+        "PERSON_CONFLICT"
+      ],
+      "expected_absent": [
+        "MACHINE_CONFLICT",
+        "PN_CONFLICT"
+      ]
+    },
+    {
+      "id": "TC04_SMALL_PN_CHAIN_GAP",
+      "size": "small",
+      "description": "Operation sequence has a gap (OP1 then OP3).",
+      "input": "scripts/testcases/piece_conflicts/tc04_small_pn_chain_gap.json",
+      "person_conflict_mode": "setup_only",
+      "expected_present": [
+        "PN_CONFLICT"
+      ],
+      "expected_absent": [
+        "MACHINE_CONFLICT",
+        "PERSON_CONFLICT"
+      ]
+    },
+    {
+      "id": "TC05_SMALL_HOLIDAY_GUARD",
+      "size": "small",
+      "description": "Scheduler should move setup/run away from holiday day.",
+      "input": "scripts/testcases/piece_conflicts/tc05_small_holiday_guard.json",
+      "person_conflict_mode": "setup_only",
+      "expected_present": [],
+      "expected_absent": [
+        "HOLIDAY_CONFLICT",
+        "MACHINE_CONFLICT",
+        "PERSON_CONFLICT",
+        "PN_CONFLICT"
+      ]
+    },
+    {
+      "id": "TC06_MEDIUM_NOMINAL_50",
+      "size": "medium",
+      "description": "Medium batch (50 pieces, 3 operations), nominal path.",
+      "input": "scripts/testcases/piece_conflicts/tc06_medium_nominal_50.json",
+      "person_conflict_mode": "setup_only",
+      "expected_present": [],
+      "expected_absent": [
+        "MACHINE_CONFLICT",
+        "PERSON_CONFLICT",
+        "PN_CONFLICT",
+        "HOLIDAY_CONFLICT",
+        "MACHINE_AVAILABILITY_CONFLICT"
+      ]
+    },
+    {
+      "id": "TC07_LARGE_NOMINAL_250",
+      "size": "large",
+      "description": "Large batch (250 pieces, 4 operations), nominal path.",
+      "input": "scripts/testcases/piece_conflicts/tc07_large_nominal_250.json",
+      "person_conflict_mode": "setup_only",
+      "expected_present": [],
+      "expected_absent": [
+        "MACHINE_CONFLICT",
+        "PERSON_CONFLICT",
+        "PN_CONFLICT",
+        "HOLIDAY_CONFLICT",
+        "MACHINE_AVAILABILITY_CONFLICT"
+      ]
+    },
+    {
+      "id": "TC08_LARGE_MULTI_BATCH_AVAILABILITY",
+      "size": "large",
+      "description": "Two big batches (449 each) with blocked machine VMC 7 to surface availability violations.",
+      "input": "scripts/testcases/piece_conflicts/tc08_large_multi_batch_availability.json",
+      "person_conflict_mode": "setup_only",
+      "expected_present": [
+        "MACHINE_AVAILABILITY_CONFLICT"
+      ],
+      "expected_absent": [
+        "MACHINE_CONFLICT",
+        "PERSON_CONFLICT",
+        "PN_CONFLICT"
+      ]
+    }
+  ]
+}

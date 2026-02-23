@@ -1,0 +1,47 @@
+{
+  "setup_window": "06:00-22:00",
+  "production_window": "00:00-23:59",
+  "operators_by_shift": {
+    "shift1": ["A", "B"],
+    "shift2": ["C", "D"]
+  },
+  "shifts": {
+    "A": "06:00-14:00",
+    "B": "06:00-14:00",
+    "C": "14:00-22:00",
+    "D": "14:00-22:00"
+  },
+  "holidays": [],
+  "breakdowns": [],
+  "batches": [
+    {
+      "part_number": "PN1501",
+      "batch_id": "B01",
+      "batch_qty": 50,
+      "start_datetime": "2026-02-22 06:00",
+      "operations": [
+        {
+          "operation_seq": 1,
+          "operation_name": "Facing",
+          "setup_time_min": 40,
+          "cycle_time_min": 5,
+          "eligible_machines": ["VMC 1", "VMC 2", "VMC 3"]
+        },
+        {
+          "operation_seq": 2,
+          "operation_name": "Drill",
+          "setup_time_min": 30,
+          "cycle_time_min": 4,
+          "eligible_machines": ["VMC 2", "VMC 3", "VMC 4"]
+        },
+        {
+          "operation_seq": 3,
+          "operation_name": "Finish",
+          "setup_time_min": 25,
+          "cycle_time_min": 3,
+          "eligible_machines": ["VMC 5", "VMC 6"]
+        }
+      ]
+    }
+  ]
+}

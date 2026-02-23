@@ -1,0 +1,41 @@
+{
+  "setup_window": "06:00-22:00",
+  "production_window": "00:00-23:59",
+  "operators_by_shift": {
+    "shift1": ["A", "B"],
+    "shift2": ["C", "D"]
+  },
+  "shifts": {
+    "A": "06:00-14:00",
+    "B": "06:00-14:00",
+    "C": "14:00-22:00",
+    "D": "14:00-22:00"
+  },
+  "holidays": [],
+  "breakdowns": [],
+  "machine_availability": [
+    {
+      "machine": "VMC 1",
+      "type": "AVAILABLE_FROM",
+      "from": "2026-02-23 06:00"
+    }
+  ],
+  "batches": [
+    {
+      "part_number": "PN1101",
+      "batch_id": "B01",
+      "batch_qty": 4,
+      "start_datetime": "2026-02-22 06:00",
+      "operations": [
+        {
+          "operation_seq": 1,
+          "operation_name": "Facing",
+          "setup_time_min": 20,
+          "cycle_time_min": 8,
+          "machine": "VMC 1",
+          "eligible_machines": ["VMC 1", "VMC 2"]
+        }
+      ]
+    }
+  ]
+}

@@ -68,6 +68,173 @@ interface Schedule {
   priority: 'high' | 'medium' | 'low'
 }
 
+interface CanonicalScheduleRow {
+  machine: string
+  person: string
+  partNumber: string
+  batchId: string
+  operationSeq: number
+  operationName: string
+  setupStart: Date
+  setupEnd: Date
+  runStart: Date
+  runEnd: Date
+  dueDate: Date | null
+  status: 'scheduled' | 'in_progress' | 'completed' | 'delayed'
+}
+
+const MACHINE_LANES = Array.from({ length: 10 }, (_, i) => `VMC ${i + 1}`)
+
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(/,/g, '').trim())
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return null
+}
+
+const parseDateSafe = (value: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value
+
+  if (typeof value === 'number') {
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  const raw = String(value).trim()
+  if (!raw) return null
+
+  const ddmmyyyy = raw.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*|\s+)(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+  )
+  if (ddmmyyyy) {
+    const day = Number(ddmmyyyy[1])
+    const month = Number(ddmmyyyy[2]) - 1
+    const year = Number(ddmmyyyy[3])
+    const hour = Number(ddmmyyyy[4])
+    const minute = Number(ddmmyyyy[5])
+    const second = Number(ddmmyyyy[6] || 0)
+    const date = new Date(year, month, day, hour, minute, second)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  const direct = new Date(raw)
+  if (!Number.isNaN(direct.getTime())) return direct
+
+  const normalized = new Date(raw.replace(',', '').replace(' ', 'T'))
+  if (!Number.isNaN(normalized.getTime())) return normalized
+
+  return null
+}
+
+const parseStatus = (value: unknown): CanonicalScheduleRow['status'] => {
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase()
+  if (raw.includes('delay')) return 'delayed'
+  if (raw.includes('complete')) return 'completed'
+  if (raw.includes('progress')) return 'in_progress'
+  return 'scheduled'
+}
+
+const pickValue = (row: Record<string, unknown>, keys: string[]): unknown => {
+  for (const key of keys) {
+    const value = row[key]
+    if (value !== undefined && value !== null && value !== '') return value
+  }
+  return undefined
+}
+
+const hoursBetween = (start: Date | null, end: Date | null): number => {
+  if (!start || !end) return 0
+  const diff = (end.getTime() - start.getTime()) / 3_600_000
+  return Number.isFinite(diff) && diff > 0 ? diff : 0
+}
+
+const getScheduleRowsFromChartData = (chartData: any): CanonicalScheduleRow[] => {
+  const sourceRows: unknown[] =
+    Array.isArray(chartData?.schedulingResults) && chartData.schedulingResults.length > 0
+      ? chartData.schedulingResults
+      : Array.isArray(chartData?.tasks)
+        ? chartData.tasks
+        : []
+
+  return sourceRows
+    .map((raw: unknown, index: number) => {
+      const row = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+
+      const partNumber = String(
+        pickValue(row, ['partNumber', 'part_number', 'PartNumber']) || 'UNKNOWN'
+      ).trim()
+      const batchId = String(pickValue(row, ['batchId', 'batch_id', 'Batch_ID']) || `B-${index + 1}`).trim()
+      const operationSeq = Math.max(
+        1,
+        Math.round(toFiniteNumber(pickValue(row, ['operationSeq', 'operation_seq', 'OperationSeq'])) || 1)
+      )
+      const operationName = String(
+        pickValue(row, ['operationName', 'operation_name', 'OperationName']) || `Operation ${operationSeq}`
+      ).trim()
+
+      const machine = String(pickValue(row, ['machine', 'Machine']) || 'Unassigned').trim()
+      const person = String(pickValue(row, ['person', 'operator', 'Person', 'Operator']) || 'Unassigned').trim()
+
+      const runStart =
+        parseDateSafe(pickValue(row, ['runStart', 'run_start', 'RunStart'])) ||
+        parseDateSafe(pickValue(row, ['startTime', 'start_time']))
+      const runEnd =
+        parseDateSafe(pickValue(row, ['runEnd', 'run_end', 'RunEnd'])) ||
+        parseDateSafe(pickValue(row, ['endTime', 'end_time']))
+
+      if (!runStart || !runEnd || runEnd <= runStart) return null
+
+      const setupStart =
+        parseDateSafe(pickValue(row, ['setupStart', 'setup_start', 'SetupStart'])) || runStart
+
+      const setupEndFromRow = parseDateSafe(pickValue(row, ['setupEnd', 'setup_end', 'SetupEnd']))
+      const setupDurationRaw = toFiniteNumber(pickValue(row, ['setupDuration', 'setup_duration']))
+      const setupEnd =
+        setupEndFromRow ||
+        (setupDurationRaw !== null
+          ? new Date(setupStart.getTime() + setupDurationRaw * 60_000)
+          : runStart)
+
+      const dueDate = parseDateSafe(pickValue(row, ['dueDate', 'due_date', 'DueDate']))
+
+      return {
+        machine,
+        person,
+        partNumber,
+        batchId,
+        operationSeq,
+        operationName,
+        setupStart,
+        setupEnd: setupEnd > setupStart ? setupEnd : setupStart,
+        runStart,
+        runEnd,
+        dueDate,
+        status: parseStatus(pickValue(row, ['status', 'Status'])),
+      } satisfies CanonicalScheduleRow
+    })
+    .filter((row): row is CanonicalScheduleRow => Boolean(row))
+}
+
+const getHorizonHours = (rows: CanonicalScheduleRow[]): number => {
+  if (rows.length === 0) return 0
+  const minTs = Math.min(...rows.map(row => Math.min(row.setupStart.getTime(), row.runStart.getTime())))
+  const maxTs = Math.max(...rows.map(row => Math.max(row.setupEnd.getTime(), row.runEnd.getTime())))
+  const diffHours = (maxTs - minTs) / 3_600_000
+  return Number.isFinite(diffHours) && diffHours > 0 ? diffHours : 0
+}
+
+const overlapHours = (start: Date, end: Date, windowStart: Date, windowEnd: Date): number => {
+  const from = Math.max(start.getTime(), windowStart.getTime())
+  const to = Math.min(end.getTime(), windowEnd.getTime())
+  if (to <= from) return 0
+  return (to - from) / 3_600_000
+}
+
 function ScheduleDashboardContent() {
   const [activeSection, setActiveSection] = useState("kpis")
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
@@ -104,9 +271,10 @@ function ScheduleDashboardContent() {
     loadDashboardData()
   }, [refreshKey])
 
-  // Calculate KPIs from chart data - Enhanced with exact requirements
+  // Calculate KPIs from canonical schedule rows.
   const calculateKPIs = (chartData: any) => {
-    if (!chartData || !chartData.tasks || chartData.tasks.length === 0) {
+    const rows = getScheduleRowsFromChartData(chartData)
+    if (rows.length === 0) {
       return {
         totalBatchesProcessed: 0,
         completedOperations: 0,
@@ -122,154 +290,171 @@ function ScheduleDashboardContent() {
         reportingPeriod: 'No Data',
         dataRefresh: new Date().toISOString(),
         criticalAlerts: 0,
-        kpiMetrics: []
+        consistencyChecks: [],
+        kpiMetrics: [],
       }
     }
 
-    const tasks = chartData.tasks
-    const now = new Date()
-    
-    // Extract required fields from tasks
-    const processedTasks = tasks.map((task: any) => ({
-      machine: task.machine || 'Unknown',
-      person: task.operator || 'Unknown',
-      setupStart: task.setupStart || task.startTime,
-      setupEnd: task.setupEnd || task.startTime,
-      runStart: task.runStart || task.startTime,
-      runEnd: task.runEnd || task.endTime,
-      dueDate: task.dueDate || task.endTime,
-      batchId: task.batchId || task.batch_id || `BATCH_${Math.random()}`,
-      operationStatus: task.status || 'pending'
-    }))
+    const uniqueBatches = new Set(rows.map(row => row.batchId))
+    const uniqueMachines = new Set(rows.map(row => row.machine))
+    const uniqueOperators = new Set(rows.map(row => row.person))
 
-    // Calculate Primary Metrics
-    const uniqueBatches = new Set(processedTasks.map((task: any) => task.batchId))
-    const totalBatchesProcessed = Array.from(uniqueBatches).filter(batchId => {
-      const batchTasks = processedTasks.filter((task: any) => task.batchId === batchId)
-      return batchTasks.some((task: any) => task.operationStatus === 'complete')
-    }).length
+    const setupDurations = rows.map(row => hoursBetween(row.setupStart, row.setupEnd)).filter(v => v > 0)
+    const runDurations = rows.map(row => hoursBetween(row.runStart, row.runEnd)).filter(v => v > 0)
 
-    const completedOperations = processedTasks.filter((task: any) => task.operationStatus === 'complete').length
+    const totalBatchesProcessed = uniqueBatches.size
+    const completedOperations = rows.length
+    const totalSetupHours = setupDurations.reduce((sum, value) => sum + value, 0)
+    const totalMachineHours = runDurations.reduce((sum, value) => sum + value, 0)
+    const avgSetupDuration =
+      setupDurations.length > 0
+        ? setupDurations.reduce((sum, value) => sum + value, 0) / setupDurations.length
+        : 0
 
-    const delayedBatches = Array.from(uniqueBatches).filter(batchId => {
-      const batchTasks = processedTasks.filter((task: any) => task.batchId === batchId)
-      const hasCompleted = batchTasks.some((task: any) => task.operationStatus === 'complete')
-      if (!hasCompleted) return false
-      const lastTask = batchTasks[batchTasks.length - 1]
-      const actualComplete = new Date(lastTask.runEnd)
-      const dueDate = new Date(lastTask.dueDate)
-      return actualComplete > dueDate
-    }).length
+    const delayedBatchSet = new Set<string>()
+    const rowsByBatch = new Map<string, CanonicalScheduleRow[]>()
+    rows.forEach(row => {
+      const bucket = rowsByBatch.get(row.batchId)
+      if (bucket) bucket.push(row)
+      else rowsByBatch.set(row.batchId, [row])
+    })
 
-    // Calculate Setup Duration in hours
-    const setupDurations = processedTasks.map((task: any) => {
-      const start = new Date(task.setupStart)
-      const end = new Date(task.setupEnd)
-      return (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-    }).filter((duration: number) => duration > 0)
-    
-    const avgSetupDuration = setupDurations.length > 0 
-      ? setupDurations.reduce((sum: number, duration: number) => sum + duration, 0) / setupDurations.length
-      : 0
+    rowsByBatch.forEach((batchRows, batchId) => {
+      const dueCandidates = batchRows.map(row => row.dueDate).filter((d): d is Date => Boolean(d))
+      if (dueCandidates.length === 0) return
+      const due = new Date(Math.min(...dueCandidates.map(date => date.getTime())))
+      const completedAt = new Date(Math.max(...batchRows.map(row => row.runEnd.getTime())))
+      if (completedAt > due) delayedBatchSet.add(batchId)
+    })
+    const delayedBatches = delayedBatchSet.size
 
-    // Calculate Total Machine Hours
-    const machineHours = processedTasks.map((task: any) => {
-      const start = new Date(task.runStart)
-      const end = new Date(task.runEnd)
-      return (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-    }).filter((hours: number) => hours > 0)
-    
-    const totalMachineHours = machineHours.reduce((sum: number, hours: number) => sum + hours, 0)
-    const totalSetupHours = setupDurations.reduce((sum: number, hours: number) => sum + hours, 0)
+    const horizonHours = Math.max(1, getHorizonHours(rows))
+    const weekSpan = Math.max(1, Math.ceil(horizonHours / 24))
+    const machineCount = Math.max(1, uniqueMachines.size)
+    const operatorCount = Math.max(1, uniqueOperators.size)
+    const totalAvailableHours = horizonHours * machineCount
+    const averageMachineUtilization =
+      totalAvailableHours > 0 ? Math.min(100, (totalMachineHours / totalAvailableHours) * 100) : 0
+    const scheduleEfficiency =
+      totalBatchesProcessed > 0
+        ? ((totalBatchesProcessed - delayedBatches) / totalBatchesProcessed) * 100
+        : 0
 
-    // Calculate Machine Utilization
-    const uniqueMachines = new Set(processedTasks.map((task: any) => task.machine))
-    const uniqueOperators = new Set(processedTasks.map((task: any) => task.person))
-    
-    const taskTimes = processedTasks.map((task: any) => ({
-      start: new Date(task.runStart),
-      end: new Date(task.runEnd)
-    }))
-    
-    const earliestStart = new Date(Math.min(...taskTimes.map((t: any) => t.start.getTime())))
-    const latestEnd = new Date(Math.max(...taskTimes.map((t: any) => t.end.getTime())))
-    const weekSpan = Math.ceil((latestEnd.getTime() - earliestStart.getTime()) / (1000 * 60 * 60 * 24))
-    
-    const totalAvailableHours = Math.max(1, weekSpan) * 8 * uniqueMachines.size
-    const averageMachineUtilization = totalAvailableHours > 0 ? (totalMachineHours / totalAvailableHours) * 100 : 0
+    const machineHoursByMachine = new Map<string, number>()
+    rows.forEach(row => {
+      const duration = hoursBetween(row.runStart, row.runEnd)
+      machineHoursByMachine.set(row.machine, (machineHoursByMachine.get(row.machine) || 0) + duration)
+    })
+    const machineHoursRollup = Array.from(machineHoursByMachine.values()).reduce(
+      (sum, value) => sum + value,
+      0
+    )
 
-    // Calculate Schedule Efficiency
-    const onTimeCompletions = completedOperations - delayedBatches
-    const scheduleEfficiency = completedOperations > 0 ? (onTimeCompletions / completedOperations) * 100 : 0
+    const setupHoursByOperator = new Map<string, number>()
+    rows.forEach(row => {
+      const duration = hoursBetween(row.setupStart, row.setupEnd)
+      setupHoursByOperator.set(row.person, (setupHoursByOperator.get(row.person) || 0) + duration)
+    })
+    const setupHoursRollup = Array.from(setupHoursByOperator.values()).reduce(
+      (sum, value) => sum + value,
+      0
+    )
 
-    // Calculate Critical Alerts
-    const criticalAlerts = delayedBatches + (averageMachineUtilization < 30 ? 1 : 0) + (avgSetupDuration > 4 ? 1 : 0)
+    const consistencyChecks = [
+      {
+        code: 'kpi_machine_hours_mismatch',
+        ok: Math.abs(machineHoursRollup - totalMachineHours) < 1 / 3600,
+      },
+      {
+        code: 'kpi_setup_hours_mismatch',
+        ok: Math.abs(setupHoursRollup - totalSetupHours) < 1 / 3600,
+      },
+      {
+        code: 'kpi_utilization_mismatch',
+        ok: averageMachineUtilization >= 0 && averageMachineUtilization <= 100,
+      },
+      {
+        code: 'kpi_person_hours_mismatch',
+        ok: operatorCount === uniqueOperators.size,
+      },
+    ]
 
-    // Create KPI Metrics Array with exact structure
+    const criticalAlerts =
+      delayedBatches +
+      consistencyChecks.filter(check => !check.ok).length +
+      (averageMachineUtilization < 30 ? 1 : 0)
+
+    const earliestStart = new Date(
+      Math.min(...rows.map(row => Math.min(row.setupStart.getTime(), row.runStart.getTime())))
+    )
+    const latestEnd = new Date(
+      Math.max(...rows.map(row => Math.max(row.setupEnd.getTime(), row.runEnd.getTime())))
+    )
+
     const kpiMetrics = [
       {
         metricName: 'Total Batches Processed',
         value: totalBatchesProcessed,
         target: '> 0',
         status: totalBatchesProcessed > 0 ? '✅' : '❌',
-        performance: getPerformanceCategory(totalBatchesProcessed, 1, 'batch')
+        performance: getPerformanceCategory(totalBatchesProcessed, 1, 'batch'),
       },
       {
         metricName: 'Completed Operations',
         value: completedOperations,
         target: completedOperations.toString(),
         status: completedOperations > 0 ? '✅' : '❌',
-        performance: getPerformanceCategory(completedOperations, 1, 'operation')
+        performance: getPerformanceCategory(completedOperations, 1, 'operation'),
       },
       {
         metricName: 'Delayed Batches',
         value: delayedBatches,
         target: '0',
         status: delayedBatches === 0 ? '✅' : '❌',
-        performance: getPerformanceCategory(0, delayedBatches, 'delay')
+        performance: getPerformanceCategory(0, delayedBatches, 'delay'),
       },
       {
         metricName: 'Avg Setup Duration',
         value: `${avgSetupDuration.toFixed(1)}h`,
         target: '< 2h',
         status: avgSetupDuration <= 2 ? '✅' : avgSetupDuration <= 4 ? '⚠️' : '❌',
-        performance: getPerformanceCategory(2, avgSetupDuration, 'setup')
+        performance: getPerformanceCategory(2, avgSetupDuration, 'setup'),
       },
       {
         metricName: 'Total Machine Hours',
         value: `${totalMachineHours.toFixed(1)}h`,
         target: '> 40h',
         status: totalMachineHours >= 40 ? '✅' : totalMachineHours >= 20 ? '⚠️' : '❌',
-        performance: getPerformanceCategory(totalMachineHours, 40, 'hours')
+        performance: getPerformanceCategory(totalMachineHours, 40, 'hours'),
       },
       {
         metricName: 'Total Setup Hours',
         value: `${totalSetupHours.toFixed(1)}h`,
         target: 'Minimize',
         status: totalSetupHours <= totalMachineHours * 0.2 ? '✅' : '⚠️',
-        performance: getPerformanceCategory(totalSetupHours, totalMachineHours * 0.2, 'setup')
+        performance: getPerformanceCategory(totalSetupHours, Math.max(0.01, totalMachineHours * 0.2), 'setup'),
       },
       {
         metricName: 'Average Machine Utilization',
         value: `${averageMachineUtilization.toFixed(1)}%`,
         target: '> 60%',
         status: averageMachineUtilization >= 60 ? '✅' : averageMachineUtilization >= 30 ? '⚠️' : '❌',
-        performance: getPerformanceCategory(averageMachineUtilization, 60, 'utilization')
+        performance: getPerformanceCategory(averageMachineUtilization, 60, 'utilization'),
       },
       {
         metricName: 'Schedule Efficiency',
         value: `${scheduleEfficiency.toFixed(1)}%`,
         target: '> 90%',
         status: scheduleEfficiency >= 90 ? '✅' : scheduleEfficiency >= 70 ? '⚠️' : '❌',
-        performance: getPerformanceCategory(scheduleEfficiency, 90, 'efficiency')
+        performance: getPerformanceCategory(scheduleEfficiency, 90, 'efficiency'),
       },
       {
         metricName: 'Week Span',
         value: `${weekSpan} days`,
         target: '≤ 7 days',
         status: weekSpan <= 7 ? '✅' : weekSpan <= 14 ? '⚠️' : '❌',
-        performance: getPerformanceCategory(7, weekSpan, 'span')
-      }
+        performance: getPerformanceCategory(7, weekSpan, 'span'),
+      },
     ]
 
     return {
@@ -282,12 +467,13 @@ function ScheduleDashboardContent() {
       averageMachineUtilization,
       scheduleEfficiency,
       weekSpan,
-      machineCount: uniqueMachines.size,
-      operatorCount: uniqueOperators.size,
+      machineCount,
+      operatorCount,
       reportingPeriod: `${earliestStart.toLocaleDateString()} - ${latestEnd.toLocaleDateString()}`,
       dataRefresh: new Date().toISOString(),
       criticalAlerts,
-      kpiMetrics
+      consistencyChecks,
+      kpiMetrics,
     }
   }
 
@@ -329,187 +515,268 @@ function ScheduleDashboardContent() {
 
   // Calculate Personnel Data
   const calculatePersonnelData = (chartData: any) => {
-    if (!chartData || !chartData.tasks || chartData.tasks.length === 0) {
-      return null
-    }
+    const rows = getScheduleRowsFromChartData(chartData)
+    if (rows.length === 0) return null
 
-    const tasks = chartData.tasks
-    const uniqueOperators = new Set(tasks.map((task: any) => task.operator)).size
-    
-    // Calculate utilization rates
-    const totalTasks = tasks.length
-    const activeOperators = Math.max(1, uniqueOperators)
-    const utilizationRate = Math.min(1, totalTasks / (activeOperators * 10)) // Assume 10 tasks per operator is optimal
-    
-    // Calculate shift performance
+    const people = new Map<
+      string,
+      {
+        setupHours: number
+        runHours: number
+        shiftAHours: number
+        shiftBHours: number
+        shiftAHits: number
+        shiftBHits: number
+      }
+    >()
+
+    rows.forEach(row => {
+      const person = row.person || 'Unassigned'
+      const current = people.get(person) || {
+        setupHours: 0,
+        runHours: 0,
+        shiftAHours: 0,
+        shiftBHours: 0,
+        shiftAHits: 0,
+        shiftBHits: 0,
+      }
+      const setupHours = hoursBetween(row.setupStart, row.setupEnd)
+      const runHours = hoursBetween(row.runStart, row.runEnd)
+      current.setupHours += setupHours
+      current.runHours += runHours
+      const hour = row.setupStart.getHours()
+      if (hour >= 6 && hour < 14) {
+        current.shiftAHours += setupHours + runHours
+        current.shiftAHits += 1
+      } else if (hour >= 14 && hour < 22) {
+        current.shiftBHours += setupHours + runHours
+        current.shiftBHits += 1
+      }
+      people.set(person, current)
+    })
+
+    const activePeople = Array.from(people.entries()).filter(([name]) => name !== 'Unassigned')
+    const activePersonnel = activePeople.length
+    const horizonHours = Math.max(1, getHorizonHours(rows))
+
+    const personUtilizations = activePeople.map(([, value]) =>
+      Math.min(1, (value.setupHours + value.runHours) / horizonHours)
+    )
+    const utilizationRate =
+      personUtilizations.length > 0
+        ? personUtilizations.reduce((sum, value) => sum + value, 0) / personUtilizations.length
+        : 0
+
+    const shiftAPeople = activePeople.filter(([, value]) => value.shiftAHits > 0).length
+    const shiftBPeople = activePeople.filter(([, value]) => value.shiftBHits > 0).length
+    const totalShiftAHours = activePeople.reduce((sum, [, value]) => sum + value.shiftAHours, 0)
+    const totalShiftBHours = activePeople.reduce((sum, [, value]) => sum + value.shiftBHours, 0)
+    const totalDays = Math.max(1, Math.ceil(horizonHours / 24))
+    const shiftCapacityHours = totalDays * 8
+    const shiftAUtilization =
+      shiftAPeople > 0 ? Math.min(1, totalShiftAHours / (shiftAPeople * shiftCapacityHours)) : 0
+    const shiftBUtilization =
+      shiftBPeople > 0 ? Math.min(1, totalShiftBHours / (shiftBPeople * shiftCapacityHours)) : 0
+
     const shiftPerformance = [
       {
-        name: "Shift A (6AM-2PM)",
-        operators: Math.max(1, Math.floor(uniqueOperators / 2)),
-        utilization: utilizationRate * 0.9,
-        efficiency: 0.85,
-        status: utilizationRate > 0.8 ? 'excellent' : utilizationRate > 0.6 ? 'good' : 'needs_improvement'
+        name: 'Shift A (6AM-2PM)',
+        operators: shiftAPeople,
+        utilization: shiftAUtilization,
+        efficiency: shiftAUtilization,
+        status:
+          shiftAUtilization >= 0.85
+            ? 'excellent'
+            : shiftAUtilization >= 0.6
+              ? 'good'
+              : 'needs_improvement',
       },
       {
-        name: "Shift B (2PM-10PM)",
-        operators: Math.max(1, Math.ceil(uniqueOperators / 2)),
-        utilization: utilizationRate * 1.1,
-        efficiency: 0.88,
-        status: utilizationRate > 0.8 ? 'excellent' : utilizationRate > 0.6 ? 'good' : 'needs_improvement'
-      }
+        name: 'Shift B (2PM-10PM)',
+        operators: shiftBPeople,
+        utilization: shiftBUtilization,
+        efficiency: shiftBUtilization,
+        status:
+          shiftBUtilization >= 0.85
+            ? 'excellent'
+            : shiftBUtilization >= 0.6
+              ? 'good'
+              : 'needs_improvement',
+      },
     ]
 
+    const underutilized = personUtilizations.filter(value => value < 0.4).length
+    const optimal = personUtilizations.filter(value => value >= 0.4 && value <= 0.85).length
+    const highUtilization = personUtilizations.filter(value => value > 0.85).length
+
     return {
-      activePersonnel: activeOperators,
-      newThisWeek: 0, // Real data will be calculated from actual new operators
-      utilizationRate: utilizationRate,
-      utilizationChange: 0, // Real change will be calculated from historical data
-      efficiencyScore: utilizationRate / 100, // Use actual utilization as efficiency
+      activePersonnel,
+      newThisWeek: 0,
+      utilizationRate,
+      utilizationChange: 0,
+      efficiencyScore: utilizationRate,
       shiftPerformance,
       shiftA: {
-        persons: Math.max(1, Math.floor(uniqueOperators / 2)),
-        utilization: utilizationRate * 0.9,
-        efficiency: utilizationRate / 100
+        persons: shiftAPeople,
+        utilization: shiftAUtilization,
+        efficiency: shiftAUtilization,
       },
       shiftB: {
-        persons: Math.max(1, Math.ceil(uniqueOperators / 2)),
-        utilization: utilizationRate * 1.1,
-        efficiency: utilizationRate / 100
+        persons: shiftBPeople,
+        utilization: shiftBUtilization,
+        efficiency: shiftBUtilization,
       },
-      underutilized: Math.max(0, Math.floor((1 - utilizationRate) * activeOperators)),
-      optimal: Math.floor(utilizationRate * activeOperators * 0.7),
-      highUtilization: Math.floor(utilizationRate * activeOperators * 0.3)
+      underutilized,
+      optimal,
+      highUtilization,
     }
   }
 
   // Calculate Machine Data
   const calculateMachineData = (chartData: any) => {
-    if (!chartData || !chartData.tasks || chartData.tasks.length === 0) {
-      return null
-    }
+    const rows = getScheduleRowsFromChartData(chartData)
+    if (rows.length === 0) return null
 
-    const tasks = chartData.tasks
-    const uniqueMachines = new Set(tasks.map((task: any) => task.machine)).size
-    
-    // Calculate machine performance
-    const machines = []
-    for (let i = 1; i <= Math.max(10, uniqueMachines); i++) {
-      const machineName = `VMC ${i}`
-      const machineTasks = tasks.filter((task: any) => task.machine === machineName)
-      const runHours = machineTasks.reduce((sum: number, task: any) => sum + (task.runDuration || 0), 0) / 60
-      const setupHours = machineTasks.reduce((sum: number, task: any) => sum + (task.setupDuration || 90), 0) / 60
-      const batches = new Set(machineTasks.map((task: any) => task.batchId)).size
-      const utilization = Math.min(100, ((runHours + setupHours) / 8) * 100) // 8 hours per day
-      
-      machines.push({
+    const machineNames = Array.from(new Set([...MACHINE_LANES, ...rows.map(row => row.machine)]))
+    const horizonHours = Math.max(1, getHorizonHours(rows))
+
+    const machines = machineNames.map(machineName => {
+      const machineRows = rows.filter(row => row.machine === machineName)
+      const runHours = machineRows.reduce((sum, row) => sum + hoursBetween(row.runStart, row.runEnd), 0)
+      const setupHours = machineRows.reduce(
+        (sum, row) => sum + hoursBetween(row.setupStart, row.setupEnd),
+        0
+      )
+      const batches = new Set(machineRows.map(row => row.batchId)).size
+      const utilization = Math.min(100, ((runHours + setupHours) / horizonHours) * 100)
+
+      const personLoad = new Map<string, number>()
+      machineRows.forEach(row => {
+        personLoad.set(
+          row.person,
+          (personLoad.get(row.person) || 0) + hoursBetween(row.setupStart, row.setupEnd)
+        )
+      })
+      const operator =
+        Array.from(personLoad.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Unassigned'
+
+      return {
         name: machineName,
         runHours: Math.round(runHours * 10) / 10,
         setupHours: Math.round(setupHours * 10) / 10,
         batches,
-        utilization: Math.round(utilization)
-      })
-    }
+        utilization: Math.round(utilization * 10) / 10,
+        operator,
+        nextMaintenance: 'Not scheduled',
+      }
+    })
 
-    // Calculate overall metrics
-    const avgUtilization = machines.reduce((sum: number, machine: any) => sum + machine.utilization, 0) / machines.length
-    const totalRunningHours = machines.reduce((sum: number, machine: any) => sum + machine.runHours, 0)
-    const activeMachines = machines.filter((machine: any) => machine.utilization > 0).length
+    const avgUtilization =
+      machines.length > 0
+        ? machines.reduce((sum, machine) => sum + machine.utilization, 0) / machines.length
+        : 0
+    const totalRunningHours = machines.reduce((sum, machine) => sum + machine.runHours, 0)
+    const activeMachines = machines.filter(machine => machine.utilization > 0).length
 
-    // Identify bottlenecks
-    const bottlenecks = []
-    const overusedMachines = machines.filter((machine: any) => machine.utilization >= 85)
-    const underusedMachines = machines.filter((machine: any) => machine.utilization < 30)
-    
+    const overusedMachines = machines.filter(machine => machine.utilization >= 85)
+    const underusedMachines = machines.filter(machine => machine.utilization < 30)
+    const bottlenecks: Array<{
+      severity: 'critical' | 'warning'
+      title: string
+      description: string
+      recommendation: string
+    }> = []
+
     if (overusedMachines.length > 0) {
       bottlenecks.push({
         severity: 'critical',
         title: 'Machine Overutilization',
-        description: `${overusedMachines.length} machine(s) running at >85% capacity`,
-        recommendation: 'Consider adding more machines or redistributing workload'
+        description: `${overusedMachines.length} machine(s) running at >=85% capacity`,
+        recommendation: 'Redistribute load or add machine capacity.',
       })
     }
-    
+
     if (underusedMachines.length > 0) {
       bottlenecks.push({
         severity: 'warning',
         title: 'Underutilized Machines',
         description: `${underusedMachines.length} machine(s) running at <30% capacity`,
-        recommendation: 'Optimize task distribution or consider maintenance scheduling'
+        recommendation: 'Review dispatching rules to balance utilization.',
       })
     }
 
     return {
-      totalMachines: Math.max(10, uniqueMachines),
+      totalMachines: machineNames.length,
       activeMachines,
       avgUtilization: avgUtilization / 100,
-      utilizationChange: 0, // Real change will be calculated from historical data
+      utilizationChange: 0,
       totalRunningHours: Math.round(totalRunningHours * 10) / 10,
-      maintenanceDue: 0, // Real maintenance due will be calculated from actual maintenance schedules
-      machines: machines.slice(0, 10), // Show first 10 machines
-      bottlenecks
+      maintenanceDue: 0,
+      machines: machines.slice(0, 10),
+      bottlenecks,
     }
   }
 
   // Calculate Activity Data
   const calculateActivityData = (chartData: any) => {
-    if (!chartData || !chartData.tasks || chartData.tasks.length === 0) {
-      return null
-    }
+    const rows = getScheduleRowsFromChartData(chartData)
+    if (rows.length === 0) return null
 
-    const tasks = chartData.tasks
     const now = new Date()
-    
-    // Calculate activity metrics
-    const totalActivities = tasks.length
-    const completedTasks = tasks.filter((task: any) => task.status === 'completed').length
-    const inProgressTasks = tasks.filter((task: any) => task.status === 'in_progress').length
-    const pendingTasks = tasks.filter((task: any) => task.status === 'pending').length
-    const activeNow = tasks.filter((task: any) => {
-      const startTime = new Date(task.startTime)
-      const endTime = new Date(task.endTime)
-      return startTime <= now && endTime >= now
-    }).length
+    const totalActivities = rows.length
+    const completedTasks = rows.filter(row => row.status === 'completed').length
+    const inProgressTasks = rows.filter(row => row.status === 'in_progress').length
+    const pendingTasks = rows.filter(row => row.status === 'scheduled').length
+    const activeNow = rows.filter(row => row.runStart <= now && row.runEnd >= now).length
+    const completionRate =
+      totalActivities > 0 ? Math.round((completedTasks / totalActivities) * 100) : 0
+    const avgProgressTime =
+      inProgressTasks > 0
+        ? Math.round(
+            (rows
+              .filter(row => row.status === 'in_progress')
+              .reduce((sum, row) => sum + hoursBetween(row.runStart, row.runEnd), 0) /
+              inProgressTasks) *
+              60
+          )
+        : 0
 
-    // Calculate completion rate
-    const completionRate = totalActivities > 0 ? Math.round((completedTasks / totalActivities) * 100) : 0
-    
-    // Calculate average progress time
-    const avgProgressTime = inProgressTasks > 0 
-      ? Math.round(tasks.filter((task: any) => task.status === 'in_progress')
-          .reduce((sum: number, task: any) => sum + (task.duration || 0), 0) / inProgressTasks / 60)
-      : 0
-
-    // Generate heatmap data based on actual task data (7 days x 2 shifts)
-    const heatmap = []
-    const taskDates = tasks.map((task: any) => new Date(task.startTime).getDay())
-    
+    const heatmap: Array<{ day: number; shift: string; activities: number; intensity: number }> = []
     for (let day = 0; day < 7; day++) {
-      for (let shift = 0; shift < 2; shift++) {
-        // Count actual tasks for this day
-        const dayTasks = taskDates.filter((taskDay: number) => taskDay === day).length
-        const activities = Math.floor(dayTasks / 2) // Split between day/night shift
+      const dayRows = rows.filter(row => row.runStart.getDay() === day)
+      const dayShift = dayRows.filter(row => row.runStart.getHours() >= 6 && row.runStart.getHours() < 18)
+      const nightShift = dayRows.length - dayShift.length
+      const buckets = [
+        { shift: 'Day', activities: dayShift.length },
+        { shift: 'Night', activities: nightShift },
+      ]
+      buckets.forEach(bucket => {
+        const activities = bucket.activities
         heatmap.push({
           day,
-          shift: shift === 0 ? 'Day' : 'Night',
+          shift: bucket.shift,
           activities,
-          intensity: activities === 0 ? 0 : activities <= 1 ? 1 : activities <= 2 ? 2 : activities <= 3 ? 3 : 4
+          intensity:
+            activities === 0 ? 0 : activities <= 1 ? 1 : activities <= 2 ? 2 : activities <= 3 ? 3 : 4,
         })
-      }
+      })
     }
 
-    // Generate recent activities from actual task data
-    const recentActivities = tasks.slice(0, 5).map((task: any, index: number) => ({
-      task: `${task.partNumber || task.part_number || 'Unknown'} - ${task.operationName || task.operation_name || 'Operation'}`,
-      machine: task.machine || 'Unknown',
-      operator: task.operator || 'Unknown',
-      duration: `${Math.round((task.duration || 0) / 60)}h`,
-      status: task.status || 'pending',
-      time: new Date(task.startTime || task.start_time || Date.now()).toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      })
-    }))
+    const recentActivities = [...rows]
+      .sort((a, b) => b.runStart.getTime() - a.runStart.getTime())
+      .slice(0, 5)
+      .map(row => ({
+        task: `${row.partNumber} - ${row.operationName} (OP${row.operationSeq})`,
+        machine: row.machine,
+        operator: row.person || 'Unassigned',
+        duration: `${hoursBetween(row.runStart, row.runEnd).toFixed(1)}h`,
+        status: row.status === 'scheduled' ? 'pending' : row.status,
+        time: row.runStart.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        }),
+      }))
 
     return {
       totalActivities,
@@ -520,127 +787,130 @@ function ScheduleDashboardContent() {
       activeNow,
       avgProgressTime,
       heatmap,
-      recentActivities
+      recentActivities,
     }
   }
 
   // Calculate Alert Data
   const calculateAlertData = (chartData: any) => {
-    if (!chartData || !chartData.tasks || chartData.tasks.length === 0) {
-      return null
-    }
+    const rows = getScheduleRowsFromChartData(chartData)
+    if (rows.length === 0) return null
 
-    const tasks = chartData.tasks
-    const now = new Date()
-    
-    // Generate alerts based on task data
-    const alerts = []
-    
-    // Check for delayed tasks
-    const delayedTasks = tasks.filter((task: any) => {
-      const dueDate = new Date(task.endTime)
-      return dueDate < now && task.status !== 'completed'
-    })
-    
-    if (delayedTasks.length > 0) {
+    const alerts: Array<{
+      severity: 'critical' | 'warning' | 'info'
+      title: string
+      description: string
+      source: string
+      time: string
+    }> = []
+
+    const delayedRows = rows.filter(row => row.dueDate && row.runEnd > row.dueDate)
+    if (delayedRows.length > 0) {
       alerts.push({
         severity: 'critical',
-        title: 'Delayed Tasks Detected',
-        description: `${delayedTasks.length} task(s) are behind schedule`,
+        title: 'Due Date Violations',
+        description: `${delayedRows.length} operation(s) finish after due date.`,
         source: 'Scheduler',
-        time: '2 minutes ago'
-      })
-    }
-    
-    // Check for machine utilization issues
-    const uniqueMachines = new Set(tasks.map((task: any) => task.machine)).size
-    const avgUtilization = tasks.length / (uniqueMachines * 10) // Rough calculation
-    
-    if (avgUtilization > 0.9) {
-      alerts.push({
-        severity: 'warning',
-        title: 'High Machine Utilization',
-        description: 'Some machines are running at >90% capacity',
-        source: 'Machine Monitor',
-        time: '15 minutes ago'
-      })
-    }
-    
-    if (avgUtilization < 0.3) {
-      alerts.push({
-        severity: 'info',
-        title: 'Low Machine Utilization',
-        description: 'Consider optimizing task distribution',
-        source: 'Analytics',
-        time: '1 hour ago'
-      })
-    }
-    
-    // Check for operator issues
-    const uniqueOperators = new Set(tasks.map((task: any) => task.operator)).size
-    if (uniqueOperators < tasks.length / 5) {
-      alerts.push({
-        severity: 'warning',
-        title: 'Operator Overload',
-        description: 'Some operators have too many tasks assigned',
-        source: 'Personnel Manager',
-        time: '30 minutes ago'
+        time: 'Now',
       })
     }
 
-    const critical = alerts.filter((alert: any) => alert.severity === 'critical').length
-    const warnings = alerts.filter((alert: any) => alert.severity === 'warning').length
-    const info = alerts.filter((alert: any) => alert.severity === 'info').length
-    const resolved = 0 // Real resolved count will be calculated from actual resolved alerts
+    const machineData = calculateMachineData(chartData)
+    if (machineData) {
+      if ((machineData.avgUtilization || 0) >= 0.9) {
+        alerts.push({
+          severity: 'warning',
+          title: 'High Machine Utilization',
+          description: 'Average machine utilization is above 90%.',
+          source: 'Machine Monitor',
+          time: 'Now',
+        })
+      }
+      if ((machineData.avgUtilization || 0) <= 0.3) {
+        alerts.push({
+          severity: 'info',
+          title: 'Low Machine Utilization',
+          description: 'Average machine utilization is below 30%.',
+          source: 'Machine Monitor',
+          time: 'Now',
+        })
+      }
+    }
+
+    const operatorIntervals = new Map<string, Array<{ start: Date; end: Date; ref: string }>>()
+    rows.forEach(row => {
+      const ref = `${row.partNumber}/${row.batchId}/OP${row.operationSeq}`
+      const entries = operatorIntervals.get(row.person) || []
+      entries.push({ start: row.setupStart, end: row.setupEnd, ref })
+      entries.push({ start: row.runStart, end: row.runEnd, ref })
+      operatorIntervals.set(row.person, entries)
+    })
+    let overlapCount = 0
+    operatorIntervals.forEach(entries => {
+      const sorted = [...entries].sort((a, b) => a.start.getTime() - b.start.getTime())
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i - 1].end > sorted[i].start) overlapCount += 1
+      }
+    })
+    if (overlapCount > 0) {
+      alerts.push({
+        severity: 'warning',
+        title: 'Operator Overlap Detected',
+        description: `${overlapCount} operator overlap conflict(s) found.`,
+        source: 'Verification',
+        time: 'Now',
+      })
+    }
+
+    const critical = alerts.filter(alert => alert.severity === 'critical').length
+    const warnings = alerts.filter(alert => alert.severity === 'warning').length
+    const info = alerts.filter(alert => alert.severity === 'info').length
 
     return {
       critical,
       warnings,
       info,
-      resolved,
-      activeAlerts: alerts
+      resolved: 0,
+      activeAlerts: alerts,
     }
   }
 
   // Calculate Analytics Data
   const calculateAnalyticsData = (chartData: any) => {
-    if (!chartData || !chartData.tasks || chartData.tasks.length === 0) {
-      return null
-    }
+    const rows = getScheduleRowsFromChartData(chartData)
+    if (rows.length === 0) return null
 
-    const tasks = chartData.tasks
-    
-    // Calculate efficiency score based on completion rate and utilization
-    const completedTasks = tasks.filter((task: any) => task.status === 'completed').length
-    const efficiencyScore = completedTasks / tasks.length
-    
-    // Calculate throughput (parts per hour)
-    const totalHours = tasks.reduce((sum: number, task: any) => sum + (task.duration || 0), 0) / (60 * 60 * 1000)
-    const throughput = totalHours > 0 ? Math.round(tasks.length / totalHours) : 0
-    
-    // Calculate quality rate based on actual completion rate
-    const qualityRate = efficiencyScore // Use actual efficiency as quality rate
-    
-    // Calculate cost per unit based on actual machine hours
-    const costPerUnit = totalHours > 0 ? (totalHours * 50) / tasks.length : 0 // $50/hour rate
-    
-    // Calculate week-over-week change (placeholder for real historical data)
-    const weekOverWeek = 0 // Real change will be calculated from historical data
-    
-    // Calculate moving average based on actual efficiency
-    const movingAverage = efficiencyScore * 100 // Use actual efficiency
-    
-    // Calculate predictive score based on current performance
-    const predictiveScore = Math.round(efficiencyScore * 100) // Use actual efficiency score
-    
-    // Determine trend direction
-    const trendDirection = weekOverWeek > 0 ? 'up' : 'down'
-    
-    // Calculate resource utilization
-    const uniqueMachines = new Set(tasks.map((task: any) => task.machine)).size
-    const uniqueOperators = new Set(tasks.map((task: any) => task.operator)).size
-    const machineUtilization = Math.min(100, (tasks.length / (uniqueMachines * 10)) * 100)
-    const personnelUtilization = Math.min(100, (tasks.length / (uniqueOperators * 8)) * 100)
+    const completedTasks = rows.filter(row => row.status === 'completed').length
+    const efficiencyScore = rows.length > 0 ? completedTasks / rows.length : 0
+    const totalRunHours = rows.reduce((sum, row) => sum + hoursBetween(row.runStart, row.runEnd), 0)
+    const throughput = totalRunHours > 0 ? Math.round(rows.length / totalRunHours) : 0
+    const delayedRows = rows.filter(row => row.dueDate && row.runEnd > row.dueDate).length
+    const qualityRate = rows.length > 0 ? Math.max(0, 1 - delayedRows / rows.length) : 0
+    const costPerUnit = rows.length > 0 ? (totalRunHours * 50) / rows.length : 0
+    const weekOverWeek = 0
+    const movingAverage = efficiencyScore * 100
+    const predictiveScore = Math.round((efficiencyScore * 0.7 + qualityRate * 0.3) * 100)
+    const trendDirection = weekOverWeek >= 0 ? 'up' : 'down'
+
+    const machineNames = new Set(rows.map(row => row.machine))
+    const operatorNames = new Set(rows.map(row => row.person))
+    const horizonHours = Math.max(1, getHorizonHours(rows))
+    const totalMachineBusy = rows.reduce(
+      (sum, row) => sum + hoursBetween(row.setupStart, row.setupEnd) + hoursBetween(row.runStart, row.runEnd),
+      0
+    )
+    const machineUtilization =
+      machineNames.size > 0
+        ? Math.min(100, (totalMachineBusy / (horizonHours * machineNames.size)) * 100)
+        : 0
+    const totalPersonBusy = rows.reduce(
+      (sum, row) => sum + hoursBetween(row.setupStart, row.setupEnd) + hoursBetween(row.runStart, row.runEnd),
+      0
+    )
+    const personnelUtilization =
+      operatorNames.size > 0
+        ? Math.min(100, (totalPersonBusy / (horizonHours * operatorNames.size)) * 100)
+        : 0
 
     return {
       efficiencyScore,
@@ -653,9 +923,36 @@ function ScheduleDashboardContent() {
       trendDirection,
       resourceUtilization: {
         machines: Math.round(machineUtilization),
-        personnel: Math.round(personnelUtilization)
-      }
+        personnel: Math.round(personnelUtilization),
+      },
     }
+  }
+
+  const calculateDailyMachineHours = (chartData: any, days = 14) => {
+    const rows = getScheduleRowsFromChartData(chartData)
+    if (rows.length === 0) return []
+
+    return Array.from({ length: days }, (_, i) => {
+      const dayStart = new Date()
+      dayStart.setDate(dayStart.getDate() - (days - 1 - i))
+      dayStart.setHours(0, 0, 0, 0)
+
+      const dayEnd = new Date(dayStart)
+      dayEnd.setHours(23, 59, 59, 999)
+
+      const dayHours = rows.reduce((sum, row) => {
+        return (
+          sum +
+          overlapHours(row.setupStart, row.setupEnd, dayStart, dayEnd) +
+          overlapHours(row.runStart, row.runEnd, dayStart, dayEnd)
+        )
+      }, 0)
+
+      return {
+        dayIndex: i + 1,
+        hours: dayHours,
+      }
+    })
   }
 
   const handleGoToMainDashboard = () => {
@@ -692,7 +989,8 @@ function ScheduleDashboardContent() {
         machineData: null,
         activityData: null,
         alertData: null,
-        analyticsData: null
+        analyticsData: null,
+        dailyMachineHours: [] as Array<{ dayIndex: number; hours: number }>,
       }
     }
 
@@ -702,7 +1000,8 @@ function ScheduleDashboardContent() {
       machineData: calculateMachineData(dashboardData.chartData),
       activityData: calculateActivityData(dashboardData.chartData),
       alertData: calculateAlertData(dashboardData.chartData),
-      analyticsData: calculateAnalyticsData(dashboardData.chartData)
+      analyticsData: calculateAnalyticsData(dashboardData.chartData),
+      dailyMachineHours: calculateDailyMachineHours(dashboardData.chartData),
     }
   }, [dashboardData?.chartData])
 
@@ -710,6 +1009,7 @@ function ScheduleDashboardContent() {
     switch (activeSection) {
       case "kpis":
         const kpis = memoizedCalculations.kpis
+        const dailyMachineHours = memoizedCalculations.dailyMachineHours
         
         return (
           <div className="space-y-6">
@@ -730,7 +1030,7 @@ function ScheduleDashboardContent() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="text-gray-600 mt-2">Loading KPI data...</p>
                   </div>
-                ) : !dashboardData || !dashboardData.chartData || !dashboardData.chartData.tasks || dashboardData.chartData.tasks.length === 0 ? (
+                ) : !dashboardData || !dashboardData.chartData || getScheduleRowsFromChartData(dashboardData.chartData).length === 0 ? (
                   <div className="text-center py-8">
                     <div className="bg-gray-100 rounded-lg p-6">
                       <div className="text-gray-400 mb-4">
@@ -843,66 +1143,29 @@ function ScheduleDashboardContent() {
                         </CardHeader>
                         <CardContent>
                           <div className="h-64 flex items-end justify-between gap-2">
-                            {Array.from({ length: 14 }, (_, i) => {
-                              // Calculate actual machine hours for each day based on task data
-                              const dayStart = new Date()
-                              dayStart.setDate(dayStart.getDate() - (13 - i))
-                              dayStart.setHours(0, 0, 0, 0)
-                              
-                              const dayEnd = new Date(dayStart)
-                              dayEnd.setHours(23, 59, 59, 999)
-                              
-                              const chartTasks = dashboardData?.chartData?.tasks || []
-                              const dayTasks = chartTasks.filter((task: any) => {
-                                const taskDate = new Date(task.startTime)
-                                return taskDate >= dayStart && taskDate <= dayEnd
-                              })
-                              
-                              const dayHours = dayTasks.reduce((sum: number, task: any) => {
-                                return sum + ((task.duration || 0) / (60 * 60 * 1000))
-                              }, 0)
-                              
+                            {dailyMachineHours.map(day => {
+                              const dayHours = day.hours
                               const height = Math.min((dayHours / 24) * 100, 100) // Max 100% height
                               return (
-                                <div key={i} className="flex flex-col items-center gap-2">
+                                <div key={day.dayIndex} className="flex flex-col items-center gap-2">
                                   <div 
                                     className="bg-gradient-to-t from-blue-500 to-blue-400 rounded-t w-8 transition-all duration-300 hover:from-blue-600 hover:to-blue-500"
                                     style={{ height: `${height}%` }}
-                                    title={`Day ${i + 1}: ${dayHours.toFixed(1)}h`}
+                                    title={`Day ${day.dayIndex}: ${dayHours.toFixed(1)}h`}
                                   ></div>
-                                  <span className="text-xs text-gray-500">{i + 1}</span>
+                                  <span className="text-xs text-gray-500">{day.dayIndex}</span>
                                 </div>
                               )
                             })}
                           </div>
                           <div className="mt-4 text-center text-sm text-gray-600">
                             Peak: {(() => {
-                              let maxHours = 0
-                              let peakDay = 1
-                              for (let i = 0; i < 14; i++) {
-                                const dayStart = new Date()
-                                dayStart.setDate(dayStart.getDate() - (13 - i))
-                                dayStart.setHours(0, 0, 0, 0)
-                                
-                                const dayEnd = new Date(dayStart)
-                                dayEnd.setHours(23, 59, 59, 999)
-                                
-                                const chartTasks = dashboardData?.chartData?.tasks || []
-                                const dayTasks = chartTasks.filter((task: any) => {
-                                  const taskDate = new Date(task.startTime)
-                                  return taskDate >= dayStart && taskDate <= dayEnd
-                                })
-                                
-                                const dayHours = dayTasks.reduce((sum: number, task: any) => {
-                                  return sum + ((task.duration || 0) / (60 * 60 * 1000))
-                                }, 0)
-                                
-                                if (dayHours > maxHours) {
-                                  maxHours = dayHours
-                                  peakDay = i + 1
-                                }
-                              }
-                              return `${maxHours.toFixed(1)}h on Day ${peakDay}`
+                              if (dailyMachineHours.length === 0) return '0.0h on Day 1'
+                              const peak = dailyMachineHours.reduce(
+                                (best, day) => (day.hours > best.hours ? day : best),
+                                dailyMachineHours[0]
+                              )
+                              return `${peak.hours.toFixed(1)}h on Day ${peak.dayIndex}`
                             })()}
                           </div>
                         </CardContent>
@@ -1282,12 +1545,12 @@ function ScheduleDashboardContent() {
                         <div className="text-center p-4 bg-blue-50 rounded-lg">
                           <div className="text-2xl font-bold text-blue-600">{personnelData.shiftA.persons}</div>
                           <div className="text-sm text-gray-600">Shift A</div>
-                          <div className="text-xs text-blue-600 mt-1">{Math.round(personnelData.shiftA.utilization)}% utilized</div>
+                          <div className="text-xs text-blue-600 mt-1">{Math.round(personnelData.shiftA.utilization * 100)}% utilized</div>
                         </div>
                         <div className="text-center p-4 bg-green-50 rounded-lg">
                           <div className="text-2xl font-bold text-green-600">{personnelData.shiftB.persons}</div>
                           <div className="text-sm text-gray-600">Shift B</div>
-                          <div className="text-xs text-green-600 mt-1">{Math.round(personnelData.shiftB.utilization)}% utilized</div>
+                          <div className="text-xs text-green-600 mt-1">{Math.round(personnelData.shiftB.utilization * 100)}% utilized</div>
                         </div>
                       </div>
                       <div className="space-y-2">
