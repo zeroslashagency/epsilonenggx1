@@ -4,7 +4,7 @@
 import { MasterDataLoader } from './master-data-loader'
 import { SchedulingEngineIntegration } from './scheduling-engine-integration'
 import { DeterministicSchedulingEngine } from './deterministic-scheduling-engine'
-import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseBrowserClient } from '@/app/lib/services/supabase-client'
 
 export interface BackendServices {
   supabase: any
@@ -52,8 +52,8 @@ export class BackendIntegrationService {
 
   private async initializeSupabase(): Promise<void> {
     try {
-      // Use shared Supabase client to prevent multiple instances
-      const client = getSupabaseClient()
+      // Use shared Supabase browser client to prevent multiple instances
+      const client = getSupabaseBrowserClient()
       this.services.supabase = client
 
     } catch (error) {

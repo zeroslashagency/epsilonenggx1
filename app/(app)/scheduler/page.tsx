@@ -30,6 +30,14 @@ import {
   SchedulerPersonnelProfileInput,
 } from '@/app/lib/features/scheduling/personnel-v2'
 import {
+  buildPieceFlowRows,
+  filterPieceFlowRows,
+  formatImportFailureAlert,
+  formatSchedulingFailureAlert,
+  normalizeMachineLane,
+  safelyEvaluate,
+} from '@/app/lib/features/scheduling/piece-flow-helpers'
+import {
   Settings,
   Calendar as CalendarIcon,
   Clock,
@@ -153,6 +161,17 @@ interface QualityIssue {
 interface QualityReport {
   status: 'GOOD' | 'WARNING' | 'BAD'
   score: number
+  kpi: {
+    feasibility: number
+    delivery: number
+    utilization: number
+    flow: number
+    machineUtilizationPct: number
+    personUtilizationPct: number
+    flowEfficiencyPct: number
+    onTimePct: number
+    avgQueueGapHours: number
+  }
   issues: QualityIssue[]
   parameters: {
     setupWindow: string
@@ -205,6 +224,8 @@ const parseWindowMinutes = (window: string): [number, number] | null => {
   return [start, end]
 }
 
+const toLocalDateTimeInput = (date: Date): string => format(date, "yyyy-MM-dd'T'HH:mm")
+
 const isWithinWindow = (date: Date, window: string): boolean => {
   const parsed = parseWindowMinutes(window)
   if (!parsed) return true
@@ -218,90 +239,19 @@ const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean =
   return aStart < bEnd && bStart < aEnd
 }
 
-const normalizeMachineLane = (value: unknown): string => {
-  const raw = String(value || '').trim()
-  if (!raw) return 'VMC 1'
-  const compact = raw.toUpperCase().replace(/\s+/g, '')
-  const match = compact.match(/^VMC0*(\d{1,2})$/)
-  if (match) {
-    return `VMC ${Number(match[1])}`
-  }
-  return raw
-}
+const clampPct = (value: number): number => Math.max(0, Math.min(100, value))
 
-const buildPieceFlowRows = (
-  scheduleRows: any[],
-  pieceTimelineRows: PieceTimelinePayloadRow[] = []
-): { rows: PieceFlowRow[], isApproximate: boolean } => {
-  if (pieceTimelineRows.length > 0) {
-    const rows = pieceTimelineRows
-      .map((row: PieceTimelinePayloadRow, rowIndex: number) => {
-        const part = String(row.partNumber || row.part || 'UNKNOWN')
-        const batch = String(row.batchId || row.batch || `B-${rowIndex + 1}`)
-        const piece = Number(row.piece || 0)
-        const operationSeq = Number(row.operationSeq || row.operation || 1)
-        const machine = normalizeMachineLane(row.machine || 'VMC 1')
-        const start = toDate(row.runStart || row.start)
-        const end = toDate(row.runEnd || row.end)
+const minutesBetween = (start: Date, end: Date): number =>
+  Math.max(0, (end.getTime() - start.getTime()) / 60_000)
 
-        if (!start || !end || end <= start) return null
-        if (!Number.isFinite(piece) || piece <= 0) return null
-        if (!Number.isFinite(operationSeq) || operationSeq <= 0) return null
-
-        return {
-          id: `${part}-${batch}-op${operationSeq}-p${piece}`,
-          part,
-          batch,
-          piece,
-          operationSeq,
-          machine,
-          start,
-          end,
-          status: String(row.status || 'OK'),
-        } satisfies PieceFlowRow
-      })
-      .filter((row): row is PieceFlowRow => Boolean(row))
-
-    return { rows, isApproximate: false }
-  }
-
-  const rows: PieceFlowRow[] = []
-
-  scheduleRows.forEach((row: any, rowIndex: number) => {
-    const part = String(row.partNumber || row.partnumber || row.part_number || 'UNKNOWN')
-    const batch = String(row.batchId || row.batch_id || `B-${rowIndex + 1}`)
-    const operationSeq = Number(row.operationSeq || row.operation_seq || 1)
-    const machine = normalizeMachineLane(row.machine || 'VMC 1')
-    const runStart = toDate(row.runStart || row.run_start)
-    const runEnd = toDate(row.runEnd || row.run_end)
-    const qtyRaw = Number(row.batchQty || row.batch_qty || row.orderQty || row.order_quantity || 1)
-    const qty = Math.max(1, Number.isFinite(qtyRaw) ? Math.round(qtyRaw) : 1)
-
-    if (!runStart || !runEnd || runEnd <= runStart) return
-
-    const totalMs = runEnd.getTime() - runStart.getTime()
-    const eachMs = Math.max(60_000, Math.floor(totalMs / qty))
-
-    for (let piece = 1; piece <= qty; piece++) {
-      const pieceStart = new Date(runStart.getTime() + eachMs * (piece - 1))
-      const tentativeEnd = new Date(runStart.getTime() + eachMs * piece)
-      const pieceEnd = piece === qty ? runEnd : tentativeEnd
-
-      rows.push({
-        id: `${part}-${batch}-op${operationSeq}-p${piece}`,
-        part,
-        batch,
-        piece,
-        operationSeq,
-        machine,
-        start: pieceStart,
-        end: pieceEnd,
-        status: String(row.status || 'OK'),
-      })
-    }
-  })
-
-  return { rows, isApproximate: true }
+const formatDurationShort = (totalMinutes: number): string => {
+  const mins = Math.max(0, Math.round(totalMinutes))
+  const days = Math.floor(mins / (24 * 60))
+  const hours = Math.floor((mins % (24 * 60)) / 60)
+  const minutes = mins % 60
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
 }
 
 const evaluateScheduleQuality = (
@@ -310,7 +260,8 @@ const evaluateScheduleQuality = (
   breakdowns: Breakdown[],
   pieceRows: PieceFlowRow[],
   holidays: Holiday[],
-  pieceTimeline: any[] = []
+  pieceTimeline: any[] = [],
+  productionWindows: string[] = []
 ): QualityReport => {
   const issues: QualityIssue[] = []
 
@@ -341,36 +292,44 @@ const evaluateScheduleQuality = (
   >()
   const partExpectedQty = new Map<string, number>()
   const partBatchQty = new Map<string, Map<string, number>>()
+  const runMinutesByMachine = new Map<string, number>()
+  const personActiveMinutes = new Map<string, number>()
+  let earliestTs = Number.POSITIVE_INFINITY
+  let latestTs = Number.NEGATIVE_INFINITY
+  let dueRowCount = 0
+  let onTimeCount = 0
+  let lateRowCount = 0
+  let totalLatenessMinutes = 0
 
   scheduleRows.forEach((row: any, index: number) => {
     const machine = normalizeMachineLane(row.machine || 'VMC 1')
     const setupPerson =
       String(
         row.setupPersonName ||
-        row.setupPerson ||
-        row.setup_person_name ||
-        row.setup_person ||
-        row.person ||
-        row.operator ||
-        ''
+          row.setupPerson ||
+          row.setup_person_name ||
+          row.setup_person ||
+          row.person ||
+          row.operator ||
+          ''
       ).trim() || 'Unassigned'
     const productionPerson =
       String(
         row.productionPersonName ||
-        row.productionPerson ||
-        row.production_person_name ||
-        row.production_person ||
-        row.person ||
-        row.operator ||
-        ''
+          row.productionPerson ||
+          row.production_person_name ||
+          row.production_person ||
+          row.person ||
+          row.operator ||
+          ''
       ).trim() || 'Unassigned'
     const handleModeRaw = String(
       row.handleMode ||
-      row.handle_mode ||
-      row.HandleMode ||
-      row.HandleMachines ||
-      row.handleMachines ||
-      ''
+        row.handle_mode ||
+        row.HandleMode ||
+        row.HandleMachines ||
+        row.handleMachines ||
+        ''
     )
       .trim()
       .toLowerCase()
@@ -410,6 +369,19 @@ const evaluateScheduleQuality = (
       return
     }
 
+    earliestTs = Math.min(earliestTs, setupStart.getTime(), runStart.getTime())
+    latestTs = Math.max(latestTs, setupEnd.getTime(), runEnd.getTime())
+
+    const runMinutes = minutesBetween(runStart, runEnd)
+    runMinutesByMachine.set(machine, (runMinutesByMachine.get(machine) || 0) + runMinutes)
+
+    const setupMinutes = minutesBetween(setupStart, setupEnd)
+    personActiveMinutes.set(setupPerson, (personActiveMinutes.get(setupPerson) || 0) + setupMinutes)
+    personActiveMinutes.set(
+      productionPerson,
+      (personActiveMinutes.get(productionPerson) || 0) + runMinutes
+    )
+
     if (setupEnd > runStart) {
       addIssue({
         code: 'machine_setup_run_overlap',
@@ -433,6 +405,9 @@ const evaluateScheduleQuality = (
     }
 
     if (dueDate && runEnd > dueDate) {
+      dueRowCount += 1
+      lateRowCount += 1
+      totalLatenessMinutes += minutesBetween(dueDate, runEnd)
       addIssue({
         code: 'due_date_missed',
         rule: 'Due Date',
@@ -441,6 +416,9 @@ const evaluateScheduleQuality = (
         entityRefs: [ref],
         timeWindow: { start: runStart.toLocaleString(), end: runEnd.toLocaleString() },
       })
+    } else if (dueDate) {
+      dueRowCount += 1
+      onTimeCount += 1
     }
 
     breakdowns.forEach(breakdown => {
@@ -732,6 +710,24 @@ const evaluateScheduleQuality = (
     }
   })
 
+  let totalActivePieceMinutes = 0
+  let totalQueueMinutes = 0
+  let queueGapCount = 0
+  pieceGroups.forEach(rows => {
+    const sorted = [...rows].sort((a, b) => a.operationSeq - b.operationSeq)
+    sorted.forEach(row => {
+      totalActivePieceMinutes += minutesBetween(row.start, row.end)
+    })
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1]
+      const curr = sorted[i]
+      if (curr.start > prev.end) {
+        totalQueueMinutes += minutesBetween(prev.end, curr.start)
+        queueGapCount += 1
+      }
+    }
+  })
+
   partBatchQty.forEach((batchMap, part) => {
     const expectedQty = partExpectedQty.get(part)
     if (!expectedQty) return
@@ -762,13 +758,119 @@ const evaluateScheduleQuality = (
   const infoCount = issues.filter(issue => issue.severity === 'info').length
   const validationFailures = criticalCount
 
-  const score = Math.max(0, 100 - criticalCount * 12 - warningCount * 4 - infoCount)
+  const normalizedProductionWindows = productionWindows
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+  const productionWindowSet =
+    normalizedProductionWindows.length > 0 ? normalizedProductionWindows : [setupWindow]
+
+  const holidayIntervals = holidays
+    .map(holiday => ({
+      start: toDate(holiday.startDateTime),
+      end: toDate(holiday.endDateTime),
+    }))
+    .filter(
+      (interval): interval is { start: Date; end: Date } =>
+        Boolean(interval.start && interval.end && interval.end > interval.start)
+    )
+
+  const breakdownByMachine = new Map<string, Array<{ start: Date; end: Date }>>()
+  breakdowns.forEach(item => {
+    const start = toDate(item.startDateTime)
+    const end = toDate(item.endDateTime)
+    if (!start || !end || end <= start) return
+    ;(item.machines || []).forEach(machine => {
+      const lane = normalizeMachineLane(machine)
+      const bucket = breakdownByMachine.get(lane) || []
+      bucket.push({ start, end })
+      breakdownByMachine.set(lane, bucket)
+    })
+  })
+
+  const inHoliday = (date: Date): boolean =>
+    holidayIntervals.some(interval => interval.start <= date && date < interval.end)
+
+  const inBreakdown = (machine: string, date: Date): boolean => {
+    const intervals = breakdownByMachine.get(machine) || []
+    return intervals.some(interval => interval.start <= date && date < interval.end)
+  }
+
+  const rangeStart =
+    Number.isFinite(earliestTs) && earliestTs !== Number.POSITIVE_INFINITY
+      ? new Date(earliestTs)
+      : null
+  const rangeEnd =
+    Number.isFinite(latestTs) && latestTs !== Number.NEGATIVE_INFINITY
+      ? new Date(latestTs)
+      : null
+
+  let availableMachineMinutes = 0
+  let availablePersonMinutes = 0
+  const personCount = Math.max(1, personActiveMinutes.size)
+
+  if (rangeStart && rangeEnd && rangeEnd > rangeStart) {
+    const cursor = new Date(rangeStart)
+    while (cursor < rangeEnd) {
+      const productionOpen = productionWindowSet.some(window => isWithinWindow(cursor, window))
+      const setupOpen = isWithinWindow(cursor, setupWindow)
+
+      if (!inHoliday(cursor) && setupOpen) {
+        availablePersonMinutes += personCount
+      }
+
+      if (productionOpen && !inHoliday(cursor)) {
+        MACHINE_LANES.forEach(machine => {
+          if (!inBreakdown(machine, cursor)) {
+            availableMachineMinutes += 1
+          }
+        })
+      }
+
+      cursor.setMinutes(cursor.getMinutes() + 1)
+    }
+  }
+
+  const totalRunMinutes = Array.from(runMinutesByMachine.values()).reduce((sum, value) => sum + value, 0)
+  const totalPersonActiveMinutes = Array.from(personActiveMinutes.values()).reduce(
+    (sum, value) => sum + value,
+    0
+  )
+  const machineUtilizationPct =
+    availableMachineMinutes > 0 ? clampPct((totalRunMinutes / availableMachineMinutes) * 100) : 0
+  const personUtilizationPct =
+    availablePersonMinutes > 0 ? clampPct((totalPersonActiveMinutes / availablePersonMinutes) * 100) : 0
+  const flowEfficiencyPct =
+    totalActivePieceMinutes + totalQueueMinutes > 0
+      ? clampPct((totalActivePieceMinutes / (totalActivePieceMinutes + totalQueueMinutes)) * 100)
+      : 100
+  const avgQueueGapHours = queueGapCount > 0 ? totalQueueMinutes / queueGapCount / 60 : 0
+  const onTimePct = dueRowCount > 0 ? clampPct((onTimeCount / dueRowCount) * 100) : 100
+  const avgLatenessMinutes = lateRowCount > 0 ? totalLatenessMinutes / lateRowCount : 0
+
+  const feasibility = clampPct(100 - criticalCount * 12 - warningCount * 4 - infoCount)
+  const delivery = clampPct(onTimePct - Math.min(40, avgLatenessMinutes / 30))
+  const utilization = clampPct(machineUtilizationPct * 0.65 + personUtilizationPct * 0.35)
+  const flow = clampPct(flowEfficiencyPct - Math.min(30, avgQueueGapHours * 1.5))
+  const score = Math.round(
+    feasibility * 0.4 + delivery * 0.2 + utilization * 0.2 + flow * 0.2
+  )
   const status: QualityReport['status'] =
     criticalCount > 0 ? 'BAD' : warningCount > 0 ? 'WARNING' : 'GOOD'
 
   return {
     status,
     score,
+    kpi: {
+      feasibility,
+      delivery,
+      utilization,
+      flow,
+      machineUtilizationPct,
+      personUtilizationPct,
+      flowEfficiencyPct,
+      onTimePct,
+      avgQueueGapHours,
+    },
     issues,
     parameters: {
       setupWindow,
@@ -812,6 +914,12 @@ function SchedulerPageContent() {
   const [playbackStepMinutes, setPlaybackStepMinutes] = useState(5)
   const [playbackCursorMs, setPlaybackCursorMs] = useState<number | null>(null)
   const [isPlaybackRunning, setIsPlaybackRunning] = useState(false)
+  const [flowTimeWindow, setFlowTimeWindow] = useState<{ start: string; end: string }>({
+    start: '',
+    end: '',
+  })
+  const [selectedFlowKey, setSelectedFlowKey] = useState<string | null>(null)
+  const [showPersonTimeline, setShowPersonTimeline] = useState(true)
   const playbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Part number management state
@@ -901,12 +1009,62 @@ function SchedulerPageContent() {
   const canDelete = hasPermissionCode('schedule.delete')
   const canApprove = hasPermissionCode('schedule.approve')
 
+  const applySavedSettings = (savedData: any) => {
+    setSettingsLocked(savedData.is_locked || false)
+
+    setAdvancedSettings(prev => ({
+      ...prev,
+      globalStartDateTime: savedData.global_start_datetime || '',
+      globalSetupWindow: savedData.global_setup_window || '',
+      shift1: savedData.shift_1 || '',
+      shift2: savedData.shift_2 || '',
+      shift3: savedData.shift_3 || '',
+      productionWindowShift1: savedData.production_shift_1 || '',
+      productionWindowShift2: savedData.production_shift_2 || '',
+      productionWindowShift3: savedData.production_shift_3 || '',
+    }))
+
+    if (Array.isArray(savedData.holidays)) {
+      setHolidays(savedData.holidays)
+    }
+    if (Array.isArray(savedData.breakdowns)) {
+      setBreakdowns(savedData.breakdowns)
+    }
+  }
+
+  const loadSavedSettings = async (): Promise<boolean> => {
+    if (!userEmail) return false
+
+    try {
+      const response = await apiClient('/api/save-advanced-settings', {
+        method: 'GET',
+        headers: {
+          'X-User-Email': userEmail || 'default@user.com',
+        },
+      })
+
+      if (!response.ok) {
+        return false
+      }
+
+      const result = await response.json()
+      if (!result.success || !result.data?.machine_data) {
+        return false
+      }
+
+      applySavedSettings(result.data.machine_data)
+      return true
+    } catch (error) {
+      return false
+    }
+  }
+
   // Load saved advanced settings on mount
   useEffect(() => {
     let isMounted = true
 
-    const loadSavedSettings = async () => {
-      try {
+    if (userEmail) {
+      ;(async () => {
         const response = await apiClient('/api/save-advanced-settings', {
           method: 'GET',
           headers: {
@@ -914,40 +1072,13 @@ function SchedulerPageContent() {
           },
         })
 
-        if (response.ok) {
-          const result = await response.json()
-          if (isMounted && result.success && result.data) {
-            const savedData = result.data.machine_data
-            // Load lock state from saved data
-            setSettingsLocked(savedData.is_locked || false)
+        if (!response.ok) return
 
-            // Load advanced settings
-            setAdvancedSettings(prev => ({
-              ...prev,
-              globalStartDateTime: savedData.global_start_datetime || '',
-              globalSetupWindow: savedData.global_setup_window || '',
-              shift1: savedData.shift_1 || '',
-              shift2: savedData.shift_2 || '',
-              shift3: savedData.shift_3 || '',
-              productionWindowShift1: savedData.production_shift_1 || '',
-              productionWindowShift2: savedData.production_shift_2 || '',
-              productionWindowShift3: savedData.production_shift_3 || '',
-            }))
-
-            // Load holidays and breakdowns
-            if (savedData.holidays) {
-              setHolidays(savedData.holidays)
-            }
-            if (savedData.breakdowns) {
-              setBreakdowns(savedData.breakdowns)
-            }
-          }
+        const result = await response.json()
+        if (isMounted && result.success && result.data?.machine_data) {
+          applySavedSettings(result.data.machine_data)
         }
-      } catch (error) { }
-    }
-
-    if (userEmail) {
-      loadSavedSettings()
+      })().catch(() => {})
     }
 
     return () => {
@@ -958,7 +1089,7 @@ function SchedulerPageContent() {
   // Initialize backend services and load part numbers on component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      ; (window as any).XLSX = XLSX
+      ;(window as any).XLSX = XLSX
     }
 
     initializeBackendServices()
@@ -974,7 +1105,7 @@ function SchedulerPageContent() {
     }
 
     // Listen for XLSX loaded event
-    const handleXLSXLoaded = () => { }
+    const handleXLSXLoaded = () => {}
 
     if (typeof window !== 'undefined') {
       window.addEventListener('xlsxLoaded', handleXLSXLoaded)
@@ -1066,23 +1197,78 @@ function SchedulerPageContent() {
       setQualityScope('all')
       setPlaybackCursorMs(null)
       setIsPlaybackRunning(false)
+      setFlowTimeWindow({ start: '', end: '' })
+      setSelectedFlowKey(null)
       return
     }
 
     const { rows: flowRows, isApproximate } = buildPieceFlowRows(results, pieceTimelinePayload)
     const maxPiece = flowRows.reduce((max, row) => Math.max(max, row.piece), 1)
+    const minTs = flowRows.length > 0 ? Math.min(...flowRows.map(row => row.start.getTime())) : Date.now()
+    const maxTs = flowRows.length > 0 ? Math.max(...flowRows.map(row => row.end.getTime())) : Date.now()
 
     setPieceFlowRows(flowRows)
     setIsApproximateView(isApproximate)
-    setQualityReport(
-      evaluateScheduleQuality(
-        results,
-        advancedSettings.globalSetupWindow,
-        breakdowns,
-        flowRows,
-        holidays
-      )
+    const fallbackReport = {
+      status: 'BAD' as const,
+      score: 0,
+      kpi: {
+        feasibility: 0,
+        delivery: 0,
+        utilization: 0,
+        flow: 0,
+        machineUtilizationPct: 0,
+        personUtilizationPct: 0,
+        flowEfficiencyPct: 0,
+        onTimePct: 0,
+        avgQueueGapHours: 0,
+      },
+      issues: [
+        {
+          code: 'verification_exception',
+          rule: 'Quality Evaluation',
+          severity: 'critical' as const,
+          message: 'Verification failed during initial quality evaluation.',
+          entityRefs: ['quality-evaluator'],
+        },
+      ],
+      parameters: {
+        setupWindow: advancedSettings.globalSetupWindow,
+        breakdownCount: breakdowns.length,
+        holidayCount: holidays.length,
+        operationRows: results.length,
+        pieceRows: flowRows.length,
+      },
+      summary: {
+        total: 1,
+        critical: 1,
+        warning: 0,
+        info: 0,
+        byCode: { verification_exception: 1 },
+        validationFailures: 1,
+      },
+    }
+    const evaluation = safelyEvaluate(
+      () =>
+        evaluateScheduleQuality(
+          results,
+          advancedSettings.globalSetupWindow,
+          breakdowns,
+          flowRows,
+          holidays,
+          pieceTimelinePayload,
+          [
+            advancedSettings.productionWindowShift1,
+            advancedSettings.productionWindowShift2,
+            advancedSettings.productionWindowShift3,
+          ]
+        ),
+      fallbackReport
     )
+    setQualityReport(evaluation.value)
+    if (evaluation.error) {
+      alert(evaluation.error)
+    }
     setQualityScope('all')
     setFlowPartFilter('ALL')
     setPieceRange({ from: 1, to: Math.min(20, maxPiece) })
@@ -1090,11 +1276,19 @@ function SchedulerPageContent() {
     setFlowMapZoom(1)
     setPlaybackCursorMs(null)
     setIsPlaybackRunning(false)
+    setFlowTimeWindow({
+      start: toLocalDateTimeInput(new Date(minTs)),
+      end: toLocalDateTimeInput(new Date(maxTs)),
+    })
+    setSelectedFlowKey(null)
   }, [
     results,
     pieceTimelinePayload,
     showResults,
     advancedSettings.globalSetupWindow,
+    advancedSettings.productionWindowShift1,
+    advancedSettings.productionWindowShift2,
+    advancedSettings.productionWindowShift3,
     breakdowns,
     holidays,
   ])
@@ -1285,6 +1479,13 @@ function SchedulerPageContent() {
     endDateTime: string
     reason: string
   }) => {
+    const start = new Date(holidayData.startDateTime)
+    const end = new Date(holidayData.endDateTime)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      alert('Holiday end must be after start')
+      return
+    }
+
     const newHoliday: Holiday = {
       id: Date.now().toString(),
       startDateTime: holidayData.startDateTime,
@@ -1300,20 +1501,31 @@ function SchedulerPageContent() {
   }
 
   const handleAddBreakdown = () => {
-    if (
-      !breakdownForm.selectedMachines.length ||
-      !breakdownDateRange?.from ||
-      !breakdownDateRange?.to ||
-      !breakdownStartTime ||
-      !breakdownEndTime
-    ) {
-      alert('Please select machines, date range, and time range')
+    if (!breakdownForm.selectedMachines.length) {
+      alert('Please select at least one machine.')
+      return
+    }
+
+    if (!breakdownDateRange?.from || !breakdownDateRange?.to) {
+      alert('Please select a breakdown date range.')
+      return
+    }
+
+    if (!breakdownStartTime || !breakdownEndTime) {
+      alert('Please select both breakdown start and end times.')
       return
     }
 
     // Combine date and time
     const startDateTime = `${format(breakdownDateRange.from, 'yyyy-MM-dd')}T${breakdownStartTime}`
     const endDateTime = `${format(breakdownDateRange.to, 'yyyy-MM-dd')}T${breakdownEndTime}`
+    const start = new Date(startDateTime)
+    const end = new Date(endDateTime)
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      alert('Breakdown end must be after start')
+      return
+    }
 
     const newBreakdown: Breakdown = {
       id: Date.now().toString(),
@@ -1334,8 +1546,26 @@ function SchedulerPageContent() {
     setBreakdowns((prev: Breakdown[]) => prev.filter((breakdown: Breakdown) => breakdown.id !== id))
   }
 
+  const buildAdvancedSettingsPayload = (locked: boolean) => ({
+    user_email: userEmail,
+    global_start_datetime: advancedSettings.globalStartDateTime,
+    global_setup_window: advancedSettings.globalSetupWindow,
+    shift_1: advancedSettings.shift1,
+    shift_2: advancedSettings.shift2,
+    shift_3: advancedSettings.shift3,
+    production_shift_1: advancedSettings.productionWindowShift1,
+    production_shift_2: advancedSettings.productionWindowShift2,
+    production_shift_3: advancedSettings.productionWindowShift3,
+    holidays: holidays,
+    breakdowns: breakdowns,
+    is_locked: locked,
+    locked_at: locked ? new Date().toISOString() : null,
+    role: 'operator',
+  })
+
   // Handle lock/unlock settings to Supabase
   const handleToggleSettingsLock = async () => {
+    setLockLoading(true)
     try {
       if (settingsLocked) {
         // UNLOCK: Send unlock request to API
@@ -1359,28 +1589,12 @@ function SchedulerPageContent() {
         }
       } else {
         // LOCK: Save to Supabase with lock state
-        const settingsData = {
-          user_email: userEmail,
-          global_start_datetime: advancedSettings.globalStartDateTime,
-          global_setup_window: advancedSettings.globalSetupWindow,
-          shift_1: advancedSettings.shift1,
-          shift_2: advancedSettings.shift2,
-          production_shift_1: advancedSettings.productionWindowShift1,
-          production_shift_2: advancedSettings.productionWindowShift2,
-          production_shift_3: advancedSettings.productionWindowShift3,
-          holidays: holidays,
-          breakdowns: breakdowns,
-          is_locked: true, // Lock state
-          locked_at: new Date().toISOString(),
-          role: 'operator',
-        }
-
         const response = await apiClient('/api/save-advanced-settings', {
           method: 'POST',
           headers: {
             'X-User-Email': userEmail || 'default@user.com',
           },
-          body: JSON.stringify(settingsData),
+          body: JSON.stringify(buildAdvancedSettingsPayload(true)),
         })
 
         if (response.ok) {
@@ -1391,6 +1605,47 @@ function SchedulerPageContent() {
       }
     } catch (error) {
       alert('Failed to toggle settings lock. Please try again.')
+    } finally {
+      setLockLoading(false)
+    }
+  }
+
+  const handleSaveSettings = async () => {
+    setLockLoading(true)
+    try {
+      const response = await apiClient('/api/save-advanced-settings', {
+        method: 'POST',
+        headers: {
+          'X-User-Email': userEmail || 'default@user.com',
+        },
+        body: JSON.stringify(buildAdvancedSettingsPayload(settingsLocked)),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        const details = Array.isArray(payload?.details)
+          ? payload.details.join(', ')
+          : payload?.details || payload?.error
+        throw new Error(details || 'Failed to save settings')
+      }
+
+      alert(settingsLocked ? 'Locked settings saved.' : 'Settings saved.')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to save settings')
+    } finally {
+      setLockLoading(false)
+    }
+  }
+
+  const handleLoadSettings = async () => {
+    setLockLoading(true)
+    try {
+      const loaded = await loadSavedSettings()
+      if (!loaded) {
+        alert('No saved advanced settings found for this user.')
+      }
+    } finally {
+      setLockLoading(false)
     }
   }
 
@@ -1403,7 +1658,9 @@ function SchedulerPageContent() {
     }))
   }
 
-  const normalizeScheduleResponse = (payload: any): {
+  const normalizeScheduleResponse = (
+    payload: any
+  ): {
     rows: any[]
     pieceTimeline: PieceTimelinePayloadRow[]
   } => {
@@ -1446,7 +1703,10 @@ function SchedulerPageContent() {
         })()
 
       const ordersForScheduling = orders.map(order => {
-        const operationDetails = resolveImportedOperationDetails(order.partNumber, order.operationSeq)
+        const operationDetails = resolveImportedOperationDetails(
+          order.partNumber,
+          order.operationSeq
+        )
         if (operationDetails.length === 0) {
           return order
         }
@@ -1477,12 +1737,11 @@ function SchedulerPageContent() {
       setShowResults(true)
       setShowFlowMap(true)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown scheduling error'
       setResults([])
       setPieceTimelinePayload([])
       setShowResults(false)
       setShowFlowMap(false)
-      alert(`Scheduling failed: ${message}`)
+      alert(formatSchedulingFailureAlert(error))
     } finally {
       setLoading(false)
     }
@@ -1522,7 +1781,9 @@ function SchedulerPageContent() {
 
       try {
         const supabase = getSupabaseBrowserClient()
-        const { data: { session } } = await supabase.auth.getSession()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
         if (session?.user) {
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
@@ -1533,7 +1794,7 @@ function SchedulerPageContent() {
             .from('scheduler-imports')
             .upload(filePath, file, {
               cacheControl: '3600',
-              upsert: false
+              upsert: false,
             })
             .catch(err => console.error('Failed to upload Excel to Supabase:', err))
         }
@@ -1657,7 +1918,8 @@ function SchedulerPageContent() {
             fixedMachine: fixedMachine || undefined,
           }
 
-          const partMap = importedCatalogMap.get(partNumber) || new Map<number, ImportedOperationDetail>()
+          const partMap =
+            importedCatalogMap.get(partNumber) || new Map<number, ImportedOperationDetail>()
           partMap.set(operationSeq, detail)
           importedCatalogMap.set(partNumber, partMap)
         }
@@ -1852,7 +2114,7 @@ function SchedulerPageContent() {
           `Imported ${importedPartNumbers.length} part numbers and ${personnelParse.profiles.length} personnel profiles from ${file.name}. Scheduler will use imported operation details (setup/cycle/machines) and real personnel names where available.${personnelParse.issues.length > 0 ? ` Personnel parser warnings: ${personnelParse.issues.length}.` : ''}`
         )
       } catch (error) {
-        alert(`Failed to import Excel file: ${(error as Error).message}`)
+        alert(formatImportFailureAlert(error))
       }
     }
 
@@ -1893,6 +2155,13 @@ function SchedulerPageContent() {
           orders,
           holidays,
           breakdowns,
+          personnelProfiles: importedPersonnelProfiles,
+          shiftSettings: {
+            shift1: advancedSettings.shift1,
+            shift2: advancedSettings.shift2,
+            shift3: advancedSettings.shift3,
+            globalSetupWindow: advancedSettings.globalSetupWindow,
+          },
           qualityReport,
           generatedAt: new Date(),
         },
@@ -2170,13 +2439,62 @@ function SchedulerPageContent() {
     return Array.from(new Set(pieceFlowRows.map(row => row.part))).sort()
   }, [pieceFlowRows])
 
+  const flowDataBounds = React.useMemo(() => {
+    if (pieceFlowRows.length === 0) return null
+    return {
+      minTs: Math.min(...pieceFlowRows.map(row => row.start.getTime())),
+      maxTs: Math.max(...pieceFlowRows.map(row => row.end.getTime())),
+    }
+  }, [pieceFlowRows])
+
+  const flowWindowStartDate = React.useMemo(
+    () => toDate(flowTimeWindow.start),
+    [flowTimeWindow.start]
+  )
+  const flowWindowEndDate = React.useMemo(
+    () => toDate(flowTimeWindow.end),
+    [flowTimeWindow.end]
+  )
+  const hasFlowWindow =
+    Boolean(flowWindowStartDate && flowWindowEndDate && flowWindowEndDate > flowWindowStartDate)
+  const flowWindowHours =
+    hasFlowWindow && flowWindowStartDate && flowWindowEndDate
+      ? minutesBetween(flowWindowStartDate, flowWindowEndDate) / 60
+      : 0
+
   const filteredFlowRows = React.useMemo(() => {
-    return pieceFlowRows.filter(row => {
-      const partMatch = flowPartFilter === 'ALL' || row.part === flowPartFilter
-      const pieceMatch = row.piece >= pieceRange.from && row.piece <= pieceRange.to
-      return partMatch && pieceMatch
+    const baseRows = filterPieceFlowRows(pieceFlowRows, {
+      part: flowPartFilter,
+      pieceFrom: pieceRange.from,
+      pieceTo: pieceRange.to,
     })
-  }, [pieceFlowRows, flowPartFilter, pieceRange])
+
+    if (!flowWindowStartDate || !flowWindowEndDate || flowWindowEndDate <= flowWindowStartDate) {
+      return baseRows
+    }
+
+    return baseRows.filter(row => overlaps(row.start, row.end, flowWindowStartDate, flowWindowEndDate))
+  }, [pieceFlowRows, flowPartFilter, pieceRange, flowWindowStartDate, flowWindowEndDate])
+
+  const setFlowWindowFromDates = (start: Date, end: Date) => {
+    if (!start || !end || end <= start) return
+    setFlowTimeWindow({
+      start: toLocalDateTimeInput(start),
+      end: toLocalDateTimeInput(end),
+    })
+  }
+
+  const handleFitFlowWindow = () => {
+    if (!flowDataBounds) return
+    setFlowWindowFromDates(new Date(flowDataBounds.minTs), new Date(flowDataBounds.maxTs))
+  }
+
+  const handleFlowWindowPreset = (hours: number) => {
+    if (!flowDataBounds) return
+    const start = new Date(flowDataBounds.minTs)
+    const end = new Date(Math.min(flowDataBounds.maxTs, flowDataBounds.minTs + hours * 60 * 60 * 1000))
+    setFlowWindowFromDates(start, end)
+  }
 
   const buildScheduleRowKey = (row: any): string => {
     const part = String(row.partNumber || row.partnumber || row.part_number || 'UNKNOWN')
@@ -2190,6 +2508,138 @@ function SchedulerPageContent() {
     return `${row.part}|${row.batch}|${row.operationSeq}|${normalizeMachineLane(row.machine)}`
   }
 
+  const scheduleMetaByKey = React.useMemo(() => {
+    const lookup = new Map<
+      string,
+      {
+        setupPerson: string
+        runPerson: string
+        setupStart: string
+        setupEnd: string
+        runStart: string
+        runEnd: string
+      }
+    >()
+    results.forEach((row: any) => {
+      lookup.set(buildScheduleRowKey(row), {
+        setupPerson: String(row.setupPersonName || row.person || 'Unassigned'),
+        runPerson: String(row.productionPersonName || row.person || 'Unassigned'),
+        setupStart: String(row.setupStart || ''),
+        setupEnd: String(row.setupEnd || ''),
+        runStart: String(row.runStart || ''),
+        runEnd: String(row.runEnd || ''),
+      })
+    })
+    return lookup
+  }, [results])
+
+  const productionWindows = React.useMemo(
+    () =>
+      [
+        advancedSettings.productionWindowShift1,
+        advancedSettings.productionWindowShift2,
+        advancedSettings.productionWindowShift3,
+      ]
+        .map(value => String(value || '').trim())
+        .filter(Boolean),
+    [
+      advancedSettings.productionWindowShift1,
+      advancedSettings.productionWindowShift2,
+      advancedSettings.productionWindowShift3,
+    ]
+  )
+
+  const selectedPieceRows = React.useMemo(() => {
+    if (!selectedFlowKey) return []
+    const tokens = selectedFlowKey.split('|')
+    if (tokens.length < 4) return []
+    const [part, batch, pieceToken] = tokens
+    const piece = Number(pieceToken)
+    if (!Number.isFinite(piece)) return []
+    return pieceFlowRows
+      .filter(row => row.part === part && row.batch === batch && row.piece === piece)
+      .sort((a, b) => a.operationSeq - b.operationSeq)
+  }, [selectedFlowKey, pieceFlowRows])
+
+  const classifyGapReason = React.useCallback(
+    (start: Date, end: Date, machine: string): string => {
+      if (end <= start) return 'No gap'
+      if (
+        holidays.some(holiday => {
+          const hStart = toDate(holiday.startDateTime)
+          const hEnd = toDate(holiday.endDateTime)
+          return hStart && hEnd && overlaps(start, end, hStart, hEnd)
+        })
+      ) {
+        return 'Holiday pause'
+      }
+      if (
+        breakdowns.some(item => {
+          if (!item.machines.map(normalizeMachineLane).includes(normalizeMachineLane(machine))) {
+            return false
+          }
+          const bStart = toDate(item.startDateTime)
+          const bEnd = toDate(item.endDateTime)
+          return bStart && bEnd && overlaps(start, end, bStart, bEnd)
+        })
+      ) {
+        return 'Machine breakdown'
+      }
+
+      const sample = new Date(start.getTime() + Math.max(1, end.getTime() - start.getTime()) / 2)
+      const inProductionWindow =
+        productionWindows.length === 0
+          ? true
+          : productionWindows.some(window => isWithinWindow(sample, window))
+      if (!inProductionWindow) {
+        return 'Production window closed'
+      }
+
+      return 'Queue / machine availability'
+    },
+    [holidays, breakdowns, productionWindows]
+  )
+
+  const selectedPieceDetails = React.useMemo(() => {
+    if (selectedPieceRows.length === 0) return []
+    return selectedPieceRows.map((row, index) => {
+      const lookupKey = `${row.part}|${row.batch}|${row.operationSeq}|${normalizeMachineLane(row.machine)}`
+      const scheduleMeta = scheduleMetaByKey.get(lookupKey)
+      const prevRow = index > 0 ? selectedPieceRows[index - 1] : null
+      const gapMinutes =
+        prevRow && row.start > prevRow.end ? minutesBetween(prevRow.end, row.start) : 0
+      return {
+        row,
+        scheduleMeta,
+        gapMinutes,
+        gapReason:
+          gapMinutes > 0 && prevRow
+            ? classifyGapReason(prevRow.end, row.start, row.machine)
+            : 'No queue gap',
+      }
+    })
+  }, [selectedPieceRows, scheduleMetaByKey, classifyGapReason])
+
+  const selectedPieceSummary = React.useMemo(() => {
+    if (selectedPieceDetails.length === 0) {
+      return {
+        activeMinutes: 0,
+        queueMinutes: 0,
+        flowEfficiencyPct: 0,
+      }
+    }
+    const activeMinutes = selectedPieceDetails.reduce(
+      (sum, detail) => sum + minutesBetween(detail.row.start, detail.row.end),
+      0
+    )
+    const queueMinutes = selectedPieceDetails.reduce((sum, detail) => sum + detail.gapMinutes, 0)
+    const flowEfficiencyPct =
+      activeMinutes + queueMinutes > 0
+        ? clampPct((activeMinutes / (activeMinutes + queueMinutes)) * 100)
+        : 100
+    return { activeMinutes, queueMinutes, flowEfficiencyPct }
+  }, [selectedPieceDetails])
+
   const runQualityEvaluation = (filteredOnly: boolean) => {
     if (!showResults || results.length === 0) return
 
@@ -2202,14 +2652,66 @@ function SchedulerPageContent() {
       pieceRowsForValidation = filteredFlowRows
     }
 
-    const report = evaluateScheduleQuality(
-      scheduleRows,
-      advancedSettings.globalSetupWindow,
-      breakdowns,
-      pieceRowsForValidation,
-      holidays
+    const fallbackReport = {
+      status: 'BAD' as const,
+      score: 0,
+      kpi: {
+        feasibility: 0,
+        delivery: 0,
+        utilization: 0,
+        flow: 0,
+        machineUtilizationPct: 0,
+        personUtilizationPct: 0,
+        flowEfficiencyPct: 0,
+        onTimePct: 0,
+        avgQueueGapHours: 0,
+      },
+      issues: [
+        {
+          code: 'verification_exception',
+          rule: 'Quality Evaluation',
+          severity: 'critical' as const,
+          message: 'Verification failed during quality evaluation.',
+          entityRefs: ['quality-evaluator'],
+        },
+      ],
+      parameters: {
+        setupWindow: advancedSettings.globalSetupWindow,
+        breakdownCount: breakdowns.length,
+        holidayCount: holidays.length,
+        operationRows: scheduleRows.length,
+        pieceRows: pieceRowsForValidation.length,
+      },
+      summary: {
+        total: 1,
+        critical: 1,
+        warning: 0,
+        info: 0,
+        byCode: { verification_exception: 1 },
+        validationFailures: 1,
+      },
+    }
+    const evaluation = safelyEvaluate(
+      () =>
+        evaluateScheduleQuality(
+          scheduleRows,
+          advancedSettings.globalSetupWindow,
+          breakdowns,
+          pieceRowsForValidation,
+          holidays,
+          pieceTimelinePayload,
+          [
+            advancedSettings.productionWindowShift1,
+            advancedSettings.productionWindowShift2,
+            advancedSettings.productionWindowShift3,
+          ]
+        ),
+      fallbackReport
     )
-    setQualityReport(report)
+    setQualityReport(evaluation.value)
+    if (evaluation.error) {
+      alert(evaluation.error)
+    }
     setQualityScope(filteredOnly ? 'filtered' : 'all')
   }
 
@@ -2217,7 +2719,7 @@ function SchedulerPageContent() {
     const leftPad = 190
     const rightPad = 210
     const laneHeight = 64
-    const topPad = 88
+    const topPad = 104
     const lanes = MACHINE_LANES.map((machine, index) => ({
       machine,
       y: topPad + index * laneHeight,
@@ -2245,10 +2747,15 @@ function SchedulerPageContent() {
       }>,
       links: [] as Array<{ id: string; d: string; color: string }>,
       operationLegend: [] as number[],
-      timeTicks: [] as Array<{ x: number; label: string }>,
+      timeTicks: [] as Array<{ x: number; dateLabel: string; timeLabel: string }>,
       resolvedMode: flowMapMode,
       isDense: false,
-      timeline: null as null | { minTs: number; maxTs: number; leftPad: number; trackWidth: number },
+      timeline: null as null | {
+        minTs: number
+        maxTs: number
+        leftPad: number
+        trackWidth: number
+      },
     }
 
     if (filteredFlowRows.length === 0) {
@@ -2361,7 +2868,10 @@ function SchedulerPageContent() {
         const opOrder = laneOps.get(group.machine) || []
         const opIndex = Math.max(0, opOrder.indexOf(group.operationSeq))
         const laneOffset = ((opIndex % 6) - 2.5) * 6
-        const y = (machineY.get(group.machine) ?? topPad + MACHINE_LANES.length * laneHeight) - 15 + laneOffset
+        const y =
+          (machineY.get(group.machine) ?? topPad + MACHINE_LANES.length * laneHeight) -
+          15 +
+          laneOffset
         const pieceLabel =
           group.pieceMin === group.pieceMax
             ? `P${group.pieceMin}`
@@ -2393,7 +2903,9 @@ function SchedulerPageContent() {
       })
 
       groupedByBatch.forEach((rows, key) => {
-        const sorted = [...rows].sort((a, b) => a.operationSeq - b.operationSeq || a.start - b.start)
+        const sorted = [...rows].sort(
+          (a, b) => a.operationSeq - b.operationSeq || a.start - b.start
+        )
         for (let i = 1; i < sorted.length; i++) {
           const prevNode = nodeById.get(sorted[i - 1].id)
           const currNode = nodeById.get(sorted[i].id)
@@ -2415,7 +2927,10 @@ function SchedulerPageContent() {
       const bucketSpanMs = Math.max(3 * 60_000, Math.floor(span / 260))
       const stackDepth = 5
       const sortedRows = [...filteredFlowRows].sort(
-        (a, b) => a.start.getTime() - b.start.getTime() || a.operationSeq - b.operationSeq || a.piece - b.piece
+        (a, b) =>
+          a.start.getTime() - b.start.getTime() ||
+          a.operationSeq - b.operationSeq ||
+          a.piece - b.piece
       )
 
       nodes = sortedRows.map(row => {
@@ -2428,8 +2943,9 @@ function SchedulerPageContent() {
         const slotKey = `${row.machine}|${bucket}`
         const slot = laneSlotCounts.get(slotKey) || 0
         laneSlotCounts.set(slotKey, slot + 1)
-        const offset = (slot % stackDepth) * 6 - ((stackDepth - 1) * 3)
-        const y = (machineY.get(row.machine) ?? topPad + MACHINE_LANES.length * laneHeight) - 15 + offset
+        const offset = (slot % stackDepth) * 6 - (stackDepth - 1) * 3
+        const y =
+          (machineY.get(row.machine) ?? topPad + MACHINE_LANES.length * laneHeight) - 15 + offset
         const showLabel = widthPx >= 46 && (row.piece <= 12 || row.piece % 25 === 0)
         return {
           id: row.id,
@@ -2490,14 +3006,16 @@ function SchedulerPageContent() {
       (a, b) => a - b
     )
 
-    const tickCount = 8
+    const spanHours = span / (60 * 60 * 1000)
+    const tickCount = spanHours <= 24 ? 8 : spanHours <= 72 ? 10 : 12
     const timeTicks = Array.from({ length: tickCount + 1 }, (_, index) => {
       const ratio = index / tickCount
       const tickMs = minTs + span * ratio
       const tickDate = new Date(tickMs)
       return {
         x: leftPad + trackWidth * ratio,
-        label: tickDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        dateLabel: tickDate.toLocaleDateString([], { month: 'short', day: '2-digit' }),
+        timeLabel: tickDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }
     })
 
@@ -2515,6 +3033,150 @@ function SchedulerPageContent() {
       timeline: { minTs, maxTs, leftPad, trackWidth },
     }
   }, [filteredFlowRows, availableFlowParts, flowMapMode, flowMapZoom])
+
+  const personTimelineModel = React.useMemo(() => {
+    if (!flowMapModel.timeline || !showPersonTimeline) {
+      return {
+        width: flowMapModel.width,
+        height: 0,
+        leftPad: 190,
+        rightPad: 210,
+        lanes: [] as Array<{ person: string; y: number }>,
+        segments: [] as Array<{
+          id: string
+          x: number
+          y: number
+          width: number
+          fill: string
+          stroke: string
+          label: string
+          tooltip: string
+        }>,
+      }
+    }
+
+    const { minTs, maxTs, leftPad, trackWidth } = flowMapModel.timeline
+    const span = Math.max(1, maxTs - minTs)
+    const selectedOps = new Set(
+      selectedPieceRows.map(row => `${row.part}|${row.batch}|${row.operationSeq}`)
+    )
+    const toX = (ts: number) => leftPad + ((ts - minTs) / span) * trackWidth
+    const keySet = new Set(filteredFlowRows.map(buildPieceRowKey))
+    const relevantScheduleRows = results.filter((row: any) => keySet.has(buildScheduleRowKey(row)))
+    const laneOrder = new Set<string>()
+    const seeds: Array<{
+      person: string
+      type: 'setup' | 'run'
+      machine: string
+      part: string
+      batch: string
+      operationSeq: number
+      startTs: number
+      endTs: number
+    }> = []
+
+    const pushSegment = (
+      personRaw: string,
+      type: 'setup' | 'run',
+      machineRaw: string,
+      partRaw: string,
+      batchRaw: string,
+      operationSeqRaw: number,
+      startRaw: any,
+      endRaw: any
+    ) => {
+      const start = toDate(startRaw)
+      const end = toDate(endRaw)
+      if (!start || !end || end <= start) return
+      const clipStart = Math.max(minTs, start.getTime())
+      const clipEnd = Math.min(maxTs, end.getTime())
+      if (clipEnd <= clipStart) return
+
+      const person = String(personRaw || 'Unassigned').trim() || 'Unassigned'
+      const machine = normalizeMachineLane(machineRaw || 'VMC 1')
+      const part = String(partRaw || 'UNKNOWN')
+      const batch = String(batchRaw || 'B')
+      const operationSeq = Number(operationSeqRaw || 1)
+
+      laneOrder.add(person)
+      seeds.push({
+        person,
+        type,
+        machine,
+        part,
+        batch,
+        operationSeq,
+        startTs: clipStart,
+        endTs: clipEnd,
+      })
+    }
+
+    relevantScheduleRows.forEach((row: any) => {
+      const machine = normalizeMachineLane(row.machine || 'VMC 1')
+      const part = String(row.partNumber || row.partnumber || row.part_number || 'UNKNOWN')
+      const batch = String(row.batchId || row.batch_id || 'B')
+      const op = Number(row.operationSeq || row.operation_seq || 1)
+      pushSegment(
+        String(row.setupPersonName || row.person || 'Unassigned'),
+        'setup',
+        machine,
+        part,
+        batch,
+        op,
+        row.setupStart || row.setup_start,
+        row.setupEnd || row.setup_end
+      )
+      pushSegment(
+        String(row.productionPersonName || row.person || 'Unassigned'),
+        'run',
+        machine,
+        part,
+        batch,
+        op,
+        row.runStart || row.run_start,
+        row.runEnd || row.run_end
+      )
+    })
+
+    const lanes = Array.from(laneOrder)
+      .sort((a, b) => a.localeCompare(b))
+      .map((person, index) => ({ person, y: 54 + index * 38 }))
+    const laneY = new Map(lanes.map(lane => [lane.person, lane.y]))
+    const segments = seeds.map((seed, index) => {
+      const x = toX(seed.startTs)
+      const width = Math.max(10, toX(seed.endTs) - x)
+      const y = (laneY.get(seed.person) || 54) - 10
+      const selectedKey = `${seed.part}|${seed.batch}|${seed.operationSeq}`
+      const isSelected = selectedOps.has(selectedKey)
+      const fill = seed.type === 'setup' ? '#f59e0b' : '#22c55e'
+      return {
+        id: `${seed.person}-${seed.type}-${seed.machine}-${seed.startTs}-${index}`,
+        x,
+        y,
+        width,
+        fill,
+        stroke: isSelected ? '#e2e8f0' : '#0f172a',
+        label: `${seed.type === 'setup' ? 'S' : 'R'} OP${seed.operationSeq}`,
+        tooltip: `${seed.person} | ${seed.type.toUpperCase()} | ${seed.part} ${seed.batch} OP${seed.operationSeq} | ${seed.machine}\n${new Date(seed.startTs).toLocaleString()} -> ${new Date(seed.endTs).toLocaleString()}`,
+      }
+    })
+
+    return {
+      width: flowMapModel.width,
+      height: lanes.length === 0 ? 0 : 54 + lanes.length * 38 + 28,
+      leftPad,
+      rightPad: flowMapModel.width - leftPad - trackWidth,
+      lanes,
+      segments,
+    }
+  }, [
+    flowMapModel.timeline,
+    flowMapModel.width,
+    showPersonTimeline,
+    filteredFlowRows,
+    results,
+    selectedPieceRows,
+  ])
 
   const playbackCursorX = React.useMemo(() => {
     if (!flowMapModel.timeline || playbackCursorMs === null) return null
@@ -2586,9 +3248,7 @@ function SchedulerPageContent() {
       return
     }
     const { minTs, maxTs } = flowMapModel.timeline
-    setPlaybackCursorMs(prev =>
-      prev === null ? minTs : Math.max(minTs, Math.min(maxTs, prev))
-    )
+    setPlaybackCursorMs(prev => (prev === null ? minTs : Math.max(minTs, Math.min(maxTs, prev))))
   }, [flowMapModel.timeline])
 
   const cardSurfaceClass =
@@ -2685,9 +3345,16 @@ function SchedulerPageContent() {
                   </h3>
                   {importedExcelMeta && (
                     <div className="mb-4">
-                      <Badge variant="outline" className="border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center w-fit gap-2">
+                      <Badge
+                        variant="outline"
+                        className="border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center w-fit gap-2"
+                      >
                         Import Excel: {importedExcelMeta.fileName}
-                        <button onClick={handleRemoveImportedData} className="hover:text-cyan-900 focus:outline-none" title="Remove imported data">
+                        <button
+                          onClick={handleRemoveImportedData}
+                          className="hover:text-cyan-900 focus:outline-none"
+                          title="Remove imported data"
+                        >
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
                       </Badge>
@@ -2840,8 +3507,9 @@ function SchedulerPageContent() {
                                 return (
                                   <div
                                     key={`${operation}-${index}`}
-                                    className={`px-3 py-2 cursor-pointer rounded transition-colors ${isSelected ? 'bg-gray-200' : 'hover:bg-gray-100'
-                                      }`}
+                                    className={`px-3 py-2 cursor-pointer rounded transition-colors ${
+                                      isSelected ? 'bg-gray-200' : 'hover:bg-gray-100'
+                                    }`}
                                     onClick={e => {
                                       e.preventDefault()
                                       e.stopPropagation()
@@ -2851,10 +3519,11 @@ function SchedulerPageContent() {
                                     <div className="flex items-center gap-3">
                                       {/* Simple Checkbox */}
                                       <div
-                                        className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected
-                                          ? 'bg-gray-400 border-gray-400'
-                                          : 'border-gray-300'
-                                          }`}
+                                        className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                          isSelected
+                                            ? 'bg-gray-400 border-gray-400'
+                                            : 'border-gray-300'
+                                        }`}
                                       >
                                         {isSelected && (
                                           <div className="w-2 h-2 bg-white rounded-sm"></div>
@@ -3315,7 +3984,10 @@ function SchedulerPageContent() {
                             </td>
                             <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
                               <div className="leading-tight">
-                                <div>Run: {result.productionPersonName || result.person || 'Unassigned'}</div>
+                                <div>
+                                  Run:{' '}
+                                  {result.productionPersonName || result.person || 'Unassigned'}
+                                </div>
                                 <div className="text-[11px] text-gray-500 dark:text-slate-400">
                                   Setup: {result.setupPersonName || result.person || 'Unassigned'}
                                 </div>
@@ -3380,36 +4052,66 @@ function SchedulerPageContent() {
 
                   {qualityReport && (
                     <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Badge
-                          className={
-                            qualityReport.status === 'GOOD'
-                              ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800'
-                              : qualityReport.status === 'WARNING'
-                                ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800'
-                                : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800'
-                          }
-                        >
-                          Quality: {qualityReport.status}
-                        </Badge>
-                        <span className="text-sm font-medium text-gray-700 dark:text-slate-200">
-                          Score: {qualityReport.score}/100
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-slate-400">
-                          Params: Setup {qualityReport.parameters.setupWindow} | Breakdowns{' '}
-                          {qualityReport.parameters.breakdownCount} | Holidays{' '}
-                          {qualityReport.parameters.holidayCount} | Ops{' '}
-                          {qualityReport.parameters.operationRows} | Pieces{' '}
-                          {qualityReport.parameters.pieceRows}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-slate-400">
-                          Conflicts: {qualityReport.summary.critical} critical,{' '}
-                          {qualityReport.summary.warning} warning, {qualityReport.summary.info} info |{' '}
-                          validation_failures={qualityReport.summary.validationFailures}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-slate-400">
-                          Scope: {qualityScope === 'filtered' ? 'filtered view only' : 'all rows'}
-                        </span>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Badge
+                            className={
+                              qualityReport.status === 'GOOD'
+                                ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800'
+                                : qualityReport.status === 'WARNING'
+                                  ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800'
+                                  : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800'
+                            }
+                          >
+                            Quality: {qualityReport.status}
+                          </Badge>
+                          <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
+                            Score: {qualityReport.score}/100
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-slate-400">
+                            Scope: {qualityScope === 'filtered' ? 'filtered view only' : 'all rows'}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-slate-300">
+                          <span className="rounded border border-gray-300 bg-white px-2 py-0.5 dark:border-slate-700 dark:bg-slate-950">
+                            Feasibility {Math.round(qualityReport.kpi.feasibility)}%
+                          </span>
+                          <span className="rounded border border-gray-300 bg-white px-2 py-0.5 dark:border-slate-700 dark:bg-slate-950">
+                            Delivery {Math.round(qualityReport.kpi.delivery)}%
+                          </span>
+                          <span className="rounded border border-gray-300 bg-white px-2 py-0.5 dark:border-slate-700 dark:bg-slate-950">
+                            Utilization {Math.round(qualityReport.kpi.utilization)}%
+                          </span>
+                          <span className="rounded border border-gray-300 bg-white px-2 py-0.5 dark:border-slate-700 dark:bg-slate-950">
+                            Flow {Math.round(qualityReport.kpi.flow)}%
+                          </span>
+                          <span className="rounded border border-cyan-300 bg-cyan-50 px-2 py-0.5 text-cyan-800 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-200">
+                            Machine Util {qualityReport.kpi.machineUtilizationPct.toFixed(1)}%
+                          </span>
+                          <span className="rounded border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                            Person Util {qualityReport.kpi.personUtilizationPct.toFixed(1)}%
+                          </span>
+                          <span className="rounded border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-200">
+                            On-time {qualityReport.kpi.onTimePct.toFixed(1)}%
+                          </span>
+                          <span className="rounded border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                            Avg Queue {qualityReport.kpi.avgQueueGapHours.toFixed(2)}h
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-slate-400">
+                          <span>
+                            Params: Setup {qualityReport.parameters.setupWindow} | Breakdowns{' '}
+                            {qualityReport.parameters.breakdownCount} | Holidays{' '}
+                            {qualityReport.parameters.holidayCount} | Ops{' '}
+                            {qualityReport.parameters.operationRows} | Pieces{' '}
+                            {qualityReport.parameters.pieceRows}
+                          </span>
+                          <span>
+                            Conflicts: {qualityReport.summary.critical} critical,{' '}
+                            {qualityReport.summary.warning} warning, {qualityReport.summary.info}{' '}
+                            info | validation_failures={qualityReport.summary.validationFailures}
+                          </span>
+                        </div>
                       </div>
                       {qualityReport.issues.length > 0 ? (
                         <div className="mt-3 space-y-1 text-xs text-gray-600 dark:text-slate-300 max-h-40 overflow-y-auto">
@@ -3425,7 +4127,9 @@ function SchedulerPageContent() {
                                 }
                               }}
                             >
-                              <span className={`font-semibold ${issue.severity === 'critical' ? 'text-red-400' : issue.severity === 'warning' ? 'text-amber-400' : 'text-blue-400'}`}>
+                              <span
+                                className={`font-semibold ${issue.severity === 'critical' ? 'text-red-400' : issue.severity === 'warning' ? 'text-amber-400' : 'text-blue-400'}`}
+                              >
                                 {issue.severity === 'critical'
                                   ? '[Critical]'
                                   : issue.severity === 'warning'
@@ -3455,15 +4159,21 @@ function SchedulerPageContent() {
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-3">
-                            <h4 className="text-base font-semibold text-cyan-100">Piece Flow Map</h4>
+                            <h4 className="text-base font-semibold text-cyan-100">
+                              Piece Flow Map
+                            </h4>
                             {isApproximateView && (
-                              <Badge variant="outline" className="text-[10px] border-yellow-700/50 bg-yellow-900/20 text-yellow-400">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] border-yellow-700/50 bg-yellow-900/20 text-yellow-400"
+                              >
                                 Approximate View
                               </Badge>
                             )}
                           </div>
                           <p className="text-xs text-cyan-200/80">
-                            Switch modes to analyze your schedule geometry, piece links, or play back event simulations.
+                            Switch modes to analyze your schedule geometry, piece links, or play
+                            back event simulations.
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -3471,30 +4181,33 @@ function SchedulerPageContent() {
                             <button
                               type="button"
                               onClick={() => setFlowMapMode('blocks')}
-                              className={`h-8 px-3 text-xs font-medium ${flowMapMode === 'blocks'
-                                ? 'bg-cyan-500/20 text-cyan-100'
-                                : 'bg-slate-900 text-cyan-300'
-                                }`}
+                              className={`h-8 px-3 text-xs font-medium ${
+                                flowMapMode === 'blocks'
+                                  ? 'bg-cyan-500/20 text-cyan-100'
+                                  : 'bg-slate-900 text-cyan-300'
+                              }`}
                             >
                               Blocks
                             </button>
                             <button
                               type="button"
                               onClick={() => setFlowMapMode('trace')}
-                              className={`h-8 px-3 text-xs font-medium ${flowMapMode === 'trace'
-                                ? 'bg-cyan-500/20 text-cyan-100'
-                                : 'bg-slate-900 text-cyan-300'
-                                }`}
+                              className={`h-8 px-3 text-xs font-medium ${
+                                flowMapMode === 'trace'
+                                  ? 'bg-cyan-500/20 text-cyan-100'
+                                  : 'bg-slate-900 text-cyan-300'
+                              }`}
                             >
                               Trace
                             </button>
                             <button
                               type="button"
                               onClick={() => setFlowMapMode('playback')}
-                              className={`h-8 px-3 text-xs font-medium ${flowMapMode === 'playback'
-                                ? 'bg-cyan-500/20 text-cyan-100'
-                                : 'bg-slate-900 text-cyan-300'
-                                }`}
+                              className={`h-8 px-3 text-xs font-medium ${
+                                flowMapMode === 'playback'
+                                  ? 'bg-cyan-500/20 text-cyan-100'
+                                  : 'bg-slate-900 text-cyan-300'
+                              }`}
                             >
                               Playback
                             </button>
@@ -3546,9 +4259,113 @@ function SchedulerPageContent() {
                               onChange={e => setFlowMapZoom(Number(e.target.value))}
                               className="w-20 accent-cyan-400"
                             />
-                            <span className="text-[11px] text-cyan-200">{Math.round(flowMapZoom * 100)}%</span>
+                            <span className="text-[11px] text-cyan-200">
+                              {Math.round(flowMapZoom * 100)}%
+                            </span>
                           </div>
                         </div>
+                      </div>
+                      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-cyan-800 bg-slate-900/70 px-3 py-2">
+                        <span className="text-xs font-semibold text-cyan-200">Time Window</span>
+                        <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                          <span className="text-[11px] text-cyan-300">From</span>
+                          <Input
+                            type="datetime-local"
+                            value={flowTimeWindow.start}
+                            onChange={e =>
+                              setFlowTimeWindow(prev => ({ ...prev, start: e.target.value }))
+                            }
+                            className="h-6 w-[180px] border-cyan-700 bg-slate-900 text-cyan-100"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                          <span className="text-[11px] text-cyan-300">To</span>
+                          <Input
+                            type="datetime-local"
+                            value={flowTimeWindow.end}
+                            onChange={e =>
+                              setFlowTimeWindow(prev => ({ ...prev, end: e.target.value }))
+                            }
+                            className="h-6 w-[180px] border-cyan-700 bg-slate-900 text-cyan-100"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleFitFlowWindow}
+                          disabled={!flowDataBounds}
+                          className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                        >
+                          Fit
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleFlowWindowPreset(24)}
+                          disabled={!flowDataBounds}
+                          className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                        >
+                          24h
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleFlowWindowPreset(72)}
+                          disabled={!flowDataBounds}
+                          className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                        >
+                          72h
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleFlowWindowPreset(7 * 24)}
+                          disabled={!flowDataBounds}
+                          className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                        >
+                          7d
+                        </Button>
+                        <label className="inline-flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8 text-[11px] text-cyan-200">
+                          <input
+                            type="checkbox"
+                            checked={showPersonTimeline}
+                            onChange={e => setShowPersonTimeline(e.target.checked)}
+                            className="accent-cyan-400"
+                          />
+                          Show person timeline
+                        </label>
+                        {flowDataBounds && (
+                          <span className="text-[11px] text-cyan-200/85">
+                            Data:{' '}
+                            {new Date(flowDataBounds.minTs).toLocaleString([], {
+                              month: 'short',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}{' '}
+                            -{' '}
+                            {new Date(flowDataBounds.maxTs).toLocaleString([], {
+                              month: 'short',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        )}
+                        {hasFlowWindow && (
+                          <span className="text-[11px] rounded border border-cyan-700/70 bg-slate-950 px-2 py-1 text-cyan-200">
+                            Window {flowWindowHours.toFixed(1)}h
+                          </span>
+                        )}
+                        {!hasFlowWindow && flowTimeWindow.start && flowTimeWindow.end && (
+                          <span className="text-[11px] rounded border border-amber-700/60 bg-amber-900/20 px-2 py-1 text-amber-300">
+                            Invalid time range
+                          </span>
+                        )}
                       </div>
                       <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-cyan-800 bg-slate-900/70 px-3 py-2">
                         <span className="text-xs font-semibold text-cyan-200">
@@ -3624,9 +4441,9 @@ function SchedulerPageContent() {
                       </div>
                       {flowMapMode === 'trace' && flowMapModel.isDense && (
                         <p className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                          Too dense to render every piece clearly. Showing the selected piece slice (
-                          {pieceRange.from}-{pieceRange.to}). Narrow part/piece filters or reduce range
-                          for clean one-by-one tracing.
+                          Too dense to render every piece clearly. Showing the selected piece slice
+                          ({pieceRange.from}-{pieceRange.to}). Narrow part/piece filters or reduce
+                          range for clean one-by-one tracing.
                         </p>
                       )}
 
@@ -3661,7 +4478,7 @@ function SchedulerPageContent() {
                                   <line
                                     x1={tick.x}
                                     x2={tick.x}
-                                    y1={44}
+                                    y1={58}
                                     y2={flowMapModel.height - 32}
                                     stroke="#12253f"
                                     strokeWidth={1}
@@ -3669,12 +4486,22 @@ function SchedulerPageContent() {
                                   />
                                   <text
                                     x={tick.x}
-                                    y={30}
+                                    y={24}
+                                    fill="#88c4ff"
+                                    fontSize={11}
+                                    textAnchor="middle"
+                                    fontWeight={700}
+                                  >
+                                    {tick.dateLabel}
+                                  </text>
+                                  <text
+                                    x={tick.x}
+                                    y={40}
                                     fill="#6ba6ff"
                                     fontSize={11}
                                     textAnchor="middle"
                                   >
-                                    {tick.label}
+                                    {tick.timeLabel}
                                   </text>
                                 </g>
                               ))}
@@ -3683,7 +4510,7 @@ function SchedulerPageContent() {
                                   <line
                                     x1={playbackCursorX}
                                     x2={playbackCursorX}
-                                    y1={44}
+                                    y1={58}
                                     y2={flowMapModel.height - 32}
                                     stroke="#ffd166"
                                     strokeWidth={2}
@@ -3691,17 +4518,19 @@ function SchedulerPageContent() {
                                   />
                                   <text
                                     x={playbackCursorX}
-                                    y={18}
+                                    y={16}
                                     fill="#ffd166"
                                     fontSize={11}
                                     textAnchor="middle"
                                     fontWeight={700}
                                   >
                                     {playbackCursorMs
-                                      ? new Date(playbackCursorMs).toLocaleTimeString([], {
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                      })
+                                      ? new Date(playbackCursorMs).toLocaleString([], {
+                                          month: 'short',
+                                          day: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })
                                       : ''}
                                   </text>
                                 </g>
@@ -3766,15 +4595,15 @@ function SchedulerPageContent() {
                                     fill={node.fill}
                                     stroke={
                                       playbackCursorMs !== null &&
-                                        node.startTs <= playbackCursorMs &&
-                                        node.endTs >= playbackCursorMs
+                                      node.startTs <= playbackCursorMs &&
+                                      node.endTs >= playbackCursorMs
                                         ? '#fef08a'
                                         : node.stroke
                                     }
                                     strokeWidth={
                                       playbackCursorMs !== null &&
-                                        node.startTs <= playbackCursorMs &&
-                                        node.endTs >= playbackCursorMs
+                                      node.startTs <= playbackCursorMs &&
+                                      node.endTs >= playbackCursorMs
                                         ? 2.8
                                         : node.stroke === '#ecfeff'
                                           ? 2.3
@@ -3796,8 +4625,15 @@ function SchedulerPageContent() {
                                     rx={6}
                                     fill="transparent"
                                     cursor="crosshair"
-                                    onMouseEnter={(e) => setHoveredNode({ node, x: e.clientX, y: e.clientY })}
-                                    onMouseMove={(e) => setHoveredNode(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
+                                    onClick={() => setSelectedFlowKey(node.key)}
+                                    onMouseEnter={e =>
+                                      setHoveredNode({ node, x: e.clientX, y: e.clientY })
+                                    }
+                                    onMouseMove={e =>
+                                      setHoveredNode(prev =>
+                                        prev ? { ...prev, x: e.clientX, y: e.clientY } : null
+                                      )
+                                    }
                                     onMouseLeave={() => setHoveredNode(null)}
                                   />
                                   {node.showLabel && (
@@ -3827,21 +4663,177 @@ function SchedulerPageContent() {
                               className="pointer-events-none fixed z-50 flex flex-col gap-1 rounded-md border border-cyan-800 bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-sm shadow-black/50"
                               style={{
                                 top: hoveredNode.y + 15,
-                                left: hoveredNode.x + 15
+                                left: hoveredNode.x + 15,
                               }}
                             >
-                              <div className="font-bold text-cyan-100">{hoveredNode.node.label || hoveredNode.node.shortLabel}</div>
+                              <div className="font-bold text-cyan-100">
+                                {hoveredNode.node.label || hoveredNode.node.shortLabel}
+                              </div>
                               <div className="text-cyan-300/80">
                                 <span className="inline-block w-12 text-slate-500">Start:</span>
-                                {new Date(hoveredNode.node.startTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                {new Date(hoveredNode.node.startTs).toLocaleString()}
                               </div>
                               <div className="text-cyan-300/80">
                                 <span className="inline-block w-12 text-slate-500">End:</span>
-                                {new Date(hoveredNode.node.endTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                {new Date(hoveredNode.node.endTs).toLocaleString()}
                               </div>
                               <div className="mt-1 border-t border-cyan-800/50 pt-1 text-[10px] text-slate-400 whitespace-pre-wrap">
                                 {hoveredNode.node.tooltip.split('\n')[0]}
                               </div>
+                            </div>
+                          )}
+                          <div className="mt-3 rounded-lg border border-cyan-800/70 bg-slate-900/60 p-3">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                              <h5 className="text-xs font-semibold uppercase tracking-wide text-cyan-200">
+                                Selected Piece Inspector
+                              </h5>
+                              {selectedPieceDetails.length > 0 && (
+                                <span className="text-[11px] text-cyan-100">
+                                  {selectedPieceDetails[0].row.part} {selectedPieceDetails[0].row.batch}{' '}
+                                  | Piece {selectedPieceDetails[0].row.piece}
+                                </span>
+                              )}
+                            </div>
+                            {selectedPieceDetails.length === 0 ? (
+                              <p className="text-xs text-cyan-100/80">
+                                Click a piece node in Trace/Playback mode to inspect OP chain, people,
+                                and queue reasons.
+                              </p>
+                            ) : (
+                              <>
+                                <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-cyan-200">
+                                  <span className="rounded border border-cyan-700 bg-slate-950 px-2 py-1">
+                                    Active {formatDurationShort(selectedPieceSummary.activeMinutes)}
+                                  </span>
+                                  <span className="rounded border border-amber-700/70 bg-amber-900/20 px-2 py-1 text-amber-200">
+                                    Queue {formatDurationShort(selectedPieceSummary.queueMinutes)}
+                                  </span>
+                                  <span className="rounded border border-emerald-700/70 bg-emerald-900/20 px-2 py-1 text-emerald-200">
+                                    Flow {selectedPieceSummary.flowEfficiencyPct.toFixed(1)}%
+                                  </span>
+                                </div>
+                                <div className="space-y-2">
+                                  {selectedPieceDetails.map(detail => {
+                                    const setupStart =
+                                      toDate(detail.scheduleMeta?.setupStart) || detail.row.start
+                                    const setupEnd = toDate(detail.scheduleMeta?.setupEnd) || detail.row.start
+                                    const runStart = toDate(detail.scheduleMeta?.runStart) || detail.row.start
+                                    const runEnd = toDate(detail.scheduleMeta?.runEnd) || detail.row.end
+                                    return (
+                                      <div
+                                        key={detail.row.id}
+                                        className="rounded border border-cyan-900/70 bg-[#07121f] px-3 py-2"
+                                      >
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-cyan-100">
+                                          <span className="font-semibold">OP{detail.row.operationSeq}</span>
+                                          <span>{detail.row.machine}</span>
+                                          <span>
+                                            Setup:{' '}
+                                            {detail.scheduleMeta?.setupPerson || 'Unassigned'} (
+                                            {setupStart.toLocaleString()} - {setupEnd.toLocaleString()})
+                                          </span>
+                                          <span>
+                                            Run: {detail.scheduleMeta?.runPerson || 'Unassigned'} (
+                                            {runStart.toLocaleString()} - {runEnd.toLocaleString()})
+                                          </span>
+                                        </div>
+                                        {detail.gapMinutes > 0 && (
+                                          <div className="mt-1 text-[11px] text-amber-300">
+                                            Gap before this OP: {formatDurationShort(detail.gapMinutes)} (
+                                            {detail.gapReason})
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {showPersonTimeline && (
+                            <div className="mt-3 rounded-lg border border-cyan-800/70 bg-slate-900/60 p-3">
+                              <div className="mb-2 flex flex-wrap items-center gap-3">
+                                <h5 className="text-xs font-semibold uppercase tracking-wide text-cyan-200">
+                                  Person Timeline (Setup + Run)
+                                </h5>
+                                <span className="inline-flex items-center gap-1 text-[11px] text-cyan-100">
+                                  <span className="h-2.5 w-2.5 rounded-sm bg-amber-500" />
+                                  Setup
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-[11px] text-cyan-100">
+                                  <span className="h-2.5 w-2.5 rounded-sm bg-green-500" />
+                                  Run
+                                </span>
+                                <span className="text-[11px] text-cyan-300/80">
+                                  Uses the same time axis as the piece flow map.
+                                </span>
+                              </div>
+                              {personTimelineModel.height === 0 ? (
+                                <p className="text-xs text-cyan-100/80">
+                                  No person assignments in current filter and time window.
+                                </p>
+                              ) : (
+                                <div className="overflow-x-auto rounded-lg border border-cyan-900/60 bg-[#070b12]">
+                                  <svg
+                                    width={personTimelineModel.width}
+                                    height={personTimelineModel.height}
+                                    className="min-w-[1400px]"
+                                  >
+                                    {personTimelineModel.lanes.map(lane => (
+                                      <g key={`person-lane-${lane.person}`}>
+                                        <line
+                                          x1={personTimelineModel.leftPad}
+                                          x2={
+                                            personTimelineModel.width -
+                                            personTimelineModel.rightPad
+                                          }
+                                          y1={lane.y}
+                                          y2={lane.y}
+                                          stroke="#14324f"
+                                          strokeWidth={1}
+                                        />
+                                        <text
+                                          x={16}
+                                          y={lane.y + 4}
+                                          fill="#9ec8ff"
+                                          fontSize={12}
+                                          fontWeight={600}
+                                        >
+                                          {lane.person}
+                                        </text>
+                                      </g>
+                                    ))}
+                                    {personTimelineModel.segments.map(segment => (
+                                      <g key={segment.id}>
+                                        <title>{segment.tooltip}</title>
+                                        <rect
+                                          x={segment.x}
+                                          y={segment.y}
+                                          width={segment.width}
+                                          height={20}
+                                          rx={4}
+                                          fill={segment.fill}
+                                          stroke={segment.stroke}
+                                          strokeWidth={1.2}
+                                          opacity={0.92}
+                                        />
+                                        {segment.width > 54 && (
+                                          <text
+                                            x={segment.x + 6}
+                                            y={segment.y + 14}
+                                            fill="#04111d"
+                                            fontSize={10}
+                                            fontWeight={700}
+                                          >
+                                            {segment.label}
+                                          </text>
+                                        )}
+                                      </g>
+                                    ))}
+                                  </svg>
+                                </div>
+                              )}
                             </div>
                           )}
                         </>
@@ -3869,15 +4861,17 @@ function SchedulerPageContent() {
                   </div>
                   <button
                     onClick={handleToggleSettingsLock}
-                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${settingsLocked
-                      ? 'bg-transparent border-gray-400 text-gray-600 hover:border-gray-500 dark:border-slate-500 dark:text-slate-300 dark:hover:border-slate-300'
-                      : 'bg-transparent border-gray-300 text-gray-500 hover:border-gray-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-500'
-                      }`}
+                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                      settingsLocked
+                        ? 'bg-transparent border-gray-400 text-gray-600 hover:border-gray-500 dark:border-slate-500 dark:text-slate-300 dark:hover:border-slate-300'
+                        : 'bg-transparent border-gray-300 text-gray-500 hover:border-gray-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-500'
+                    }`}
                     title={
                       settingsLocked
                         ? 'Click to unlock and edit settings'
                         : 'Click to lock and save settings'
                     }
+                    disabled={lockLoading}
                   >
                     {settingsLocked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
                   </button>
@@ -3911,10 +4905,9 @@ function SchedulerPageContent() {
                           size="sm"
                           onClick={() => {
                             const now = new Date()
-                            // Use actual current time, not forced to 6:00 AM
                             setAdvancedSettings((prev: any) => ({
                               ...prev,
-                              globalStartDateTime: now.toISOString().slice(0, 16),
+                              globalStartDateTime: toLocalDateTimeInput(now),
                             }))
                           }}
                           className="whitespace-nowrap"
@@ -4233,8 +5226,16 @@ function SchedulerPageContent() {
             <Card className={cardSurfaceClass}>
               <CardContent className="pt-6">
                 <div className="flex gap-3">
-                  <Button className="bg-blue-600 hover:bg-blue-700">💾 Save Settings</Button>
-                  <Button variant="outline">📂 Load Settings</Button>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={handleSaveSettings}
+                    disabled={lockLoading}
+                  >
+                    💾 Save Settings
+                  </Button>
+                  <Button variant="outline" onClick={handleLoadSettings} disabled={lockLoading}>
+                    📂 Load Settings
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -4317,6 +5318,6 @@ function SchedulerPageContent() {
           </div>
         </div>
       </div>
-    </div >
+    </div>
   )
 }

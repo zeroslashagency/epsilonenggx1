@@ -1,0 +1,32 @@
+{
+  "setup_window": "06:00-22:00",
+  "production_window": "06:00-22:00",
+  "operators_by_shift": { "shift1": ["A"] },
+  "shifts": { "A": "06:00-22:00" },
+  "holidays": [],
+  "breakdowns": [],
+  "batches": [
+    {
+      "part_number": "PN151",
+      "batch_id": "B01",
+      "batch_qty": 3,
+      "start_datetime": "2026-02-22 06:00",
+      "operations": [
+        {
+          "operation_seq": 1,
+          "operation_name": "Facing",
+          "setup_time_min": 10,
+          "cycle_time_min": 20,
+          "machine": "VMC 1"
+        },
+        {
+          "operation_seq": 2,
+          "operation_name": "Drill",
+          "setup_time_min": 10,
+          "cycle_time_min": 20,
+          "machine": "VMC 2"
+        }
+      ]
+    }
+  ]
+}

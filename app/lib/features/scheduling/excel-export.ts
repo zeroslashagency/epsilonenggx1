@@ -10,11 +10,30 @@ interface QualityReportLike {
   issues?: QualityIssueLike[]
 }
 
+interface PersonnelProfileLike {
+  uid?: string
+  name?: string
+  sourceSection?: string
+  levelUp?: number
+  setupEligible?: boolean
+  productionEligible?: boolean
+  setupPriority?: number
+}
+
+interface ShiftSettingsLike {
+  shift1?: string
+  shift2?: string
+  shift3?: string
+  globalSetupWindow?: string
+}
+
 export interface SchedulingExcelExportPayload {
   results: unknown[]
   orders?: unknown[]
   holidays?: unknown[]
   breakdowns?: unknown[]
+  personnelProfiles?: PersonnelProfileLike[]
+  shiftSettings?: ShiftSettingsLike
   qualityReport?: QualityReportLike | null
   generatedAt?: Date
 }
@@ -54,6 +73,46 @@ interface ExclusionMatrixRow {
   count: number
   types: string
   descriptions: string
+}
+
+interface ShiftWindowRow {
+  label: string
+  window: string
+}
+
+interface ParsedShiftWindow extends ShiftWindowRow {
+  startMin: number
+  endMin: number
+  overnight: boolean
+}
+
+interface PersonnelEventRow {
+  eventGroupId: string
+  sliceIndex: number
+  eventDateTime: Date
+  eventDate: string
+  eventTime: string
+  shiftDate: string
+  shiftDay: string
+  uid: string
+  name: string
+  sourceSection: string
+  role: 'setup' | 'production'
+  activityType: 'SETUP' | 'RUN'
+  partNumber: string
+  batchId: string
+  operationSeq: number
+  operationName: string
+  machine: string
+  startTime: Date
+  endTime: Date
+  durationMin: number
+  originalStartTime: Date
+  originalEndTime: Date
+  originalDurationMin: number
+  shiftLabel: string
+  shiftWindow: string
+  refKey: string
 }
 
 const OUTPUT_HEADERS = [
@@ -106,6 +165,57 @@ const CLIENT_OUT_HEADERS = [
   'Timing',
   'Start Date',
   'Expected Delivery Date',
+] as const
+
+const PERSONNEL_EVENT_LOG_HEADERS = [
+  'Event_Group_ID',
+  'Slice_Index',
+  'Event_DateTime',
+  'Event_Date',
+  'Event_Time',
+  'Shift_Date',
+  'Shift_Day',
+  'UID',
+  'Name',
+  'Source_Section',
+  'Role',
+  'Activity_Type',
+  'PartNumber',
+  'Batch_ID',
+  'OperationSeq',
+  'OperationName',
+  'Machine',
+  'Start_Time',
+  'End_Time',
+  'Duration_Min',
+  'Original_Start_DateTime',
+  'Original_End_DateTime',
+  'Original_Duration_Min',
+  'Shift_Label',
+  'Shift_Window',
+  'Ref_Key',
+] as const
+
+const PERSONNEL_SUMMARY_HEADERS = [
+  'Week_Start',
+  'Date',
+  'Day',
+  'UID',
+  'Name',
+  'Source_Section',
+  'Setup_Eligible',
+  'Production_Eligible',
+  'Setup_Priority',
+  'Assigned_Shift_Label',
+  'Assigned_Shift_Window',
+  'First_Activity_Time',
+  'Last_Activity_Time',
+  'Setup_Minutes',
+  'Run_Minutes',
+  'Total_Work_Minutes',
+  'Event_Count',
+  'Ops_Count',
+  'Machines_Used',
 ] as const
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -226,6 +336,114 @@ function formatDateTimeForReport(value: Date): string {
   const hh = String(value.getHours()).padStart(2, '0')
   const min = String(value.getMinutes()).padStart(2, '0')
   return `${dd}/${mm}/${yyyy}, ${hh}:${min}:00`
+}
+
+function formatDateOnly(value: Date): string {
+  const dd = String(value.getDate()).padStart(2, '0')
+  const mm = String(value.getMonth() + 1).padStart(2, '0')
+  const yyyy = value.getFullYear()
+  return `${dd}/${mm}/${yyyy}`
+}
+
+function formatTimeOnly(value: Date): string {
+  const hh = String(value.getHours()).padStart(2, '0')
+  const min = String(value.getMinutes()).padStart(2, '0')
+  const sec = String(value.getSeconds()).padStart(2, '0')
+  return `${hh}:${min}:${sec}`
+}
+
+function formatTimeHHMM(value: Date): string {
+  const hh = String(value.getHours()).padStart(2, '0')
+  const min = String(value.getMinutes()).padStart(2, '0')
+  return `${hh}:${min}`
+}
+
+function toDisplayDateTime(value: Date | string | null): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return formatDateTimeForReport(value)
+  }
+  if (typeof value === 'string') {
+    const parsed = toDate(value)
+    if (parsed) return formatDateTimeForReport(parsed)
+    return value
+  }
+  return ''
+}
+
+function startOfDay(value: Date): Date {
+  const d = new Date(value)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function addDays(value: Date, days: number): Date {
+  return new Date(value.getTime() + days * 24 * 60 * 60_000)
+}
+
+function startOfWeekMonday(value: Date): Date {
+  const d = startOfDay(value)
+  const day = d.getDay() // 0 Sunday
+  const delta = day === 0 ? -6 : 1 - day
+  return addDays(d, delta)
+}
+
+function dayLabel(value: Date): string {
+  const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  return labels[value.getDay()] || ''
+}
+
+function parseShiftWindows(settings?: ShiftSettingsLike): ShiftWindowRow[] {
+  const values = [
+    { label: 'Shift 1', window: coerceString(settings?.shift1) },
+    { label: 'Shift 2', window: coerceString(settings?.shift2) },
+    { label: 'Shift 3', window: coerceString(settings?.shift3) },
+  ].filter(item => item.window)
+
+  if (values.length > 0) return values
+  const fallback = coerceString(settings?.globalSetupWindow)
+  if (fallback) return [{ label: 'Global', window: fallback }]
+  return [{ label: 'Global', window: '06:00-22:00' }]
+}
+
+function parseShiftWindow(window: string, label: string): ParsedShiftWindow {
+  const text = coerceString(window)
+  const match = text.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/)
+  if (!match) {
+    return {
+      label,
+      window: text || '06:00-22:00',
+      startMin: 6 * 60,
+      endMin: 22 * 60,
+      overnight: false,
+    }
+  }
+  const startMin = Number(match[1]) * 60 + Number(match[2])
+  const endMin = Number(match[3]) * 60 + Number(match[4])
+  return {
+    label,
+    window: text,
+    startMin,
+    endMin,
+    overnight: endMin <= startMin,
+  }
+}
+
+function atMinute(date: Date, minuteOfDay: number): Date {
+  const d = new Date(date)
+  d.setHours(Math.floor(minuteOfDay / 60), minuteOfDay % 60, 0, 0)
+  return d
+}
+
+function intersectIntervals(
+  aStart: Date,
+  aEnd: Date,
+  bStart: Date,
+  bEnd: Date
+): { start: Date; end: Date } | null {
+  const start = new Date(Math.max(aStart.getTime(), bStart.getTime()))
+  const end = new Date(Math.min(aEnd.getTime(), bEnd.getTime()))
+  if (end <= start) return null
+  return { start, end }
 }
 
 function normalizeRows(rows: unknown[], holidayPeriodsText: string): NormalizedScheduleRow[] {
@@ -425,8 +643,8 @@ function buildSetupOutputRows(rows: NormalizedScheduleRow[]): Record<string, unk
       Machine: row.machine,
       Person: row.setupPersonName || row.person,
       Production_Person: row.productionPersonName || row.person,
-      SetupStart: toExcelDate(row.setupStart),
-      SetupEnd: toExcelDate(row.setupEnd),
+      SetupStart: row.setupStart ? formatDateTimeForReport(row.setupStart) : '',
+      SetupEnd: row.setupEnd ? formatDateTimeForReport(row.setupEnd) : '',
       Timing: formatDuration(setupMin),
     }
   })
@@ -437,9 +655,9 @@ function buildOutput2Rows(rows: NormalizedScheduleRow[]): Record<string, unknown
     'Part Number': row.partNumber,
     Quantity: row.orderQuantity,
     'Batch Size': row.batchQty,
-    'Date & Time': toExcelDate(row.setupEnd || row.setupStart),
+    'Date & Time': toDisplayDateTime(row.setupEnd || row.setupStart),
     Machine: row.machine,
-    'Expected Delivery Date': toExcelDate(row.runEnd),
+    'Expected Delivery Date': toDisplayDateTime(row.runEnd),
   }))
 }
 
@@ -481,8 +699,8 @@ function buildClientOutRows(rows: NormalizedScheduleRow[]): Record<string, unkno
         PartNumber: partNumber,
         Order_Quantity: orderQuantity,
         Timing: timing,
-        'Start Date': toExcelDate(start),
-        'Expected Delivery Date': toExcelDate(end),
+        'Start Date': toDisplayDateTime(start),
+        'Expected Delivery Date': toDisplayDateTime(end),
       })
     })
 
@@ -532,6 +750,437 @@ function buildExclusionMatrixRows(breakdowns: unknown[]): ExclusionMatrixRow[] {
       types: Array.from(value.types).join(', '),
       descriptions: value.descriptions.join(' | '),
     }))
+}
+
+function buildPersonnelIndex(personnelProfiles: PersonnelProfileLike[], shifts: ShiftWindowRow[]) {
+  const byName = new Map<
+    string,
+    {
+      uid: string
+      name: string
+      sourceSection: string
+      setupEligible: boolean
+      productionEligible: boolean
+      setupPriority: number
+      shiftLabel: string
+      shiftWindow: string
+    }
+  >()
+
+  const sorted = [...personnelProfiles].sort((a, b) =>
+    coerceString(a.name).localeCompare(coerceString(b.name))
+  )
+
+  sorted.forEach((profile, index) => {
+    const name = coerceString(profile.name)
+    if (!name) return
+    const uid = coerceString(profile.uid) || `UID-${index + 1}`
+    const sourceSection = coerceString(profile.sourceSection) || 'production'
+    const setupEligible = profile.setupEligible === true || sourceSection === 'setup'
+    const productionEligible = profile.productionEligible !== false
+    const setupPriority = Math.max(1, Math.round(coerceNumber(profile.setupPriority, 99)))
+    const shift = shifts[index % shifts.length] || shifts[0]
+
+    byName.set(name.toLowerCase(), {
+      uid,
+      name,
+      sourceSection,
+      setupEligible,
+      productionEligible,
+      setupPriority,
+      shiftLabel: shift.label,
+      shiftWindow: shift.window,
+    })
+  })
+
+  return byName
+}
+
+function buildPersonnelEventRows(
+  rows: NormalizedScheduleRow[],
+  personnelProfiles: PersonnelProfileLike[],
+  shiftSettings?: ShiftSettingsLike
+): PersonnelEventRow[] {
+  const shifts = parseShiftWindows(shiftSettings)
+  const parsedShifts = shifts.map(shift => parseShiftWindow(shift.window, shift.label))
+  const byName = buildPersonnelIndex(personnelProfiles, shifts)
+
+  const events: PersonnelEventRow[] = []
+  let eventGroupCounter = 0
+
+  const splitByShift = (start: Date, end: Date) => {
+    const slices: Array<{
+      start: Date
+      end: Date
+      shiftLabel: string
+      shiftWindow: string
+      shiftDate: Date
+    }> = []
+    const firstDay = addDays(startOfDay(start), -1)
+    const lastDay = addDays(startOfDay(end), 1)
+
+    for (let day = new Date(firstDay); day <= lastDay; day = addDays(day, 1)) {
+      parsedShifts.forEach(shift => {
+        const shiftStart = atMinute(day, shift.startMin)
+        const shiftEnd = shift.overnight
+          ? atMinute(addDays(day, 1), shift.endMin)
+          : atMinute(day, shift.endMin)
+        const overlap = intersectIntervals(start, end, shiftStart, shiftEnd)
+        if (!overlap) return
+        slices.push({
+          start: overlap.start,
+          end: overlap.end,
+          shiftLabel: shift.label,
+          shiftWindow: shift.window,
+          shiftDate: day,
+        })
+      })
+    }
+
+    slices.sort((a, b) => a.start.getTime() - b.start.getTime())
+    return slices
+  }
+
+  const pushEvent = (
+    role: 'setup' | 'production',
+    activityType: 'SETUP' | 'RUN',
+    personName: string,
+    start: Date | null,
+    end: Date | null,
+    row: NormalizedScheduleRow
+  ) => {
+    const trimmedName = coerceString(personName)
+    if (!trimmedName || !start || !end || end <= start) return
+
+    const fallbackShift = shifts[0]
+    const profile = byName.get(trimmedName.toLowerCase())
+    const uid = profile?.uid || `UNMAPPED-${trimmedName}`
+
+    const slices = splitByShift(start, end)
+    const fallbackSlices =
+      slices.length > 0
+        ? slices
+        : [
+            {
+              start,
+              end,
+              shiftLabel: profile?.shiftLabel || fallbackShift.label,
+              shiftWindow: profile?.shiftWindow || fallbackShift.window,
+              shiftDate: startOfDay(start),
+            },
+          ]
+
+    eventGroupCounter += 1
+    const eventGroupId = `EVT-${activityType}-${String(eventGroupCounter).padStart(4, '0')}`
+    const originalDurationMin = diffMinutes(start, end)
+
+    fallbackSlices.forEach((slice, index) => {
+      events.push({
+        eventGroupId,
+        sliceIndex: index + 1,
+        eventDateTime: slice.start,
+        eventDate: formatDateOnly(slice.start),
+        eventTime: formatTimeOnly(slice.start),
+        shiftDate: formatDateOnly(slice.shiftDate),
+        shiftDay: dayLabel(slice.shiftDate),
+        uid,
+        name: trimmedName,
+        sourceSection: profile?.sourceSection || (role === 'setup' ? 'setup' : 'production'),
+        role,
+        activityType,
+        partNumber: row.partNumber,
+        batchId: row.batchId,
+        operationSeq: row.operationSeq,
+        operationName: row.operationName,
+        machine: row.machine,
+        startTime: slice.start,
+        endTime: slice.end,
+        durationMin: diffMinutes(slice.start, slice.end),
+        originalStartTime: start,
+        originalEndTime: end,
+        originalDurationMin,
+        shiftLabel: slice.shiftLabel,
+        shiftWindow: slice.shiftWindow,
+        refKey: `${row.partNumber}/${row.batchId}/OP${row.operationSeq}`,
+      })
+    })
+  }
+
+  rows.forEach(row => {
+    pushEvent('setup', 'SETUP', row.setupPersonName, row.setupStart, row.setupEnd, row)
+    pushEvent(
+      'production',
+      'RUN',
+      row.productionPersonName || row.person,
+      row.runStart,
+      row.runEnd,
+      row
+    )
+  })
+
+  events.sort((a, b) => {
+    const dt = a.eventDateTime.getTime() - b.eventDateTime.getTime()
+    if (dt !== 0) return dt
+    const byNameSort = a.name.localeCompare(b.name)
+    if (byNameSort !== 0) return byNameSort
+    return a.refKey.localeCompare(b.refKey)
+  })
+
+  return events
+}
+
+function buildPersonnelEventLogRows(events: PersonnelEventRow[]): Record<string, unknown>[] {
+  return events.map(event => ({
+    Event_Group_ID: event.eventGroupId,
+    Slice_Index: event.sliceIndex,
+    Event_DateTime: formatDateTimeForReport(event.eventDateTime),
+    Event_Date: event.eventDate,
+    Event_Time: event.eventTime,
+    Shift_Date: event.shiftDate,
+    Shift_Day: event.shiftDay,
+    UID: event.uid,
+    Name: event.name,
+    Source_Section: event.sourceSection,
+    Role: event.role,
+    Activity_Type: event.activityType,
+    PartNumber: event.partNumber,
+    Batch_ID: event.batchId,
+    OperationSeq: event.operationSeq,
+    OperationName: event.operationName,
+    Machine: event.machine,
+    Start_Time: formatDateTimeForReport(event.startTime),
+    End_Time: formatDateTimeForReport(event.endTime),
+    Duration_Min: event.durationMin,
+    Original_Start_DateTime: formatDateTimeForReport(event.originalStartTime),
+    Original_End_DateTime: formatDateTimeForReport(event.originalEndTime),
+    Original_Duration_Min: event.originalDurationMin,
+    Shift_Label: event.shiftLabel,
+    Shift_Window: event.shiftWindow,
+    Ref_Key: event.refKey,
+  }))
+}
+
+function buildPersonnelSummaryRows(
+  events: PersonnelEventRow[],
+  personnelProfiles: PersonnelProfileLike[],
+  shiftSettings?: ShiftSettingsLike
+): Record<string, unknown>[] {
+  const shifts = parseShiftWindows(shiftSettings)
+  const byName = buildPersonnelIndex(personnelProfiles, shifts)
+
+  const allPeople = new Map<
+    string,
+    ReturnType<typeof buildPersonnelIndex> extends Map<string, infer V> ? V : never
+  >()
+  byName.forEach((value, key) => allPeople.set(key, value))
+  events.forEach(event => {
+    const key = event.name.toLowerCase()
+    if (allPeople.has(key)) return
+    allPeople.set(key, {
+      uid: event.uid,
+      name: event.name,
+      sourceSection: event.sourceSection,
+      setupEligible: event.role === 'setup',
+      productionEligible: true,
+      setupPriority: 99,
+      shiftLabel: event.shiftLabel,
+      shiftWindow: event.shiftWindow,
+    })
+  })
+
+  const allDates = events.map(e => startOfDay(e.eventDateTime))
+  const weekStart =
+    allDates.length > 0 ? startOfWeekMonday(allDates[0]) : startOfWeekMonday(new Date())
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+
+  const grouped = new Map<string, PersonnelEventRow[]>()
+  events.forEach(event => {
+    const key = `${event.uid}|${formatDateOnly(startOfDay(event.eventDateTime))}`
+    const bucket = grouped.get(key) || []
+    bucket.push(event)
+    grouped.set(key, bucket)
+  })
+
+  const rows: Record<string, unknown>[] = []
+  Array.from(allPeople.values())
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach(person => {
+      weekDays.forEach(day => {
+        const key = `${person.uid}|${formatDateOnly(day)}`
+        const bucket = grouped.get(key) || []
+        const sorted = [...bucket].sort(
+          (a, b) => a.eventDateTime.getTime() - b.eventDateTime.getTime()
+        )
+
+        const first = sorted[0]?.startTime || null
+        const last = sorted.length > 0 ? sorted[sorted.length - 1].endTime : null
+        const setupMinutes = sorted
+          .filter(item => item.activityType === 'SETUP')
+          .reduce((sum, item) => sum + item.durationMin, 0)
+        const runMinutes = sorted
+          .filter(item => item.activityType === 'RUN')
+          .reduce((sum, item) => sum + item.durationMin, 0)
+        const opCount = new Set(
+          sorted.map(item => `${item.partNumber}|${item.batchId}|${item.operationSeq}`)
+        ).size
+        const machines = Array.from(new Set(sorted.map(item => item.machine)))
+          .sort()
+          .join(', ')
+
+        rows.push({
+          Week_Start: formatDateOnly(weekStart),
+          Date: formatDateOnly(day),
+          Day: dayLabel(day),
+          UID: person.uid,
+          Name: person.name,
+          Source_Section: person.sourceSection,
+          Setup_Eligible: person.setupEligible ? 'Yes' : 'No',
+          Production_Eligible: person.productionEligible ? 'Yes' : 'No',
+          Setup_Priority: person.setupPriority,
+          Assigned_Shift_Label: person.shiftLabel,
+          Assigned_Shift_Window: person.shiftWindow,
+          First_Activity_Time: first ? formatDateTimeForReport(first) : '',
+          Last_Activity_Time: last ? formatDateTimeForReport(last) : '',
+          Setup_Minutes: setupMinutes,
+          Run_Minutes: runMinutes,
+          Total_Work_Minutes: setupMinutes + runMinutes,
+          Event_Count: sorted.length,
+          Ops_Count: opCount,
+          Machines_Used: machines,
+        })
+      })
+    })
+
+  return rows
+}
+
+function buildPercentReportSheet(
+  events: PersonnelEventRow[],
+  personnelProfiles: PersonnelProfileLike[],
+  shiftSettings?: ShiftSettingsLike,
+  generatedAt?: Date
+): XLSX.WorkSheet {
+  const shifts = parseShiftWindows(shiftSettings)
+  const safeShifts = shifts.length > 0 ? shifts : [{ label: 'Shift 1', window: '06:00-14:00' }]
+
+  const allNames = new Set<string>()
+  personnelProfiles.forEach(profile => {
+    const name = coerceString(profile.name)
+    if (name) allNames.add(name)
+  })
+  events.forEach(event => {
+    const name = coerceString(event.name)
+    if (name) allNames.add(name)
+  })
+
+  const sortedNames = Array.from(allNames).sort((a, b) => a.localeCompare(b))
+
+  const allEventDays = events.map(event => startOfDay(event.eventDateTime))
+  const firstDate =
+    allEventDays.length > 0
+      ? new Date(Math.min(...allEventDays.map(day => day.getTime())))
+      : startOfDay(generatedAt || new Date())
+  const lastDate =
+    allEventDays.length > 0
+      ? new Date(Math.max(...allEventDays.map(day => day.getTime())))
+      : new Date(firstDate)
+
+  const dates: Date[] = []
+  for (let day = new Date(firstDate); day <= lastDate; day = addDays(day, 1)) {
+    dates.push(new Date(day))
+  }
+
+  const totalShiftColumns = dates.length * safeShifts.length
+  const row1: string[] = ['No.S', 'Name']
+  const row2: string[] = ['', '']
+
+  dates.forEach(day => {
+    row1.push(String(day.getDate()))
+    for (let i = 1; i < safeShifts.length; i += 1) row1.push('')
+    safeShifts.forEach(shift => row2.push(shift.label))
+  })
+
+  const eventMap = new Map<string, PersonnelEventRow[]>()
+  events.forEach(event => {
+    const key = `${event.name.toLowerCase()}|${event.shiftDate}|${event.shiftLabel}`
+    const bucket = eventMap.get(key) || []
+    bucket.push(event)
+    eventMap.set(key, bucket)
+  })
+
+  const aoa: Array<Array<string | number>> = [row1, row2]
+
+  sortedNames.forEach((name, index) => {
+    const row: Array<string | number> = [index + 1, name]
+
+    dates.forEach(day => {
+      const dateKey = formatDateOnly(day)
+      safeShifts.forEach(shift => {
+        const key = `${name.toLowerCase()}|${dateKey}|${shift.label}`
+        const matches = [...(eventMap.get(key) || [])].sort(
+          (a, b) => a.startTime.getTime() - b.startTime.getTime()
+        )
+
+        if (matches.length === 0) {
+          row.push('X')
+          return
+        }
+
+        const content = matches
+          .map(
+            item =>
+              `${item.machine} (${formatTimeHHMM(item.startTime)}-${formatTimeHHMM(item.endTime)}) [${item.activityType}] ${item.partNumber}/OP${item.operationSeq}`
+          )
+          .join('\n')
+        row.push(content)
+      })
+    })
+
+    aoa.push(row)
+  })
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa)
+  const merges: XLSX.Range[] = [
+    { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
+    { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+  ]
+
+  dates.forEach((_, index) => {
+    const startCol = 2 + index * safeShifts.length
+    merges.push({
+      s: { r: 0, c: startCol },
+      e: { r: 0, c: startCol + safeShifts.length - 1 },
+    })
+  })
+
+  ws['!merges'] = merges
+  ws['!cols'] = [
+    { wch: 8 },
+    { wch: 20 },
+    ...Array.from({ length: totalShiftColumns }, () => ({ wch: 44 })),
+  ]
+
+  const rangeRef = ws['!ref']
+  if (rangeRef) {
+    const range = XLSX.utils.decode_range(rangeRef)
+    for (let row = 2; row <= range.e.r; row += 1) {
+      for (let col = 2; col <= range.e.c; col += 1) {
+        const cellRef = XLSX.utils.encode_cell({ r: row, c: col })
+        const cell = ws[cellRef]
+        if (!cell) continue
+        cell.s = {
+          ...(cell.s || {}),
+          alignment: {
+            ...(cell.s?.alignment || {}),
+            wrapText: true,
+            vertical: 'top',
+          },
+        }
+      }
+    }
+  }
+
+  return ws
 }
 
 function buildFixedReportSheet(
@@ -643,6 +1292,23 @@ export function buildSchedulingWorkbook(payload: SchedulingExcelExportPayload): 
   const setupOutputRows = buildSetupOutputRows(normalizedRows)
   const output2Rows = buildOutput2Rows(normalizedRows)
   const clientOutRows = buildClientOutRows(normalizedRows)
+  const personnelEvents = buildPersonnelEventRows(
+    normalizedRows,
+    payload.personnelProfiles || [],
+    payload.shiftSettings
+  )
+  const personnelEventLogRows = buildPersonnelEventLogRows(personnelEvents)
+  const personnelSummaryRows = buildPersonnelSummaryRows(
+    personnelEvents,
+    payload.personnelProfiles || [],
+    payload.shiftSettings
+  )
+  const percentReportSheet = buildPercentReportSheet(
+    personnelEvents,
+    payload.personnelProfiles || [],
+    payload.shiftSettings,
+    payload.generatedAt
+  )
 
   const outputSheet = XLSX.utils.json_to_sheet(outputRows, {
     header: [...OUTPUT_HEADERS],
@@ -670,10 +1336,25 @@ export function buildSchedulingWorkbook(payload: SchedulingExcelExportPayload): 
 
   const fixedReportSheet = buildFixedReportSheet(normalizedRows, payload)
 
+  const personnelEventLogSheet = XLSX.utils.json_to_sheet(personnelEventLogRows, {
+    header: [...PERSONNEL_EVENT_LOG_HEADERS],
+    skipHeader: false,
+  })
+  setStandardColumns(personnelEventLogSheet, PERSONNEL_EVENT_LOG_HEADERS.length)
+
+  const personnelSummarySheet = XLSX.utils.json_to_sheet(personnelSummaryRows, {
+    header: [...PERSONNEL_SUMMARY_HEADERS],
+    skipHeader: false,
+  })
+  setStandardColumns(personnelSummarySheet, PERSONNEL_SUMMARY_HEADERS.length)
+
   XLSX.utils.book_append_sheet(workbook, outputSheet, 'Output')
   XLSX.utils.book_append_sheet(workbook, setupOutputSheet, 'Setup_output')
   XLSX.utils.book_append_sheet(workbook, output2Sheet, 'Output_2')
   XLSX.utils.book_append_sheet(workbook, clientOutSheet, 'Client_Out')
+  XLSX.utils.book_append_sheet(workbook, personnelEventLogSheet, 'Personnel_Event_Log')
+  XLSX.utils.book_append_sheet(workbook, personnelSummarySheet, 'Personnel_Personnel')
+  XLSX.utils.book_append_sheet(workbook, percentReportSheet, 'Percent_Report')
   XLSX.utils.book_append_sheet(workbook, fixedReportSheet, 'Fixed_Report')
 
   return workbook

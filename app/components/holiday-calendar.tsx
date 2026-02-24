@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { format } from "date-fns"
 import { Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,8 +38,15 @@ export function HolidayCalendar({ holidays, onAddHoliday, onDeleteHoliday, disab
     }
 
     // Combine date and time
-    const startDateTime = `${dateRange.from.toISOString().split('T')[0]}T${startTime}`
-    const endDateTime = `${dateRange.to.toISOString().split('T')[0]}T${endTime}`
+    const startDateTime = `${format(dateRange.from, "yyyy-MM-dd")}T${startTime}`
+    const endDateTime = `${format(dateRange.to, "yyyy-MM-dd")}T${endTime}`
+    const start = new Date(startDateTime)
+    const end = new Date(endDateTime)
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      alert("Holiday end must be after start")
+      return
+    }
 
     onAddHoliday({
       startDateTime,
@@ -81,6 +89,7 @@ export function HolidayCalendar({ holidays, onAddHoliday, onDeleteHoliday, disab
               endTime={endTime}
               onEndTimeChange={setEndTime}
               placeholder="Pick start and end dates with times"
+              disabled={disabled}
               onSelect={() => {
                 // Optional: You can add any logic here when user clicks Select
               }}

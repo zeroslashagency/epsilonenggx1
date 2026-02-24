@@ -1,0 +1,146 @@
+# CHK-121..CHK-250 Scorecard (Phase 2)
+
+Date: 2026-02-23
+
+## Status Counts
+
+- BLOCKED_UI_COUPLED: 4
+- FAIL_EXPECTED_REJECT_BUT_ACCEPTED: 3
+- FAIL_POOR_ERROR_MESSAGE: 2
+- NOT_EXECUTED: 56
+- PARTIAL_ERROR_MESSAGE: 1
+- PARTIAL_NEEDS_ASSERTION: 7
+- PASS: 57
+
+## Detailed Status
+
+- CHK-121: PASS - out/chk101_200/wave1/chk121_breakdown_mid_run/operation_summary.csv
+- CHK-122: NOT_EXECUTED - No explicit breakdown-mid-setup assertion yet
+- CHK-123: PASS - Jest deterministic-handle-modes holiday blocking test
+- CHK-124: PASS - Jest deterministic-handle-modes holiday blocking test
+- CHK-125: PASS - out/chk101_200/wave1/chk125_overnight_setup_window/operation_summary.csv
+- CHK-126: PASS - out/chk101_200/wave1/chk126_overnight_production_window/operation_summary.csv
+- CHK-127: NOT_EXECUTED - No dedicated failing fixture/assertion run in Wave 2
+- CHK-128: NOT_EXECUTED - No dedicated failing fixture/assertion run in Wave 2
+- CHK-129: NOT_EXECUTED - No dedicated failing fixture/assertion run in Wave 2
+- CHK-130: PARTIAL_NEEDS_ASSERTION - Machine column present in generated operation summaries but no dedicated assertion harness
+- CHK-131: PARTIAL_NEEDS_ASSERTION - Setup person present in Jest schedule rows; no explicit null-guard check across all rows
+- CHK-132: PARTIAL_NEEDS_ASSERTION - Production person present in Jest schedule rows; no explicit null-guard check across all rows
+- CHK-133: PASS - Jest deterministic-handle-modes validates single/double normalization behavior
+- CHK-134: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-135: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-136: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-137: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-138: PASS - Demo and fixture runs respect provided start_datetime lower bound
+- CHK-139: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-140: PARTIAL_NEEDS_ASSERTION - Observed valid outputs; dedicated setup-end<=run-start assertion not codified globally
+- CHK-141: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-142: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-143: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-144: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-145: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-146: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-147: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-148: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-149: NOT_EXECUTED - Not included in current automated command matrix
+- CHK-150: PASS - Jest test_demo_batch3_runs equivalent via verifier output artifacts
+- CHK-151: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-152: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-153: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-154: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-155: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-156: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-157: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-158: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-159: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-160: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-161: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-162: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-163: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-164: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-165: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-166: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-167: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-168: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-169: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-170: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-171: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-172: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-173: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-174: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-175: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-176: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-177: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-178: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-179: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-180: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-181: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-182: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-183: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-184: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-185: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-186: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-187: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-188: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-189: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-190: NOT_EXECUTED - 
+- CHK-191: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-192: PASS - out/chk101_200/wave1/chk126_overnight_production_window/operation_summary.csv
+- CHK-193: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-194: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-195: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-196: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-197: NOT_EXECUTED - No dedicated assertion run in Wave 2
+- CHK-198: PASS - Jest piece-flow-verifier capacity exceeded test
+- CHK-199: PASS - out/chk101_200/wave1/chk109_due_miss/validation_report.json
+- CHK-200: PASS - Jest piece-flow-verifier invalid report on critical issue
+- CHK-201: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk201_invalid_datetime
+- CHK-202: PARTIAL_ERROR_MESSAGE - out/chk121_250_phase2/negative_matrix_summary.json: chk202_invalid_window (fails, but not custom 'Invalid window format' message)
+- CHK-203: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk203_missing_batches
+- CHK-204: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk204_missing_operations
+- CHK-205: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk205_missing_operation_seq
+- CHK-206: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk206_missing_operation_name
+- CHK-207: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk207_missing_setup_time
+- CHK-208: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk208_missing_cycle_time
+- CHK-209: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk209_missing_start_datetime
+- CHK-210: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk210_missing_batch_qty
+- CHK-211: FAIL_POOR_ERROR_MESSAGE - out/chk121_250_phase2/negative_matrix_summary.json: chk211_zero_batch_qty (IndexError, not actionable)
+- CHK-212: FAIL_POOR_ERROR_MESSAGE - out/chk121_250_phase2/negative_matrix_summary.json: chk212_negative_batch_qty (IndexError, not actionable)
+- CHK-213: NOT_EXECUTED - Zero cycle-time policy behavior not isolated and asserted
+- CHK-214: FAIL_EXPECTED_REJECT_BUT_ACCEPTED - out/chk121_250_phase2/negative_matrix_summary.json: chk214_negative_cycle_time accepted
+- CHK-215: FAIL_EXPECTED_REJECT_BUT_ACCEPTED - out/chk121_250_phase2/negative_matrix_summary.json: chk215_negative_setup_time not validated; fails later with generic runtime slot error
+- CHK-216: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk216_nonnumeric_cycle
+- CHK-217: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk217_invalid_holiday_item rejected (TypeError)
+- CHK-218: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk218_invalid_breakdown_datetime
+- CHK-219: FAIL_EXPECTED_REJECT_BUT_ACCEPTED - out/chk121_250_phase2/negative_matrix_summary.json: chk219_breakdown_end_before_start accepted
+- CHK-220: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk220_breakdown_missing_machine
+- CHK-221: NOT_EXECUTED - Unknown machine token warning path not asserted
+- CHK-222: NOT_EXECUTED - Unknown handle mode default path not asserted for verifier input
+- CHK-223: NOT_EXECUTED - Empty eligible machine list failure path not asserted
+- CHK-224: NOT_EXECUTED - Impossible production window case not isolated
+- CHK-225: NOT_EXECUTED - Impossible setup window case not isolated
+- CHK-226: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk226_missing_shift_mapping
+- CHK-227: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk227_invalid_shift_window
+- CHK-228: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk228_malformed_json
+- CHK-229: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk229_missing_file
+- CHK-230: NOT_EXECUTED - Unreadable file permission case not executed
+- CHK-231: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk231_missing_input_demo
+- CHK-232: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk232_invalid_demo (argparse rc=2 invalid choice)
+- CHK-233: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk233_invalid_lane_mode (argparse rc=2 invalid choice)
+- CHK-234: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk234_invalid_machine_mode (argparse rc=2 invalid choice)
+- CHK-235: PASS - out/chk121_250_phase2/chk235_bad_live_ops_live stderr shows invalid literal for int() when --live enabled
+- CHK-236: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk236_malformed_live_machines_safe
+- CHK-237: BLOCKED_UI_COUPLED - Requires scheduler UI runtime exception harness in page-level flow
+- CHK-238: BLOCKED_UI_COUPLED - Requires scheduler UI runtime exception harness in page-level flow
+- CHK-239: BLOCKED_UI_COUPLED - Requires scheduler UI runtime exception harness in page-level flow
+- CHK-240: BLOCKED_UI_COUPLED - Requires scheduler UI runtime exception harness in page-level flow
+- CHK-241: PARTIAL_NEEDS_ASSERTION - Error taxonomy appears mixed (ValueError/KeyError/TypeError/IndexError); consistency policy not enforced yet
+- CHK-242: PARTIAL_NEEDS_ASSERTION - Many errors include field names; not formally asserted across all failures
+- CHK-243: NOT_EXECUTED - Row/case identifier in errors not systematically asserted
+- CHK-244: NOT_EXECUTED - Warning message context checks not executed
+- CHK-245: PASS - Due warnings include run_end and due timestamps (chk109_due_miss output)
+- CHK-246: PASS - Overlap errors include timestamp context in verifier validations (existing behavior/docs)
+- CHK-247: PASS - Overlap errors include resource identifier (machine/operator)
+- CHK-248: PARTIAL_NEEDS_ASSERTION - Parser errors repeat deterministically in sampled runs; no automated repeat-loop assertion yet
+- CHK-249: NOT_EXECUTED - Multi-error aggregation behavior not explicitly tested
+- CHK-250: NOT_EXECUTED - Remediation hint quality not standardized/asserted

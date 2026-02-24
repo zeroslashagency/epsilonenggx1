@@ -1,0 +1,25 @@
+{
+  "setup_window": "00:00-23:59",
+  "production_window": "22:00-02:00",
+  "operators_by_shift": { "shift1": ["A"] },
+  "shifts": { "A": "00:00-23:59" },
+  "holidays": [],
+  "breakdowns": [],
+  "batches": [
+    {
+      "part_number": "PN126",
+      "batch_id": "B01",
+      "batch_qty": 1,
+      "start_datetime": "2026-02-22 21:00",
+      "operations": [
+        {
+          "operation_seq": 1,
+          "operation_name": "NightRun",
+          "setup_time_min": 30,
+          "cycle_time_min": 180,
+          "machine": "VMC 1"
+        }
+      ]
+    }
+  ]
+}

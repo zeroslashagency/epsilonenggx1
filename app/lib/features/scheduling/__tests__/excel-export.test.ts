@@ -66,6 +66,32 @@ describe('scheduling excel export', () => {
           },
         ],
       },
+      personnelProfiles: [
+        {
+          uid: 'U001',
+          name: 'Ravi',
+          sourceSection: 'setup',
+          levelUp: 1,
+          setupEligible: true,
+          productionEligible: true,
+          setupPriority: 1,
+        },
+        {
+          uid: 'U002',
+          name: 'A',
+          sourceSection: 'production',
+          levelUp: 0,
+          setupEligible: false,
+          productionEligible: true,
+          setupPriority: 99,
+        },
+      ],
+      shiftSettings: {
+        shift1: '06:00-14:00',
+        shift2: '14:00-22:00',
+        shift3: '22:00-06:00',
+        globalSetupWindow: '06:00-22:00',
+      },
       generatedAt: new Date('2026-02-22T12:00:00.000Z'),
     })
 
@@ -74,6 +100,9 @@ describe('scheduling excel export', () => {
       'Setup_output',
       'Output_2',
       'Client_Out',
+      'Personnel_Event_Log',
+      'Personnel_Personnel',
+      'Percent_Report',
       'Fixed_Report',
     ])
 
@@ -125,6 +154,8 @@ describe('scheduling excel export', () => {
       'SetupEnd',
       'Timing',
     ])
+    expect(String(setupRows[1][7])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:00$/)
+    expect(String(setupRows[1][8])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:00$/)
 
     const clientSheet = workbook.Sheets.Client_Out
     const clientRows = XLSX.utils.sheet_to_json(clientSheet, { header: 1, defval: '' }) as Array<
@@ -137,6 +168,108 @@ describe('scheduling excel export', () => {
       'Start Date',
       'Expected Delivery Date',
     ])
+    expect(String(clientRows[1][3])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2}$/)
+    expect(String(clientRows[1][4])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2}$/)
+
+    const output2Sheet = workbook.Sheets.Output_2
+    const output2Rows = XLSX.utils.sheet_to_json(output2Sheet, { header: 1, defval: '' }) as Array<
+      Array<string>
+    >
+    expect(String(output2Rows[1][3])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2}$/)
+    expect(String(output2Rows[1][5])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2}$/)
+
+    const personnelEventSheet = workbook.Sheets.Personnel_Event_Log
+    const personnelEventRows = XLSX.utils.sheet_to_json(personnelEventSheet, {
+      header: 1,
+      defval: '',
+    }) as Array<Array<string>>
+    expect(personnelEventRows[0]).toEqual([
+      'Event_Group_ID',
+      'Slice_Index',
+      'Event_DateTime',
+      'Event_Date',
+      'Event_Time',
+      'Shift_Date',
+      'Shift_Day',
+      'UID',
+      'Name',
+      'Source_Section',
+      'Role',
+      'Activity_Type',
+      'PartNumber',
+      'Batch_ID',
+      'OperationSeq',
+      'OperationName',
+      'Machine',
+      'Start_Time',
+      'End_Time',
+      'Duration_Min',
+      'Original_Start_DateTime',
+      'Original_End_DateTime',
+      'Original_Duration_Min',
+      'Shift_Label',
+      'Shift_Window',
+      'Ref_Key',
+    ])
+    expect(personnelEventRows.length).toBeGreaterThan(1)
+    const eventGroupIndex = personnelEventRows[0].indexOf('Event_Group_ID')
+    const activityTypeIndex = personnelEventRows[0].indexOf('Activity_Type')
+    const operationIndex = personnelEventRows[0].indexOf('OperationSeq')
+    const runGroups = new Map<string, number>()
+    personnelEventRows.slice(1).forEach(row => {
+      if (String(row[activityTypeIndex]) !== 'RUN') return
+      if (String(row[operationIndex]) !== '2') return
+      const key = String(row[eventGroupIndex])
+      runGroups.set(key, (runGroups.get(key) || 0) + 1)
+    })
+    expect(Array.from(runGroups.values()).some(count => count >= 3)).toBe(true)
+
+    const personnelSummarySheet = workbook.Sheets.Personnel_Personnel
+    const personnelSummaryRows = XLSX.utils.sheet_to_json(personnelSummarySheet, {
+      header: 1,
+      defval: '',
+    }) as Array<Array<string>>
+    expect(personnelSummaryRows[0]).toEqual([
+      'Week_Start',
+      'Date',
+      'Day',
+      'UID',
+      'Name',
+      'Source_Section',
+      'Setup_Eligible',
+      'Production_Eligible',
+      'Setup_Priority',
+      'Assigned_Shift_Label',
+      'Assigned_Shift_Window',
+      'First_Activity_Time',
+      'Last_Activity_Time',
+      'Setup_Minutes',
+      'Run_Minutes',
+      'Total_Work_Minutes',
+      'Event_Count',
+      'Ops_Count',
+      'Machines_Used',
+    ])
+    expect(personnelSummaryRows.length).toBeGreaterThanOrEqual(8)
+
+    const percentReportSheet = workbook.Sheets.Percent_Report
+    const percentReportRows = XLSX.utils.sheet_to_json(percentReportSheet, {
+      header: 1,
+      defval: '',
+    }) as Array<Array<string>>
+    expect(String(percentReportRows[0][0])).toBe('No.S')
+    expect(String(percentReportRows[0][1])).toBe('Name')
+    expect(String(percentReportRows[1][2])).toBe('Shift 1')
+    expect(String(percentReportRows[1][3])).toBe('Shift 2')
+    expect(String(percentReportRows[1][4])).toBe('Shift 3')
+
+    const percentBodyRows = percentReportRows.slice(2)
+    const joinedCells = percentBodyRows.flat().map(cell => String(cell))
+    expect(joinedCells.some(cell => /\bVMC\b/.test(cell))).toBe(true)
+    expect(joinedCells.some(cell => /\(\d{2}:\d{2}-\d{2}:\d{2}\)/.test(cell))).toBe(true)
+    expect(joinedCells.some(cell => /\[(SETUP|RUN)\]/.test(cell))).toBe(true)
+    expect(joinedCells.some(cell => /\bPN7001\/OP\d+\b/.test(cell))).toBe(true)
+    expect(joinedCells.includes('X')).toBe(true)
 
     const reportSheet = workbook.Sheets.Fixed_Report
     const reportRows = XLSX.utils.sheet_to_json(reportSheet, { header: 1, defval: '' }) as Array<

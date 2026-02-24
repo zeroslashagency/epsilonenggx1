@@ -14,14 +14,21 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import time
+import traceback
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, cast
 
 
 TIME_FMT = "%Y-%m-%d %H:%M"
+MACHINE_NAME_RE = re.compile(r"^[A-Za-z0-9 _-]+$")
+
+
+class InputValidationError(ValueError):
+    pass
 
 
 @dataclass
@@ -83,7 +90,72 @@ def parse_window(window: str) -> Tuple[str, str]:
     parts = [p.strip() for p in window.split("-")]
     if len(parts) != 2:
         raise ValueError(f"Invalid window format: {window}")
+    try:
+        datetime.strptime(parts[0], "%H:%M")
+        datetime.strptime(parts[1], "%H:%M")
+    except ValueError as exc:
+        raise ValueError(f"Invalid window format: {window}") from exc
+    if parts[0] == parts[1]:
+        raise ValueError(f"Invalid window format: {window}")
     return parts[0], parts[1]
+
+
+def _require_object(value: Any, context: str) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise InputValidationError(f"Invalid {context}: expected object")
+    return value
+
+
+def _require_list(value: Any, context: str) -> List[Any]:
+    if not isinstance(value, list):
+        raise InputValidationError(f"Invalid {context}: expected array")
+    return value
+
+
+def _require_key(obj: Dict[str, Any], key: str, context: str) -> Any:
+    if key not in obj:
+        raise InputValidationError(f"Missing required field '{key}' in {context}")
+    return obj[key]
+
+
+def _to_int(value: Any, field: str, context: str) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise InputValidationError(
+            f"Invalid {field} in {context}: expected integer"
+        ) from exc
+
+
+def _to_positive_int(value: Any, field: str, context: str) -> int:
+    parsed = _to_int(value, field, context)
+    if parsed <= 0:
+        raise InputValidationError(
+            f"Invalid {field} in {context}: expected positive integer"
+        )
+    return parsed
+
+
+def _to_non_negative_int(value: Any, field: str, context: str) -> int:
+    parsed = _to_int(value, field, context)
+    if parsed < 0:
+        raise InputValidationError(
+            f"Invalid {field} in {context}: expected non-negative integer"
+        )
+    return parsed
+
+
+def _validate_machine_name(name: str, context: str) -> str:
+    machine = name.strip()
+    if not machine:
+        raise InputValidationError(
+            f"Invalid machine in {context}: expected non-empty string"
+        )
+    if not MACHINE_NAME_RE.match(machine):
+        raise InputValidationError(
+            f"Invalid machine in {context}: unsupported characters"
+        )
+    return machine
 
 
 def minute_iter(start: datetime, end: datetime):
@@ -267,10 +339,10 @@ def find_setup_slot(
     if best_payload is None:
         raise RuntimeError("Could not find setup slot within 30 days")
 
-    setup_start = best_payload["setup_start"]
-    setup_end = best_payload["setup_end"]
-    op = best_payload["operator"]
-    setup_segments = best_payload["segments"]
+    setup_start = cast(datetime, best_payload["setup_start"])
+    setup_end = cast(datetime, best_payload["setup_end"])
+    op = cast(str, best_payload["operator"])
+    setup_segments = cast(List[Interval], best_payload["segments"])
     total_span = int((setup_end - setup_start).total_seconds() // 60)
     paused_min = max(0, total_span - duration_min)
     logs.append(
@@ -283,9 +355,7 @@ def fmt(dt: datetime) -> str:
     return dt.strftime(TIME_FMT)
 
 
-def build_live_event_rows(
-    piece_rows: Sequence[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+def build_live_event_rows(piece_rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not piece_rows:
         return []
 
@@ -309,7 +379,12 @@ def build_live_event_rows(
         start_ts = parse_dt(row["RunStart"])
         end_ts = parse_dt(row["RunEnd"])
         event_defs = [
-            ("START", 0, start_ts, f"MOVE P{piece} -> OP{op_seq} ({op_name}) on {machine}"),
+            (
+                "START",
+                0,
+                start_ts,
+                f"MOVE P{piece} -> OP{op_seq} ({op_name}) on {machine}",
+            ),
             ("END", 1, end_ts, f"DONE P{piece} @ OP{op_seq} ({op_name}) on {machine}"),
         ]
         for event_name, event_rank, event_ts, message in event_defs:
@@ -430,12 +505,14 @@ def run_piece_level_schedule(
 
             for machine in machine_candidates:
                 machine_start = next_machine_free(machine, candidate_base, machine_cal)
-                setup_start, setup_end, operator, setup_segments, setup_logs = find_setup_slot(
-                    machine_start,
-                    op.setup_time_min,
-                    machine,
-                    settings,
-                    operator_cal,
+                setup_start, setup_end, operator, setup_segments, setup_logs = (
+                    find_setup_slot(
+                        machine_start,
+                        op.setup_time_min,
+                        machine,
+                        settings,
+                        operator_cal,
+                    )
                 )
 
                 piece_starts: List[datetime] = []
@@ -992,6 +1069,44 @@ def load_input(
         raise ValueError("Provide --input or --demo")
 
     raw = json.loads(path.read_text(encoding="utf-8"))
+    raw = _require_object(raw, "input root")
+
+    holidays_raw = _require_list(raw.get("holidays", []), "holidays")
+    holidays: List[datetime] = []
+    for i, holiday in enumerate(holidays_raw, start=1):
+        context = f"holidays[{i}]"
+        if not isinstance(holiday, str):
+            raise InputValidationError(f"Invalid {context}: expected datetime string")
+        holiday_text = holiday.strip()
+        if len(holiday_text) == 10:
+            holidays.append(parse_dt(f"{holiday_text} 00:00"))
+        else:
+            holidays.append(parse_dt(holiday_text))
+
+    breakdowns_raw = _require_list(raw.get("breakdowns", []), "breakdowns")
+    breakdowns: List[Breakdown] = []
+    for i, breakdown_raw in enumerate(breakdowns_raw, start=1):
+        context = f"breakdowns[{i}]"
+        breakdown_obj = _require_object(breakdown_raw, context)
+        machine = _require_key(breakdown_obj, "machine", context)
+        start_text = _require_key(breakdown_obj, "start", context)
+        end_text = _require_key(breakdown_obj, "end", context)
+
+        if not isinstance(machine, str):
+            raise InputValidationError(
+                f"Invalid machine in {context}: expected non-empty string"
+            )
+        machine_name = _validate_machine_name(machine, context)
+
+        start_dt = parse_dt(str(start_text))
+        end_dt = parse_dt(str(end_text))
+        if end_dt <= start_dt:
+            raise InputValidationError(
+                f"Invalid breakdown interval in {context}: end must be after start"
+            )
+
+        breakdowns.append(Breakdown(machine=machine_name, start=start_dt, end=end_dt))
+
     settings = Settings(
         setup_window=parse_window(raw.get("setup_window", "06:00-22:00")),
         production_window=parse_window(raw.get("production_window", "00:00-23:59")),
@@ -1010,42 +1125,124 @@ def load_input(
                 },
             ).items()
         },
-        holidays=[
-            parse_dt(f"{d} 00:00") if len(d) == 10 else parse_dt(d)
-            for d in raw.get("holidays", [])
-        ],
-        breakdowns=[
-            Breakdown(
-                machine=b["machine"], start=parse_dt(b["start"]), end=parse_dt(b["end"])
-            )
-            for b in raw.get("breakdowns", [])
-        ],
+        holidays=holidays,
+        breakdowns=breakdowns,
         lane_mode=lane_mode,
         machine_mode=raw.get("machine_mode", "respect_fixed"),
     )
 
-    batches = []
-    for b in raw["batches"]:
+    batches_raw = _require_key(raw, "batches", "input root")
+    batches_list = _require_list(batches_raw, "batches")
+    batches: List[BatchSpec] = []
+    for batch_index, b in enumerate(batches_list, start=1):
+        batch_context = f"batches[{batch_index}]"
+        batch_obj = _require_object(b, batch_context)
+
+        part_number = _require_key(batch_obj, "part_number", batch_context)
+        batch_id = _require_key(batch_obj, "batch_id", batch_context)
+        start_datetime_raw = _require_key(batch_obj, "start_datetime", batch_context)
+        batch_qty_raw = _require_key(batch_obj, "batch_qty", batch_context)
+        operations_raw = _require_key(batch_obj, "operations", batch_context)
+
+        part_number_text = str(part_number).strip()
+        batch_id_text = str(batch_id).strip()
+        if not part_number_text:
+            raise InputValidationError(
+                f"Invalid part_number in {batch_context}: expected non-empty string"
+            )
+        if not batch_id_text:
+            raise InputValidationError(
+                f"Invalid batch_id in {batch_context}: expected non-empty string"
+            )
+
+        batch_qty = _to_positive_int(batch_qty_raw, "batch_qty", batch_context)
+        start_datetime = parse_dt(str(start_datetime_raw))
+
+        operations_list = _require_list(operations_raw, f"{batch_context}.operations")
+        if not operations_list:
+            raise InputValidationError(
+                f"Invalid operations in {batch_context}: expected at least one operation"
+            )
+
+        operations: List[OperationSpec] = []
+        for op_index, op in enumerate(operations_list, start=1):
+            op_context = f"{batch_context}.operations[{op_index}]"
+            op_obj = _require_object(op, op_context)
+
+            operation_seq = _to_positive_int(
+                _require_key(op_obj, "operation_seq", op_context),
+                "operation_seq",
+                op_context,
+            )
+            operation_name = _require_key(op_obj, "operation_name", op_context)
+            operation_name_text = str(operation_name).strip()
+            if not operation_name_text:
+                raise InputValidationError(
+                    f"Invalid operation_name in {op_context}: expected non-empty string"
+                )
+
+            setup_time_min = _to_non_negative_int(
+                _require_key(op_obj, "setup_time_min", op_context),
+                "setup_time_min",
+                op_context,
+            )
+            cycle_time_min = _to_positive_int(
+                _require_key(op_obj, "cycle_time_min", op_context),
+                "cycle_time_min",
+                op_context,
+            )
+
+            machine = op_obj.get("machine")
+            machine_text = None
+            if machine is not None:
+                machine_text = _validate_machine_name(str(machine), op_context)
+
+            eligible_raw = op_obj.get("eligible_machines", [])
+            if isinstance(eligible_raw, list):
+                eligible_machines = [
+                    _validate_machine_name(str(item), op_context)
+                    for item in eligible_raw
+                    if str(item).strip()
+                ]
+            elif isinstance(eligible_raw, str):
+                eligible_machines = [
+                    _validate_machine_name(item, op_context)
+                    for item in eligible_raw.split(",")
+                    if item.strip()
+                ]
+            else:
+                raise InputValidationError(
+                    f"Invalid eligible_machines in {op_context}: expected array or comma-separated string"
+                )
+
+            if machine_text is None and not eligible_machines:
+                raise InputValidationError(
+                    f"Invalid machine assignment in {op_context}: provide machine or eligible_machines"
+                )
+
+            operations.append(
+                OperationSpec(
+                    operation_seq=operation_seq,
+                    operation_name=operation_name_text,
+                    setup_time_min=setup_time_min,
+                    cycle_time_min=cycle_time_min,
+                    machine=machine_text,
+                    eligible_machines=eligible_machines,
+                )
+            )
+
+        due_datetime = None
+        if batch_obj.get("due_datetime"):
+            due_datetime = parse_dt(str(batch_obj["due_datetime"]))
+
         batches.append(
             BatchSpec(
-                part_number=b["part_number"],
-                batch_id=b["batch_id"],
-                batch_qty=int(b["batch_qty"]),
-                start_datetime=parse_dt(b["start_datetime"]),
-                due_datetime=parse_dt(b["due_datetime"])
-                if b.get("due_datetime")
-                else None,
-                operations=[
-                    OperationSpec(
-                        operation_seq=int(op["operation_seq"]),
-                        operation_name=op["operation_name"],
-                        setup_time_min=int(op["setup_time_min"]),
-                        cycle_time_min=int(op["cycle_time_min"]),
-                        machine=op.get("machine"),
-                        eligible_machines=op.get("eligible_machines", []),
-                    )
-                    for op in b["operations"]
-                ],
+                part_number=part_number_text,
+                batch_id=batch_id_text,
+                batch_qty=batch_qty,
+                start_datetime=start_datetime,
+                due_datetime=due_datetime,
+                operations=operations,
             )
         )
 
@@ -1100,48 +1297,67 @@ def main() -> None:
         help="Machine selection mode: respect fixed machine on each operation, or optimize across candidates",
     )
     args = parser.parse_args()
-
-    batches, settings = load_input(args.input, args.demo, args.lane_mode)
-    if args.machine_mode is not None:
-        settings.machine_mode = args.machine_mode
-    results = run_piece_level_schedule(batches, settings)
-
     out_dir = args.out_dir
-    out_dir.mkdir(parents=True, exist_ok=True)
-    op_path = out_dir / "operation_summary.csv"
-    piece_path = out_dir / "piece_timeline.csv"
-    live_path = out_dir / "piece_live_events.csv"
-    validation_path = out_dir / "validation_report.json"
-    html_path = out_dir / "piece_flow.html"
-    flow_map_path = out_dir / "piece_flow_map.html"
 
-    write_csv(op_path, results["operation_rows"])
-    write_csv(piece_path, results["piece_rows"])
-    write_csv(live_path, results["event_rows"])
-    validation_path.write_text(
-        json.dumps(results["validation"], indent=2), encoding="utf-8"
-    )
-    write_html_timeline(html_path, results["piece_rows"], args.lane_mode)
-    write_html_flow_map(flow_map_path, results["piece_rows"])
+    try:
+        batches, settings = load_input(args.input, args.demo, args.lane_mode)
+        if args.machine_mode is not None:
+            settings.machine_mode = args.machine_mode
+        results = run_piece_level_schedule(batches, settings)
 
-    print(f"[OK] operation summary: {op_path}")
-    print(f"[OK] piece timeline:    {piece_path}")
-    print(f"[OK] live events:       {live_path}")
-    print(f"[OK] validation:        {validation_path}")
-    print(f"[OK] visual timeline:   {html_path}")
-    print(f"[OK] visual flow map:   {flow_map_path}")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        op_path = out_dir / "operation_summary.csv"
+        piece_path = out_dir / "piece_timeline.csv"
+        live_path = out_dir / "piece_live_events.csv"
+        validation_path = out_dir / "validation_report.json"
+        html_path = out_dir / "piece_flow.html"
+        flow_map_path = out_dir / "piece_flow_map.html"
 
-    if args.live:
-        replay_live_events(
-            results["event_rows"],
-            delay_s=max(0.0, args.live_delay),
-            max_piece=max(0, args.live_pieces),
-            op_filter=parse_int_filter(args.live_operations),
-            machine_filter=parse_machine_filter(args.live_machines),
+        write_csv(op_path, results["operation_rows"])
+        write_csv(piece_path, results["piece_rows"])
+        write_csv(live_path, results["event_rows"])
+        validation_path.write_text(
+            json.dumps(results["validation"], indent=2), encoding="utf-8"
         )
+        write_html_timeline(html_path, results["piece_rows"], args.lane_mode)
+        write_html_flow_map(flow_map_path, results["piece_rows"])
 
-    if not results["validation"]["valid"]:
-        print("[WARN] Validation failed. Check validation_report.json")
+        print(f"[OK] operation summary: {op_path}")
+        print(f"[OK] piece timeline:    {piece_path}")
+        print(f"[OK] live events:       {live_path}")
+        print(f"[OK] validation:        {validation_path}")
+        print(f"[OK] visual timeline:   {html_path}")
+        print(f"[OK] visual flow map:   {flow_map_path}")
+
+        if args.live:
+            replay_live_events(
+                results["event_rows"],
+                delay_s=max(0.0, args.live_delay),
+                max_piece=max(0, args.live_pieces),
+                op_filter=parse_int_filter(args.live_operations),
+                machine_filter=parse_machine_filter(args.live_machines),
+            )
+
+        if not results["validation"]["valid"]:
+            print("[WARN] Validation failed. Check validation_report.json")
+    except Exception:
+        try:
+            out_dir.mkdir(parents=True, exist_ok=True)
+            diagnostic = {
+                "error_class": traceback.format_exc()
+                .strip()
+                .splitlines()[-1]
+                .split(":", 1)[0],
+                "error": traceback.format_exc().strip().splitlines()[-1],
+                "traceback": traceback.format_exc().splitlines(),
+            }
+            (out_dir / "failure_diagnostic.json").write_text(
+                json.dumps(diagnostic, indent=2), encoding="utf-8"
+            )
+            print(f"[WARN] failure diagnostic: {out_dir / 'failure_diagnostic.json'}")
+        except Exception:
+            pass
+        raise
 
 
 if __name__ == "__main__":

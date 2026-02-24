@@ -1,13 +1,13 @@
-"use client"
+'use client'
 
-import React, { useState, useRef, useEffect } from "react"
-import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Label } from "@/components/ui/label"
-import { DateRange } from "react-day-picker"
+import React, { useState, useRef, useEffect } from 'react'
+import { format } from 'date-fns'
+import { Calendar as CalendarIcon, Clock } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Label } from '@/components/ui/label'
+import { DateRange } from 'react-day-picker'
 
 interface DateTimePickerProps {
   dateRange: DateRange | undefined
@@ -29,12 +29,13 @@ export function DateTimePicker({
   onStartTimeChange,
   endTime,
   onEndTimeChange,
-  placeholder = "Pick start and end dates with times",
+  placeholder = 'Pick start and end dates with times',
   className,
   onSelect,
-  disabled = false
+  disabled = false,
 }: DateTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [validationError, setValidationError] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Close picker when clicking outside
@@ -54,6 +55,25 @@ export function DateTimePicker({
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (disabled && isOpen) {
+      setIsOpen(false)
+    }
+  }, [disabled, isOpen])
+
+  useEffect(() => {
+    if (!validationError) return
+    if (dateRange?.from && dateRange?.to && startTime && endTime) {
+      setValidationError('')
+    }
+  }, [validationError, dateRange, startTime, endTime])
+
+  useEffect(() => {
+    if (!dateRange?.from || !dateRange?.to) return
+    if (!startTime) onStartTimeChange('06:00')
+    if (!endTime) onEndTimeChange('22:00')
+  }, [dateRange, startTime, endTime, onStartTimeChange, onEndTimeChange])
+
   // Generate time options (every 30 minutes)
   const generateTimeOptions = () => {
     const times = []
@@ -70,26 +90,33 @@ export function DateTimePicker({
 
   // Quick time presets
   const timePresets = [
-    { label: "All Day", start: "00:00", end: "23:30" },
-    { label: "Business Hours", start: "09:00", end: "17:30" },
-    { label: "Morning Shift", start: "06:00", end: "14:30" },
-    { label: "Evening Shift", start: "14:00", end: "22:30" },
-    { label: "Night Shift", start: "22:00", end: "06:30" }
+    { label: 'All Day', start: '00:00', end: '23:30' },
+    { label: 'Business Hours', start: '09:00', end: '17:30' },
+    { label: 'Morning Shift', start: '06:00', end: '14:30' },
+    { label: 'Evening Shift', start: '14:00', end: '22:30' },
+    { label: 'Night Shift', start: '22:00', end: '06:30' },
   ]
 
-  const handlePresetClick = (preset: typeof timePresets[0]) => {
+  const handlePresetClick = (preset: (typeof timePresets)[0]) => {
     onStartTimeChange(preset.start)
     onEndTimeChange(preset.end)
   }
 
   const handleClear = () => {
     onDateRangeChange(undefined)
-    onStartTimeChange("")
-    onEndTimeChange("")
+    onStartTimeChange('')
+    onEndTimeChange('')
+    setValidationError('')
     setIsOpen(false)
   }
 
   const handleSelect = () => {
+    if (!dateRange?.from || !dateRange?.to || !startTime || !endTime) {
+      setValidationError('Please select both dates and both times.')
+      return
+    }
+
+    setValidationError('')
     // Call the onSelect callback if provided
     if (onSelect) {
       onSelect()
@@ -99,13 +126,13 @@ export function DateTimePicker({
   }
 
   return (
-    <div className={cn("space-y-3", className)} ref={containerRef}>
+    <div className={cn('space-y-3', className)} ref={containerRef}>
       {/* Trigger Button */}
       <div
         className={cn(
-          "w-full justify-start text-left font-normal border border-gray-200 hover:border-blue-500 rounded-md px-3 py-2 cursor-pointer bg-white",
-          !dateRange && "text-gray-500",
-          disabled && "opacity-50 cursor-not-allowed"
+          'w-full justify-start text-left font-normal border border-gray-200 hover:border-blue-500 rounded-md px-3 py-2 cursor-pointer bg-white',
+          !dateRange && 'text-gray-500',
+          disabled && 'opacity-50 cursor-not-allowed'
         )}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
@@ -115,21 +142,21 @@ export function DateTimePicker({
             dateRange.to ? (
               <div className="flex flex-col">
                 <span>
-                  {format(dateRange.from, "LLL dd, yyyy")} -{" "}
-                  {format(dateRange.to, "LLL dd, yyyy")}
+                  {format(dateRange.from, 'LLL dd, yyyy')} - {format(dateRange.to, 'LLL dd, yyyy')}
                 </span>
                 {startTime && endTime && (
                   <span className="text-sm text-gray-600">
                     {startTime} - {endTime}
                   </span>
                 )}
+                {(!startTime || !endTime) && (
+                  <span className="text-sm text-amber-600">Time not selected</span>
+                )}
               </div>
             ) : (
               <div className="flex flex-col">
-                <span>{format(dateRange.from, "LLL dd, yyyy")}</span>
-                {startTime && (
-                  <span className="text-sm text-gray-600">from {startTime}</span>
-                )}
+                <span>{format(dateRange.from, 'LLL dd, yyyy')}</span>
+                {startTime && <span className="text-sm text-gray-600">from {startTime}</span>}
               </div>
             )
           ) : (
@@ -137,18 +164,25 @@ export function DateTimePicker({
           )}
         </div>
       </div>
-      
+
       {/* Picker Panel */}
       {isOpen && (
-        <div className="border border-gray-200 rounded-lg p-4 bg-white shadow-lg z-50 relative">
+        <div
+          className={cn(
+            'border border-gray-200 rounded-lg p-4 bg-white shadow-lg z-50 relative',
+            disabled && 'pointer-events-none opacity-60'
+          )}
+        >
           {/* Date Range Picker */}
           <div className="mb-4">
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">Select Date Range</Label>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              Select Date Range
+            </Label>
             <Calendar
               mode="range"
               defaultMonth={dateRange?.from}
               selected={dateRange}
-              onSelect={onDateRangeChange}
+              onSelect={disabled ? undefined : onDateRangeChange}
               numberOfMonths={2}
               className="rounded-md"
             />
@@ -157,44 +191,46 @@ export function DateTimePicker({
           {/* Time Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             {/* Start Time */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">Start Time (Optional)</Label>
-                <div className="relative">
-                  <select
-                    value={startTime}
-                    onChange={(e) => onStartTimeChange(e.target.value)}
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="">Select start time (optional)</option>
-                    {timeOptions.map((time) => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                  <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Start Time</Label>
+              <div className="relative">
+                <select
+                  value={startTime}
+                  onChange={e => onStartTimeChange(e.target.value)}
+                  disabled={disabled}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Select start time</option>
+                  {timeOptions.map(time => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+                <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
+            </div>
 
-              {/* End Time */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">End Time (Optional)</Label>
-                <div className="relative">
-                  <select
-                    value={endTime}
-                    onChange={(e) => onEndTimeChange(e.target.value)}
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="">Select end time (optional)</option>
-                    {timeOptions.map((time) => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                  <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                </div>
+            {/* End Time */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">End Time</Label>
+              <div className="relative">
+                <select
+                  value={endTime}
+                  onChange={e => onEndTimeChange(e.target.value)}
+                  disabled={disabled}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Select end time</option>
+                  {timeOptions.map(time => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+                <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
+            </div>
           </div>
 
           {/* Quick Presets */}
@@ -211,16 +247,17 @@ export function DateTimePicker({
                   const tomorrow = new Date(today)
                   tomorrow.setDate(tomorrow.getDate() + 1)
                   onDateRangeChange({ from: today, to: tomorrow })
-                  onStartTimeChange("09:00")
-                  onEndTimeChange("17:30")
+                  onStartTimeChange('09:00')
+                  onEndTimeChange('17:30')
                 }}
                 className="text-xs text-blue-600 hover:text-blue-700"
+                disabled={disabled}
               >
                 🚀 Quick Select Today
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {timePresets.map((preset) => (
+              {timePresets.map(preset => (
                 <Button
                   key={preset.label}
                   type="button"
@@ -228,6 +265,7 @@ export function DateTimePicker({
                   size="sm"
                   onClick={() => handlePresetClick(preset)}
                   className="text-xs hover:bg-blue-50"
+                  disabled={disabled}
                 >
                   {preset.label}
                 </Button>
@@ -243,10 +281,11 @@ export function DateTimePicker({
               size="sm"
               onClick={handleClear}
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              disabled={disabled}
             >
               🗑️ Clear All
             </Button>
-            
+
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -254,22 +293,28 @@ export function DateTimePicker({
                 size="sm"
                 onClick={handleSelect}
                 className="bg-green-600 hover:bg-green-700 text-white"
-                disabled={!dateRange?.from || !dateRange?.to}
+                disabled={disabled || !dateRange?.from || !dateRange?.to || !startTime || !endTime}
               >
                 ✓ Select
               </Button>
-              
+
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsOpen(false)}
                 className="text-gray-600 hover:text-gray-700"
+                disabled={disabled}
               >
                 ❌ Close
               </Button>
             </div>
           </div>
+          {validationError && (
+            <p className="mt-3 text-sm text-red-600" role="alert">
+              {validationError}
+            </p>
+          )}
         </div>
       )}
     </div>
