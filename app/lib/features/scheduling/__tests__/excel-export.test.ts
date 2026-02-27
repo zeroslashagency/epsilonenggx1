@@ -104,6 +104,8 @@ describe('scheduling excel export', () => {
       'Personnel_Personnel',
       'Percent_Report',
       'Fixed_Report',
+      'Personnel_Daily_Full',
+      'Utilization_Summary',
     ])
 
     const outputSheet = workbook.Sheets.Output
@@ -112,30 +114,26 @@ describe('scheduling excel export', () => {
     >
 
     expect(outputRows[0]).toEqual([
-      'PartNumber',
-      'Order_Quantity',
+      'Part Number',
+      'Order Qty',
       'Priority',
-      'Batch_ID',
-      'Batch_Qty',
-      'OperationSeq',
-      'OperationName',
+      'Batch ID',
+      'Batch Qty',
+      'Operation Seq',
+      'Operation Name',
       'Machine',
-      'Person',
-      'SetupStart',
-      'SetupEnd',
-      'RunStart',
-      'RunEnd',
+      'Run Person',
+      'Run Start',
+      'Run End',
       'Timing',
-      'DueDate',
-      'BreakdownMachine',
-      'Global_Holiday_Periods',
-      'Operator',
-      'Machine_Availability_STATUS',
+      'Due Date',
+      'Status',
     ])
 
     expect(String(outputRows[1][0])).toBe('PN7001')
     expect(String(outputRows[1][9])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:00$/)
-    expect(String(outputRows[1][12])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:00$/)
+    expect(String(outputRows[1][10])).toMatch(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:00$/)
+    expect(String(outputRows[1][13])).toBe('Scheduled')
     expect(String(outputRows[outputRows.length - 1][0])).toBe('TOTAL (Timing)')
 
     const setupSheet = workbook.Sheets.Setup_output
@@ -278,5 +276,135 @@ describe('scheduling excel export', () => {
 
     expect(String(reportRows[0][0])).toBe('FIXED UNIFIED SCHEDULING ENGINE REPORT')
     expect(reportRows.some(row => String(row[0]) === 'SUCCESSFUL ASSIGNMENTS')).toBe(true)
+
+    const personnelDailySheet = workbook.Sheets.Personnel_Daily_Full
+    const personnelDailyRows = XLSX.utils.sheet_to_json(personnelDailySheet, {
+      header: 1,
+      defval: '',
+    }) as Array<Array<string | number>>
+    expect(personnelDailyRows[0]).toEqual([
+      'Name',
+      'Role',
+      'Date',
+      'RUN',
+      'SETUP',
+      'Total_Min',
+      'Event_Count',
+      'First_Start',
+      'Last_End',
+    ])
+    expect(personnelDailyRows.length).toBeGreaterThan(1)
+    const dailyRunIndex = personnelDailyRows[0].indexOf('RUN')
+    const dailySetupIndex = personnelDailyRows[0].indexOf('SETUP')
+    expect(personnelDailyRows.slice(1).some(row => Number(row[dailyRunIndex]) > 0)).toBe(true)
+    expect(personnelDailyRows.slice(1).some(row => Number(row[dailySetupIndex]) > 0)).toBe(true)
+
+    const utilizationSheet = workbook.Sheets.Utilization_Summary
+    const utilizationRows = XLSX.utils.sheet_to_json(utilizationSheet, {
+      header: 1,
+      defval: '',
+    }) as Array<Array<string | number>>
+    expect(utilizationRows[0]).toEqual([
+      'Name',
+      'Role',
+      'Days_With_Work',
+      'Run_Min',
+      'Setup_Min',
+      'Busy_Min',
+      'Window_Min',
+      'Util_Window_Pct',
+      'Assumed_Avail_Min',
+      'Util_Assumed_Pct',
+      'Events',
+    ])
+    expect(utilizationRows.length).toBeGreaterThan(1)
+    const utilBusyIndex = utilizationRows[0].indexOf('Busy_Min')
+    const utilEventsIndex = utilizationRows[0].indexOf('Events')
+    expect(utilizationRows.slice(1).some(row => Number(row[utilBusyIndex]) > 0)).toBe(true)
+    expect(utilizationRows.slice(1).every(row => Number(row[utilEventsIndex]) > 0)).toBe(true)
+  })
+
+  it('builds basic profile workbook without setup sheet/events', () => {
+    const workbook = buildSchedulingWorkbook({
+      results: [
+        {
+          partNumber: 'PN7001',
+          orderQty: 120,
+          priority: 'Normal',
+          batchId: 'B01',
+          batchQty: 120,
+          operationSeq: 1,
+          operationName: 'Facing',
+          machine: 'VMC 2',
+          person: 'A',
+          setupStart: '2026-02-22 06:00',
+          setupEnd: '2026-02-22 06:20',
+          runStart: '2026-02-22 06:20',
+          runEnd: '2026-02-22 08:20',
+          timing: '2H 0M',
+          dueDate: '',
+          machineAvailabilityStatus: 'FIXED_VALIDATED | SELECTED: VMC 2',
+        },
+      ],
+      holidays: [],
+      breakdowns: [],
+      qualityReport: { issues: [] },
+      personnelProfiles: [
+        {
+          uid: 'U100',
+          name: 'Operator A',
+          sourceSection: 'production',
+          levelUp: 0,
+          setupEligible: false,
+          productionEligible: true,
+          setupPriority: 99,
+        },
+      ],
+      shiftSettings: {
+        shift1: '06:00-14:00',
+        shift2: '14:00-22:00',
+        shift3: '22:00-06:00',
+        globalSetupWindow: '06:00-22:00',
+      },
+      generatedAt: new Date('2026-02-22T12:00:00.000Z'),
+      profileMode: 'basic',
+    })
+
+    expect(workbook.SheetNames).toEqual([
+      'Output',
+      'Output_2',
+      'Client_Out',
+      'Personnel_Event_Log',
+      'Personnel_Personnel',
+      'Percent_Report',
+      'Fixed_Report',
+      'Personnel_Daily_Full',
+      'Utilization_Summary',
+    ])
+    expect(workbook.SheetNames).not.toContain('Setup_output')
+
+    const eventRows = XLSX.utils.sheet_to_json(workbook.Sheets.Personnel_Event_Log, {
+      header: 1,
+      defval: '',
+    }) as Array<Array<string>>
+    const activityTypeIndex = eventRows[0].indexOf('Activity_Type')
+    const activityTypes = eventRows.slice(1).map(row => String(row[activityTypeIndex]))
+
+    expect(activityTypes.length).toBeGreaterThan(0)
+    expect(activityTypes.every(type => type === 'RUN')).toBe(true)
+
+    const basicDailyRows = XLSX.utils.sheet_to_json(workbook.Sheets.Personnel_Daily_Full, {
+      header: 1,
+      defval: '',
+    }) as Array<Array<string | number>>
+    const basicDailySetupIndex = basicDailyRows[0].indexOf('SETUP')
+    expect(basicDailyRows.slice(1).every(row => Number(row[basicDailySetupIndex]) === 0)).toBe(true)
+
+    const basicUtilRows = XLSX.utils.sheet_to_json(workbook.Sheets.Utilization_Summary, {
+      header: 1,
+      defval: '',
+    }) as Array<Array<string | number>>
+    const basicUtilSetupIndex = basicUtilRows[0].indexOf('Setup_Min')
+    expect(basicUtilRows.slice(1).every(row => Number(row[basicUtilSetupIndex]) === 0)).toBe(true)
   })
 })

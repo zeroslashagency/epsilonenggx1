@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
@@ -28,7 +28,7 @@ const mergePermissionModules = (sources: unknown[]): Record<string, PermissionMo
       const currentModule = merged[moduleKey] || {
         name: typedModule.name || moduleKey,
         items: {},
-        specialPermissions: []
+        specialPermissions: [],
       }
 
       currentModule.name = typedModule.name || currentModule.name
@@ -103,13 +103,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: userRoleRows } = await supabase
         .from('user_roles')
-        .select(`
+        .select(
+          `
           role_id,
           roles (
             name,
             permissions_json
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
 
       const assignedRoles: Array<{ name: string | undefined; permissionsJson: unknown }> = []
@@ -118,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!roleData || typeof roleData !== 'object') continue
         assignedRoles.push({
           name: roleData.name as string | undefined,
-          permissionsJson: roleData.permissions_json
+          permissionsJson: roleData.permissions_json,
         })
       }
 
@@ -126,9 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .map(role => role.name)
         .filter((name): name is string => typeof name === 'string' && name.length > 0)
 
-      const hasSuperAdminRole = assignedRoleNames.some(
-        name => name === 'Super Admin' || name === 'super_admin'
-      ) || profile?.role === 'Super Admin' || profile?.role === 'super_admin'
+      const hasSuperAdminRole =
+        assignedRoleNames.some(name => name === 'Super Admin' || name === 'super_admin') ||
+        profile?.role === 'Super Admin' ||
+        profile?.role === 'super_admin'
 
       if (hasSuperAdminRole) {
         setUserRole('Super Admin')
@@ -170,7 +173,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUserPermissions({})
       }
-
     } catch (error) {
       setUserRole('User')
       setUserPermissions({})
@@ -185,7 +187,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const resolvedModuleKey =
-      (!userPermissions?.[moduleKey] && (moduleKey === 'web_user_attendance' || moduleKey === 'mobile_user_attendance') && userPermissions?.user_attendance)
+      !userPermissions?.[moduleKey] &&
+      (moduleKey === 'web_user_attendance' || moduleKey === 'mobile_user_attendance') &&
+      userPermissions?.user_attendance
         ? 'user_attendance'
         : moduleKey
 
@@ -247,17 +251,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // This is a transitional approach until full migration
     const codeMap: Record<string, { module: string; item: string; action: string }> = {
       'schedule.view': { module: 'main_scheduling', item: 'Schedule Generator', action: 'view' },
-      'schedule.create': { module: 'main_scheduling', item: 'Schedule Generator', action: 'create' },
+      'schedule.create': {
+        module: 'main_scheduling',
+        item: 'Schedule Generator',
+        action: 'create',
+      },
       'schedule.edit': { module: 'main_scheduling', item: 'Schedule Generator', action: 'edit' },
-      'schedule.delete': { module: 'main_scheduling', item: 'Schedule Generator', action: 'delete' },
-      'schedule.approve': { module: 'main_scheduling', item: 'Schedule Generator', action: 'approve' },
+      'schedule.run.basic': {
+        module: 'main_scheduling',
+        item: 'Schedule Generator',
+        action: 'create',
+      },
+      'schedule.run.advanced': {
+        module: 'main_scheduling',
+        item: 'Schedule Generator',
+        action: 'edit',
+      },
+      'schedule.delete': {
+        module: 'main_scheduling',
+        item: 'Schedule Generator',
+        action: 'delete',
+      },
+      'schedule.approve': {
+        module: 'main_scheduling',
+        item: 'Schedule Generator',
+        action: 'approve',
+      },
       'users.view': { module: 'admin_users', item: 'User Management', action: 'view' },
       'users.edit': { module: 'admin_users', item: 'User Management', action: 'edit' },
       'users.permissions': { module: 'admin_users', item: 'User Management', action: 'full' },
-      'manage_users': { module: 'admin_users', item: 'User Management', action: 'edit' },
+      manage_users: { module: 'admin_users', item: 'User Management', action: 'edit' },
       'roles.view': { module: 'admin_roles', item: 'Role Profiles', action: 'view' },
       'roles.manage': { module: 'admin_roles', item: 'Role Profiles', action: 'edit' },
-      'assign_roles': { module: 'admin_roles', item: 'Role Profiles', action: 'edit' },
+      assign_roles: { module: 'admin_roles', item: 'Role Profiles', action: 'edit' },
     }
 
     const mapping = codeMap[permissionCode]
@@ -273,7 +299,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) return
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (session?.user?.id) {
         await fetchUserProfile(session.user.id)
       }
@@ -289,14 +317,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check authentication status on mount
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
         if (session?.user) {
           setIsAuthenticated(true)
-          setUserEmail(session.user.email || "")
+          setUserEmail(session.user.email || '')
           setUserId(session.user.id)
           localStorage.setItem('isAuthenticated', 'true')
-          localStorage.setItem('userEmail', session.user.email || "")
+          localStorage.setItem('userEmail', session.user.email || '')
           localStorage.setItem('userId', session.user.id)
           localStorage.setItem('userId', session.user.id)
 
@@ -324,7 +354,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       if (event === 'SIGNED_OUT' || !session) {
         setIsAuthenticated(false)
         setUserEmail(null)
@@ -363,7 +395,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data.user) {
         setIsAuthenticated(true)
-        setUserEmail(data.user.email || "")
+        setUserEmail(data.user.email || '')
         setUserId(data.user.id)
         localStorage.setItem('isAuthenticated', 'true')
         localStorage.setItem('userEmail', data.user.email || email)
@@ -414,7 +446,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = async (email: string): Promise<void> => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?reset=true`
+        redirectTo: `${window.location.origin}/auth?reset=true`,
       })
 
       if (error) {
@@ -426,20 +458,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{
-      isAuthenticated,
-      userEmail,
-      userRole,
-      user: { id: userId, role: userRole, email: userEmail },
-      userPermissions,
-      hasPermission,
-      hasPermissionCode,
-      refreshPermissions,
-      login,
-      logout,
-      resetPassword,
-      isLoading
-    }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        userEmail,
+        userRole,
+        user: { id: userId, role: userRole, email: userEmail },
+        userPermissions,
+        hasPermission,
+        hasPermissionCode,
+        refreshPermissions,
+        login,
+        logout,
+        resetPassword,
+        isLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

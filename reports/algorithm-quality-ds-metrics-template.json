@@ -1,0 +1,232 @@
+{
+  "run": {
+    "run_id": "alg-quality-YYYYMMDD-HHMM",
+    "date": "2026-02-26",
+    "branch": "<fill-branch>",
+    "commit": "<fill-commit-sha>",
+    "input_file": "/Users/xoxo/Downloads/import_input (2).xlsx",
+    "advanced_output": "advanced_new.xlsx",
+    "basic_output": "basic_new.xlsx"
+  },
+  "kpi_policy": {
+    "person_util_label": "Run Util",
+    "person_util_formula": "run_only_busy_minutes / available_run_window_minutes",
+    "setup_included_in_person_util": false
+  },
+  "summary": {
+    "total_checks": 30,
+    "pass": 0,
+    "fail": 0,
+    "blocked": 0,
+    "decision": "PENDING"
+  },
+  "metric_snapshots": {
+    "advanced": {
+      "on_time_pct": null,
+      "avg_queue_hours": null,
+      "makespan_hours": null,
+      "machine_util_pct": null,
+      "run_util_pct": null,
+      "setup_minutes_total": null,
+      "run_minutes_total": null
+    },
+    "basic": {
+      "on_time_pct": null,
+      "avg_queue_hours": null,
+      "makespan_hours": null,
+      "machine_util_pct": null,
+      "run_util_pct": null,
+      "setup_minutes_total": null,
+      "run_minutes_total": null
+    },
+    "delta_advanced_minus_basic": {
+      "on_time_pct_points": null,
+      "avg_queue_hours": null,
+      "makespan_hours": null,
+      "machine_util_pct_points": null,
+      "run_util_pct_points": null
+    }
+  },
+  "checks": [
+    {
+      "id": "ALG-01",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-02",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-03",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-04",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-05",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-06",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-07",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-08",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-09",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-10",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-11",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-12",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-13",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-14",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-15",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-16",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-17",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-18",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-19",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-20",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-21",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-22",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-23",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-24",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-25",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-26",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-27",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-28",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-29",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "ALG-30",
+      "status": "PENDING",
+      "evidence": "",
+      "notes": ""
+    }
+  ]
+}

@@ -10,6 +10,10 @@ export interface PieceFlowRowLike {
   status: string
 }
 
+export type PieceRenderPolicy = 'auto' | 'slice' | 'all'
+
+export const FLOW_DENSE_ROW_THRESHOLD = 420
+
 export interface PieceTimelinePayloadRowLike {
   partNumber?: string
   part?: string
@@ -156,6 +160,26 @@ export const filterPieceFlowRows = (
     const batchMatch = !batchFilter || row.batch === batchFilter
     return partMatch && pieceMatch && opMatch && machineMatch && batchMatch
   })
+}
+
+export const resolvePieceRenderMode = (
+  policy: PieceRenderPolicy,
+  rowCount: number,
+  denseThreshold: number = FLOW_DENSE_ROW_THRESHOLD
+): 'slice' | 'all' => {
+  if (policy === 'slice') return 'slice'
+  if (policy === 'all') return 'all'
+  return rowCount > denseThreshold ? 'slice' : 'all'
+}
+
+export const applyPieceSlice = <T extends { piece: number }>(
+  rows: T[],
+  from: number,
+  to: number
+): T[] => {
+  const start = Math.max(1, Number.isFinite(from) ? Math.floor(from) : 1)
+  const end = Math.max(start, Number.isFinite(to) ? Math.floor(to) : start)
+  return rows.filter(row => row.piece >= start && row.piece <= end)
 }
 
 export const formatSchedulingFailureAlert = (error: unknown): string => {

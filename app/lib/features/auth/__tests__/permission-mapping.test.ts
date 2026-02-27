@@ -223,4 +223,41 @@ describe('permission-mapping helpers', () => {
     expect(codes).toContain('dashboard.view')
     expect(codes).toContain('dashboard.create')
   })
+
+  test('buildPermissionCodes emits schedule run profile permissions', () => {
+    const fixture: PermissionModules = {
+      main_scheduling: {
+        name: 'MAIN - Scheduling',
+        items: {
+          'Schedule Generator': {
+            full: false,
+            view: true,
+            create: true,
+            edit: false,
+            delete: false,
+            approve: false,
+            export: false,
+          },
+          'Schedule Generator Dashboard': {
+            full: false,
+            view: false,
+            create: false,
+            edit: false,
+            delete: false,
+            approve: false,
+            export: false,
+          },
+        },
+      },
+    }
+
+    const basicOnlyCodes = buildPermissionCodes(fixture)
+    expect(basicOnlyCodes).toContain('schedule.run.basic')
+    expect(basicOnlyCodes).not.toContain('schedule.run.advanced')
+
+    fixture.main_scheduling.items['Schedule Generator'].edit = true
+    const advancedCodes = buildPermissionCodes(fixture)
+    expect(advancedCodes).toContain('schedule.run.basic')
+    expect(advancedCodes).toContain('schedule.run.advanced')
+  })
 })

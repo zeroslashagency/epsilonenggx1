@@ -1,6 +1,8 @@
 import {
+  applyPieceSlice,
   buildPieceFlowRows,
   filterPieceFlowRows,
+  resolvePieceRenderMode,
   formatImportFailureAlert,
   formatSchedulingFailureAlert,
   safelyEvaluate,
@@ -89,6 +91,25 @@ describe('piece flow helpers', () => {
     const byBatch = filterPieceFlowRows(base, { batch: 'B01' })
     expect(byBatch).toHaveLength(1)
     expect(byBatch[0].batch).toBe('B01')
+  })
+
+  it('resolves render mode by policy and density', () => {
+    expect(resolvePieceRenderMode('slice', 1000)).toBe('slice')
+    expect(resolvePieceRenderMode('all', 1000)).toBe('all')
+    expect(resolvePieceRenderMode('auto', 100)).toBe('all')
+    expect(resolvePieceRenderMode('auto', 1000, 420)).toBe('slice')
+  })
+
+  it('applies piece slice boundaries safely', () => {
+    const rows = [
+      { id: 'r1', piece: 1 },
+      { id: 'r2', piece: 2 },
+      { id: 'r3', piece: 3 },
+    ]
+
+    expect(applyPieceSlice(rows, 2, 3).map(row => row.id)).toEqual(['r2', 'r3'])
+    expect(applyPieceSlice(rows, 3, 1).map(row => row.id)).toEqual(['r3'])
+    expect(applyPieceSlice(rows, -4, 2).map(row => row.id)).toEqual(['r1', 'r2'])
   })
 
   it('CHK-148: formats surfaced scheduling failure message', () => {

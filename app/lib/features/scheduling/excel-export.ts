@@ -36,6 +36,7 @@ export interface SchedulingExcelExportPayload {
   shiftSettings?: ShiftSettingsLike
   qualityReport?: QualityReportLike | null
   generatedAt?: Date
+  profileMode?: 'basic' | 'advanced'
 }
 
 interface NormalizedScheduleRow {
@@ -56,6 +57,7 @@ interface NormalizedScheduleRow {
   runEnd: Date | null
   timing: string
   dueDate: Date | string
+  status: string
   breakdownMachine: string
   globalHolidayPeriods: string
   operator: string
@@ -115,26 +117,33 @@ interface PersonnelEventRow {
   refKey: string
 }
 
+interface PersonnelDailyFullRow {
+  name: string
+  role: 'setup' | 'production'
+  date: string
+  runMin: number
+  setupMin: number
+  totalMin: number
+  eventCount: number
+  firstStart: Date
+  lastEnd: Date
+}
+
 const OUTPUT_HEADERS = [
-  'PartNumber',
-  'Order_Quantity',
+  'Part Number',
+  'Order Qty',
   'Priority',
-  'Batch_ID',
-  'Batch_Qty',
-  'OperationSeq',
-  'OperationName',
+  'Batch ID',
+  'Batch Qty',
+  'Operation Seq',
+  'Operation Name',
   'Machine',
-  'Person',
-  'SetupStart',
-  'SetupEnd',
-  'RunStart',
-  'RunEnd',
+  'Run Person',
+  'Run Start',
+  'Run End',
   'Timing',
-  'DueDate',
-  'BreakdownMachine',
-  'Global_Holiday_Periods',
-  'Operator',
-  'Machine_Availability_STATUS',
+  'Due Date',
+  'Status',
 ] as const
 
 const SETUP_OUTPUT_HEADERS = [
@@ -216,6 +225,32 @@ const PERSONNEL_SUMMARY_HEADERS = [
   'Event_Count',
   'Ops_Count',
   'Machines_Used',
+] as const
+
+const PERSONNEL_DAILY_FULL_HEADERS = [
+  'Name',
+  'Role',
+  'Date',
+  'RUN',
+  'SETUP',
+  'Total_Min',
+  'Event_Count',
+  'First_Start',
+  'Last_End',
+] as const
+
+const UTILIZATION_SUMMARY_HEADERS = [
+  'Name',
+  'Role',
+  'Days_With_Work',
+  'Run_Min',
+  'Setup_Min',
+  'Busy_Min',
+  'Window_Min',
+  'Util_Window_Pct',
+  'Assumed_Avail_Min',
+  'Util_Assumed_Pct',
+  'Events',
 ] as const
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -345,11 +380,39 @@ function formatDateOnly(value: Date): string {
   return `${dd}/${mm}/${yyyy}`
 }
 
+function parseDateOnly(value: string): Date | null {
+  const text = coerceString(value)
+  if (!text) return null
+
+  const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (match) {
+    const dd = Number(match[1])
+    const mm = Number(match[2])
+    const yyyy = Number(match[3])
+    const parsed = new Date(yyyy, mm - 1, dd)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+
+  const fallback = new Date(text)
+  if (!Number.isNaN(fallback.getTime())) return fallback
+  return null
+}
+
 function formatTimeOnly(value: Date): string {
   const hh = String(value.getHours()).padStart(2, '0')
   const min = String(value.getMinutes()).padStart(2, '0')
   const sec = String(value.getSeconds()).padStart(2, '0')
   return `${hh}:${min}:${sec}`
+}
+
+function formatDateTimeIsoText(value: Date): string {
+  const yyyy = value.getFullYear()
+  const mm = String(value.getMonth() + 1).padStart(2, '0')
+  const dd = String(value.getDate()).padStart(2, '0')
+  const hh = String(value.getHours())
+  const min = String(value.getMinutes()).padStart(2, '0')
+  const sec = String(value.getSeconds()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${sec}`
 }
 
 function formatTimeHHMM(value: Date): string {
@@ -385,6 +448,12 @@ function startOfWeekMonday(value: Date): Date {
   const day = d.getDay() // 0 Sunday
   const delta = day === 0 ? -6 : 1 - day
   return addDays(d, delta)
+}
+
+function toRoundedPercent(numerator: number, denominator: number): number {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return 0
+  const rounded = Math.round((numerator / denominator) * 1000) / 10
+  return Number.isInteger(rounded) ? Math.trunc(rounded) : rounded
 }
 
 function dayLabel(value: Date): string {
@@ -510,6 +579,10 @@ function normalizeRows(rows: unknown[], holidayPeriodsText: string): NormalizedS
       const dueDateValue = pickFirst(source, ['dueDate', 'DueDate', 'due_date'])
       const parsedDue = toDate(dueDateValue)
       const dueDate = parsedDue || coerceString(dueDateValue)
+      const status =
+        coerceString(
+          pickFirst(source, ['status', 'Status', 'scheduleStatus', 'Schedule_Status'])
+        ) || 'Scheduled'
 
       const breakdownMachine = coerceString(
         pickFirst(source, ['breakdownMachine', 'BreakdownMachine', 'breakdown_machine'])
@@ -546,6 +619,7 @@ function normalizeRows(rows: unknown[], holidayPeriodsText: string): NormalizedS
         runEnd,
         timing,
         dueDate,
+        status,
         breakdownMachine,
         globalHolidayPeriods,
         operator: operator || productionPersonName || person,
@@ -579,25 +653,20 @@ function buildHolidayPeriodsText(holidays: unknown[]): string {
 
 function buildOutputSheetRows(rows: NormalizedScheduleRow[]): Record<string, unknown>[] {
   const data: Record<string, unknown>[] = rows.map(row => ({
-    PartNumber: row.partNumber,
-    Order_Quantity: row.orderQuantity,
+    'Part Number': row.partNumber,
+    'Order Qty': row.orderQuantity,
     Priority: row.priority,
-    Batch_ID: row.batchId,
-    Batch_Qty: row.batchQty,
-    OperationSeq: row.operationSeq,
-    OperationName: row.operationName,
+    'Batch ID': row.batchId,
+    'Batch Qty': row.batchQty,
+    'Operation Seq': row.operationSeq,
+    'Operation Name': row.operationName,
     Machine: row.machine,
-    Person: row.person || row.productionPersonName || row.setupPersonName,
-    SetupStart: row.setupStart ? formatDateTimeForReport(row.setupStart) : '',
-    SetupEnd: row.setupEnd ? formatDateTimeForReport(row.setupEnd) : '',
-    RunStart: row.runStart ? formatDateTimeForReport(row.runStart) : '',
-    RunEnd: row.runEnd ? formatDateTimeForReport(row.runEnd) : '',
+    'Run Person': row.person || row.productionPersonName || row.setupPersonName,
+    'Run Start': row.runStart ? formatDateTimeForReport(row.runStart) : '',
+    'Run End': row.runEnd ? formatDateTimeForReport(row.runEnd) : '',
     Timing: row.timing,
-    DueDate: toExcelDate(row.dueDate),
-    BreakdownMachine: row.breakdownMachine,
-    Global_Holiday_Periods: row.globalHolidayPeriods,
-    Operator: row.operator,
-    Machine_Availability_STATUS: row.machineAvailabilityStatus,
+    'Due Date': toExcelDate(row.dueDate),
+    Status: row.status,
   }))
 
   const totalMinutes = rows.reduce((sum, row) => {
@@ -607,25 +676,20 @@ function buildOutputSheetRows(rows: NormalizedScheduleRow[]): Record<string, unk
 
   if (data.length > 0) {
     data.push({
-      PartNumber: 'TOTAL (Timing)',
-      Order_Quantity: '',
+      'Part Number': 'TOTAL (Timing)',
+      'Order Qty': '',
       Priority: '',
-      Batch_ID: '',
-      Batch_Qty: '',
-      OperationSeq: '',
-      OperationName: '',
+      'Batch ID': '',
+      'Batch Qty': '',
+      'Operation Seq': '',
+      'Operation Name': '',
       Machine: '',
-      Person: '',
-      SetupStart: '',
-      SetupEnd: '',
-      RunStart: '',
-      RunEnd: formatDuration(totalMinutes),
+      'Run Person': '',
+      'Run Start': '',
+      'Run End': formatDuration(totalMinutes),
       Timing: '',
-      DueDate: '',
-      BreakdownMachine: '',
-      Global_Holiday_Periods: '',
-      Operator: '',
-      Machine_Availability_STATUS: '',
+      'Due Date': '',
+      Status: '',
     })
   }
 
@@ -799,7 +863,8 @@ function buildPersonnelIndex(personnelProfiles: PersonnelProfileLike[], shifts: 
 function buildPersonnelEventRows(
   rows: NormalizedScheduleRow[],
   personnelProfiles: PersonnelProfileLike[],
-  shiftSettings?: ShiftSettingsLike
+  shiftSettings?: ShiftSettingsLike,
+  profileMode?: 'basic' | 'advanced'
 ): PersonnelEventRow[] {
   const shifts = parseShiftWindows(shiftSettings)
   const parsedShifts = shifts.map(shift => parseShiftWindow(shift.window, shift.label))
@@ -907,7 +972,10 @@ function buildPersonnelEventRows(
   }
 
   rows.forEach(row => {
-    pushEvent('setup', 'SETUP', row.setupPersonName, row.setupStart, row.setupEnd, row)
+    // In Basic mode there are no setup persons; skip SETUP events entirely
+    if (profileMode !== 'basic') {
+      pushEvent('setup', 'SETUP', row.setupPersonName, row.setupStart, row.setupEnd, row)
+    }
     pushEvent(
       'production',
       'RUN',
@@ -1052,6 +1120,137 @@ function buildPersonnelSummaryRows(
     })
 
   return rows
+}
+
+function buildPersonnelDailyRows(events: PersonnelEventRow[]): PersonnelDailyFullRow[] {
+  const grouped = new Map<string, PersonnelDailyFullRow>()
+
+  events.forEach(event => {
+    const date = coerceString(event.shiftDate || event.eventDate)
+    if (!date) return
+
+    const role = event.role === 'setup' ? 'setup' : 'production'
+    const key = `${event.name.toLowerCase()}|${role}|${date}`
+    const existing = grouped.get(key)
+
+    if (existing) {
+      if (event.activityType === 'SETUP') existing.setupMin += event.durationMin
+      else existing.runMin += event.durationMin
+      existing.totalMin += event.durationMin
+      existing.eventCount += 1
+      if (event.startTime < existing.firstStart) existing.firstStart = event.startTime
+      if (event.endTime > existing.lastEnd) existing.lastEnd = event.endTime
+      return
+    }
+
+    grouped.set(key, {
+      name: event.name,
+      role,
+      date,
+      runMin: event.activityType === 'RUN' ? event.durationMin : 0,
+      setupMin: event.activityType === 'SETUP' ? event.durationMin : 0,
+      totalMin: event.durationMin,
+      eventCount: 1,
+      firstStart: event.startTime,
+      lastEnd: event.endTime,
+    })
+  })
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    const byName = a.name.localeCompare(b.name)
+    if (byName !== 0) return byName
+
+    const aDate = parseDateOnly(a.date)
+    const bDate = parseDateOnly(b.date)
+    const byDate = (aDate?.getTime() || 0) - (bDate?.getTime() || 0)
+    if (byDate !== 0) return byDate
+
+    return a.role.localeCompare(b.role)
+  })
+}
+
+function buildPersonnelDailyFullRows(rows: PersonnelDailyFullRow[]): Record<string, unknown>[] {
+  return rows.map(row => ({
+    Name: row.name,
+    Role: row.role,
+    Date: row.date,
+    RUN: row.runMin,
+    SETUP: row.setupMin,
+    Total_Min: row.totalMin,
+    Event_Count: row.eventCount,
+    First_Start: formatDateTimeIsoText(row.firstStart),
+    Last_End: formatDateTimeIsoText(row.lastEnd),
+  }))
+}
+
+function buildUtilizationSummaryRows(rows: PersonnelDailyFullRow[]): Record<string, unknown>[] {
+  const grouped = new Map<
+    string,
+    {
+      name: string
+      role: 'setup' | 'production'
+      dates: Set<string>
+      runMin: number
+      setupMin: number
+      busyMin: number
+      firstStart: Date
+      lastEnd: Date
+      events: number
+    }
+  >()
+
+  rows.forEach(row => {
+    const key = `${row.name.toLowerCase()}|${row.role}`
+    const existing = grouped.get(key)
+    if (existing) {
+      existing.dates.add(row.date)
+      existing.runMin += row.runMin
+      existing.setupMin += row.setupMin
+      existing.busyMin += row.totalMin
+      existing.events += row.eventCount
+      if (row.firstStart < existing.firstStart) existing.firstStart = row.firstStart
+      if (row.lastEnd > existing.lastEnd) existing.lastEnd = row.lastEnd
+      return
+    }
+
+    grouped.set(key, {
+      name: row.name,
+      role: row.role,
+      dates: new Set([row.date]),
+      runMin: row.runMin,
+      setupMin: row.setupMin,
+      busyMin: row.totalMin,
+      firstStart: row.firstStart,
+      lastEnd: row.lastEnd,
+      events: row.eventCount,
+    })
+  })
+
+  return Array.from(grouped.values())
+    .sort((a, b) => {
+      const byName = a.name.localeCompare(b.name)
+      if (byName !== 0) return byName
+      return a.role.localeCompare(b.role)
+    })
+    .map(row => {
+      const daysWithWork = row.dates.size
+      const windowMin = diffMinutes(row.firstStart, row.lastEnd)
+      const assumedAvailMin = daysWithWork * (row.role === 'setup' ? 16 * 60 : 24 * 60)
+
+      return {
+        Name: row.name,
+        Role: row.role,
+        Days_With_Work: daysWithWork,
+        Run_Min: row.runMin,
+        Setup_Min: row.setupMin,
+        Busy_Min: row.busyMin,
+        Window_Min: windowMin,
+        Util_Window_Pct: toRoundedPercent(row.busyMin, windowMin),
+        Assumed_Avail_Min: assumedAvailMin,
+        Util_Assumed_Pct: toRoundedPercent(row.busyMin, assumedAvailMin),
+        Events: row.events,
+      }
+    })
 }
 
 function buildPercentReportSheet(
@@ -1284,18 +1483,19 @@ function setStandardColumns(sheet: XLSX.WorkSheet, count: number): void {
 
 export function buildSchedulingWorkbook(payload: SchedulingExcelExportPayload): XLSX.WorkBook {
   const workbook = XLSX.utils.book_new()
+  const isBasic = payload.profileMode === 'basic'
 
   const holidayPeriodsText = buildHolidayPeriodsText(payload.holidays || [])
   const normalizedRows = normalizeRows(payload.results || [], holidayPeriodsText)
 
   const outputRows = buildOutputSheetRows(normalizedRows)
-  const setupOutputRows = buildSetupOutputRows(normalizedRows)
   const output2Rows = buildOutput2Rows(normalizedRows)
   const clientOutRows = buildClientOutRows(normalizedRows)
   const personnelEvents = buildPersonnelEventRows(
     normalizedRows,
     payload.personnelProfiles || [],
-    payload.shiftSettings
+    payload.shiftSettings,
+    payload.profileMode
   )
   const personnelEventLogRows = buildPersonnelEventLogRows(personnelEvents)
   const personnelSummaryRows = buildPersonnelSummaryRows(
@@ -1303,6 +1503,9 @@ export function buildSchedulingWorkbook(payload: SchedulingExcelExportPayload): 
     payload.personnelProfiles || [],
     payload.shiftSettings
   )
+  const personnelDailyRows = buildPersonnelDailyRows(personnelEvents)
+  const personnelDailyFullRows = buildPersonnelDailyFullRows(personnelDailyRows)
+  const utilizationSummaryRows = buildUtilizationSummaryRows(personnelDailyRows)
   const percentReportSheet = buildPercentReportSheet(
     personnelEvents,
     payload.personnelProfiles || [],
@@ -1315,12 +1518,6 @@ export function buildSchedulingWorkbook(payload: SchedulingExcelExportPayload): 
     skipHeader: false,
   })
   setStandardColumns(outputSheet, OUTPUT_HEADERS.length)
-
-  const setupOutputSheet = XLSX.utils.json_to_sheet(setupOutputRows, {
-    header: [...SETUP_OUTPUT_HEADERS],
-    skipHeader: false,
-  })
-  setStandardColumns(setupOutputSheet, SETUP_OUTPUT_HEADERS.length)
 
   const output2Sheet = XLSX.utils.json_to_sheet(output2Rows, {
     header: [...OUTPUT_2_HEADERS],
@@ -1348,14 +1545,61 @@ export function buildSchedulingWorkbook(payload: SchedulingExcelExportPayload): 
   })
   setStandardColumns(personnelSummarySheet, PERSONNEL_SUMMARY_HEADERS.length)
 
+  const personnelDailyFullSheet = XLSX.utils.json_to_sheet(personnelDailyFullRows, {
+    header: [...PERSONNEL_DAILY_FULL_HEADERS],
+    skipHeader: false,
+  })
+  personnelDailyFullSheet['!cols'] = [
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 11 },
+    { wch: 13 },
+    { wch: 21 },
+    { wch: 21 },
+  ]
+
+  const utilizationSummarySheet = XLSX.utils.json_to_sheet(utilizationSummaryRows, {
+    header: [...UTILIZATION_SUMMARY_HEADERS],
+    skipHeader: false,
+  })
+  utilizationSummarySheet['!cols'] = [
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 10 },
+    { wch: 11 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 17 },
+    { wch: 19 },
+    { wch: 18 },
+    { wch: 10 },
+  ]
+
   XLSX.utils.book_append_sheet(workbook, outputSheet, 'Output')
-  XLSX.utils.book_append_sheet(workbook, setupOutputSheet, 'Setup_output')
+
+  // In Advanced mode: include the Setup_output sheet (setup person details)
+  if (!isBasic) {
+    const setupOutputRows = buildSetupOutputRows(normalizedRows)
+    const setupOutputSheet = XLSX.utils.json_to_sheet(setupOutputRows, {
+      header: [...SETUP_OUTPUT_HEADERS],
+      skipHeader: false,
+    })
+    setStandardColumns(setupOutputSheet, SETUP_OUTPUT_HEADERS.length)
+    XLSX.utils.book_append_sheet(workbook, setupOutputSheet, 'Setup_output')
+  }
+
   XLSX.utils.book_append_sheet(workbook, output2Sheet, 'Output_2')
   XLSX.utils.book_append_sheet(workbook, clientOutSheet, 'Client_Out')
   XLSX.utils.book_append_sheet(workbook, personnelEventLogSheet, 'Personnel_Event_Log')
   XLSX.utils.book_append_sheet(workbook, personnelSummarySheet, 'Personnel_Personnel')
   XLSX.utils.book_append_sheet(workbook, percentReportSheet, 'Percent_Report')
   XLSX.utils.book_append_sheet(workbook, fixedReportSheet, 'Fixed_Report')
+  XLSX.utils.book_append_sheet(workbook, personnelDailyFullSheet, 'Personnel_Daily_Full')
+  XLSX.utils.book_append_sheet(workbook, utilizationSummarySheet, 'Utilization_Summary')
 
   return workbook
 }

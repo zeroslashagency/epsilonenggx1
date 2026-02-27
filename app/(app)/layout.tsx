@@ -1,5 +1,6 @@
 "use client"
 
+import { usePathname } from 'next/navigation'
 import { ReactNode, CSSProperties } from 'react'
 import { BreadcrumbProvider } from '@/app/lib/contexts/breadcrumb-context'
 import { SidebarProvider, SidebarInset } from '@/components/animate-ui/components/radix/sidebar'
@@ -8,6 +9,9 @@ import { AppHeader } from '@/components/app-header'
 // import { ZohoBreadcrumb } from '@/app/components/zoho-ui/ZohoBreadcrumb'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+    const pathname = usePathname()
+    const isScheduler = pathname === '/scheduler'
+
     return (
         <BreadcrumbProvider>
             <SidebarProvider
@@ -17,11 +21,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
                 <AppSidebar />
                 <SidebarInset className="overflow-x-hidden">
-                    <AppHeader />
-                    <div className="flex flex-1 flex-col gap-4 p-4 pt-0 overflow-x-hidden">
-                        <div className="px-4 py-2">
-                            {/* Breadcrumb integration point */}
-                        </div>
+                    {!isScheduler && <AppHeader />}
+                    <div className={isScheduler ? "flex flex-1 flex-col overflow-x-hidden" : "flex flex-1 flex-col gap-4 p-4 pt-0 overflow-x-hidden"}>
+                        {!isScheduler && (
+                            <div className="px-4 py-2">
+                                {/* Breadcrumb integration point */}
+                            </div>
+                        )}
                         {children}
                     </div>
                 </SidebarInset>

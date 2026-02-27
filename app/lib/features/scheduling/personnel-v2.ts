@@ -94,7 +94,11 @@ export function parsePersonnelProfilesFromRows(rawRows: LooseRow[]): PersonnelPa
   const issues: PersonnelParseIssue[] = []
   const rows = Array.isArray(rawRows) ? rawRows : []
 
-  const sectionKey = findColumnKey(rows, ['Production-Person', 'production_person', 'production person'])
+  const sectionKey = findColumnKey(rows, [
+    'Production-Person',
+    'production_person',
+    'production person',
+  ])
   const uidKey = findColumnKey(rows, ['uid', 'user id', 'employee id'])
   const nameKey = findColumnKey(rows, ['Name', 'person name', 'employee name'])
   const levelKey = findColumnKey(rows, ['level-up', 'level up', 'levelup', 'level'])
@@ -104,8 +108,7 @@ export function parsePersonnelProfilesFromRows(rawRows: LooseRow[]): PersonnelPa
       code: 'missing_required_column',
       severity: 'critical',
       row: 1,
-      message:
-        'Personnel columns missing. Required: Production-Person, uid, Name, level-up.',
+      message: 'Personnel columns missing. Required: Production-Person, uid, Name, level-up.',
     })
     return {
       profiles: [],
@@ -179,7 +182,7 @@ export function parsePersonnelProfilesFromRows(rawRows: LooseRow[]): PersonnelPa
 
     const sourceSection: PersonnelSourceSection = currentSection
     const setupEligible = sourceSection === 'setup' || levelUp === 1
-    const productionEligible = true
+    const productionEligible = sourceSection === 'production' || levelUp === 1
     const setupPriority = sourceSection === 'setup' ? 1 : levelUp === 1 ? 2 : 99
 
     if (sourceSection === 'setup') setupRowsDetected += 1

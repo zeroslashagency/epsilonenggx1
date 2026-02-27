@@ -123,6 +123,346 @@ const maxConcurrentIntervals = (intervals: Array<{ start: number; end: number }>
 }
 
 describe('deterministic engine HandleMachines behavior', () => {
+  it('prefers production team for run when both production and setup are feasible', () => {
+    const engine = new DeterministicSchedulingEngine([])
+    const result = engine.runSchedule(
+      [
+        {
+          id: 'order-pref-prod-run',
+          partNumber: 'PN7771',
+          operationSeq: '1',
+          orderQuantity: 1,
+          priority: 'Normal',
+          batchMode: 'single-batch',
+          operationDetails: [
+            {
+              operationSeq: 1,
+              operationName: 'Facing',
+              setupTimeMin: 10,
+              cycleTimeMin: 30,
+              minimumBatchSize: 1,
+              eligibleMachines: ['VMC 1'],
+              handleMode: 'single',
+            },
+          ],
+        },
+      ],
+      {
+        ...baseSettings,
+        personnelProfiles: [
+          {
+            uid: 'p-1',
+            name: 'Prod Primary',
+            sourceSection: 'production',
+            levelUp: 0,
+            setupEligible: false,
+            productionEligible: true,
+            setupPriority: 99,
+          },
+          {
+            uid: 's-1',
+            name: 'Setup Backup',
+            sourceSection: 'setup',
+            levelUp: 1,
+            setupEligible: true,
+            productionEligible: true,
+            setupPriority: 1,
+          },
+        ],
+      }
+    )
+
+    expect(result.rows).toHaveLength(1)
+    expect(result.rows[0].productionPersonName).toBe('Prod Primary')
+  })
+
+  it('uses setup person for run only as fallback when no production candidate is eligible', () => {
+    const engine = new DeterministicSchedulingEngine([])
+    const result = engine.runSchedule(
+      [
+        {
+          id: 'order-fallback-setup-run',
+          partNumber: 'PN7772',
+          operationSeq: '1',
+          orderQuantity: 1,
+          priority: 'Normal',
+          batchMode: 'single-batch',
+          operationDetails: [
+            {
+              operationSeq: 1,
+              operationName: 'Facing',
+              setupTimeMin: 10,
+              cycleTimeMin: 30,
+              minimumBatchSize: 1,
+              eligibleMachines: ['VMC 1'],
+              handleMode: 'single',
+            },
+          ],
+        },
+      ],
+      {
+        ...baseSettings,
+        personnelProfiles: [
+          {
+            uid: 'p-2',
+            name: 'Prod Disabled',
+            sourceSection: 'production',
+            levelUp: 0,
+            setupEligible: false,
+            productionEligible: false,
+            setupPriority: 99,
+          },
+          {
+            uid: 's-2',
+            name: 'Setup Fallback',
+            sourceSection: 'setup',
+            levelUp: 1,
+            setupEligible: true,
+            productionEligible: true,
+            setupPriority: 1,
+          },
+        ],
+      }
+    )
+
+    expect(result.rows).toHaveLength(1)
+    expect(result.rows[0].productionPersonName).toBe('Setup Fallback')
+  })
+
+  it('keeps production assignment when production can start within 30-minute fallback tolerance', () => {
+    const engine = new DeterministicSchedulingEngine([])
+    const result = engine.runSchedule(
+      [
+        {
+          id: 'order-prod-busy-short',
+          partNumber: 'PN7801',
+          operationSeq: '1',
+          orderQuantity: 1,
+          priority: 'Normal',
+          batchMode: 'single-batch',
+          operationDetails: [
+            {
+              operationSeq: 1,
+              operationName: 'Op',
+              setupTimeMin: 5,
+              cycleTimeMin: 20,
+              minimumBatchSize: 1,
+              eligibleMachines: ['VMC 1'],
+              handleMode: 'single',
+            },
+          ],
+        },
+        {
+          id: 'order-should-stay-prod',
+          partNumber: 'PN7802',
+          operationSeq: '1',
+          orderQuantity: 1,
+          priority: 'Normal',
+          batchMode: 'single-batch',
+          operationDetails: [
+            {
+              operationSeq: 1,
+              operationName: 'Op',
+              setupTimeMin: 5,
+              cycleTimeMin: 20,
+              minimumBatchSize: 1,
+              eligibleMachines: ['VMC 2'],
+              handleMode: 'single',
+            },
+          ],
+        },
+      ],
+      {
+        ...baseSettings,
+        personnelProfiles: [
+          {
+            uid: 'p-3',
+            name: 'Prod Busy',
+            sourceSection: 'production',
+            levelUp: 0,
+            setupEligible: false,
+            productionEligible: true,
+            setupPriority: 99,
+          },
+          {
+            uid: 's-3',
+            name: 'Setup Can Fallback',
+            sourceSection: 'setup',
+            levelUp: 1,
+            setupEligible: true,
+            productionEligible: true,
+            setupPriority: 1,
+          },
+        ],
+      }
+    )
+
+    const second = result.rows.find((row: any) => row.id.includes('order-should-stay-prod'))
+    expect(second).toBeTruthy()
+    expect(second?.productionPersonName).toBe('Prod Busy')
+  })
+
+  it('uses setup fallback for run when no production candidate can start within 30 minutes', () => {
+    const engine = new DeterministicSchedulingEngine([])
+    const result = engine.runSchedule(
+      [
+        {
+          id: 'order-prod-busy-long',
+          partNumber: 'PN7803',
+          operationSeq: '1',
+          orderQuantity: 1,
+          priority: 'Normal',
+          batchMode: 'single-batch',
+          operationDetails: [
+            {
+              operationSeq: 1,
+              operationName: 'Op',
+              setupTimeMin: 5,
+              cycleTimeMin: 90,
+              minimumBatchSize: 1,
+              eligibleMachines: ['VMC 1'],
+              handleMode: 'single',
+            },
+          ],
+        },
+        {
+          id: 'order-should-fallback',
+          partNumber: 'PN7804',
+          operationSeq: '1',
+          orderQuantity: 1,
+          priority: 'Normal',
+          batchMode: 'single-batch',
+          operationDetails: [
+            {
+              operationSeq: 1,
+              operationName: 'Op',
+              setupTimeMin: 5,
+              cycleTimeMin: 20,
+              minimumBatchSize: 1,
+              eligibleMachines: ['VMC 2'],
+              handleMode: 'single',
+            },
+          ],
+        },
+      ],
+      {
+        ...baseSettings,
+        personnelProfiles: [
+          {
+            uid: 'p-4',
+            name: 'Prod Busy Long',
+            sourceSection: 'production',
+            levelUp: 0,
+            setupEligible: false,
+            productionEligible: true,
+            setupPriority: 99,
+          },
+          {
+            uid: 's-4',
+            name: 'Setup Fallback Long',
+            sourceSection: 'setup',
+            levelUp: 1,
+            setupEligible: true,
+            productionEligible: true,
+            setupPriority: 1,
+          },
+        ],
+      }
+    )
+
+    const second = result.rows.find((row: any) => row.id.includes('order-should-fallback'))
+    expect(second).toBeTruthy()
+    expect(second?.productionPersonName).toBe('Setup Fallback Long')
+  })
+
+  it('balances near-tie production assignment toward lower reserved run load', () => {
+    const engine = new DeterministicSchedulingEngine([])
+    const result = engine.runSchedule(
+      [
+        {
+          id: 'a-order-preload-heavy',
+          partNumber: 'PN7901',
+          operationSeq: '1',
+          orderQuantity: 1,
+          priority: 'Normal',
+          batchMode: 'single-batch',
+          operationDetails: [
+            {
+              operationSeq: 1,
+              operationName: 'Op',
+              setupTimeMin: 5,
+              cycleTimeMin: 40,
+              minimumBatchSize: 1,
+              eligibleMachines: ['VMC 1'],
+              handleMode: 'single',
+            },
+          ],
+        },
+        {
+          id: 'z-order-load-balanced',
+          partNumber: 'PN7902',
+          operationSeq: '1',
+          orderQuantity: 1,
+          priority: 'Normal',
+          batchMode: 'single-batch',
+          startDateTime: '2026-02-22T10:00:00',
+          operationDetails: [
+            {
+              operationSeq: 1,
+              operationName: 'Op',
+              setupTimeMin: 5,
+              cycleTimeMin: 30,
+              minimumBatchSize: 1,
+              eligibleMachines: ['VMC 2'],
+              handleMode: 'single',
+            },
+          ],
+        },
+      ],
+      {
+        ...baseSettings,
+        enforceOperatorShifts: true,
+        shift1: '06:00-22:00',
+        shift2: '10:00-22:00',
+        shift3: '06:00-22:00',
+        personnelProfiles: [
+          {
+            uid: 'p-5',
+            name: 'AA Prod Heavy',
+            sourceSection: 'production',
+            levelUp: 0,
+            setupEligible: false,
+            productionEligible: true,
+            setupPriority: 99,
+          },
+          {
+            uid: 'p-6',
+            name: 'ZZ Prod Light',
+            sourceSection: 'production',
+            levelUp: 0,
+            setupEligible: false,
+            productionEligible: true,
+            setupPriority: 99,
+          },
+          {
+            uid: 's-5',
+            name: 'Setup Anchor',
+            sourceSection: 'setup',
+            levelUp: 1,
+            setupEligible: true,
+            productionEligible: false,
+            setupPriority: 1,
+          },
+        ],
+      }
+    )
+
+    const preload = result.rows.find((row: any) => row.id.includes('a-order-preload-heavy'))
+    const balanced = result.rows.find((row: any) => row.id.includes('z-order-load-balanced'))
+    expect(preload?.productionPersonName).toBe('AA Prod Heavy')
+    expect(balanced?.productionPersonName).toBe('ZZ Prod Light')
+  })
+
   it('allows overlap for double-machine runs on the same production person', () => {
     const engine = new DeterministicSchedulingEngine([])
     const result = engine.runSchedule(buildOrders('double'), {

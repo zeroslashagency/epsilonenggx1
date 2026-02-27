@@ -427,7 +427,12 @@ const addUserAttendanceCodes = (
     const parentPerms = module.items[parentName]
     if (!parentPerms) return
 
-    if (moduleKey === 'mobile_user_attendance' || moduleKey === 'web_user_attendance' || moduleKey === 'tools_health') return
+    if (
+      moduleKey === 'mobile_user_attendance' ||
+      moduleKey === 'web_user_attendance' ||
+      moduleKey === 'tools_health'
+    )
+      return
 
     const matchedForParent = matchedChildCodesByParent[parentName] ?? new Set<string>()
 
@@ -473,7 +478,12 @@ const addUserAttendanceCodes = (
   })
 
   Object.entries(baseState).forEach(([prefix, state]) => {
-    if (moduleKey === 'mobile_user_attendance' || moduleKey === 'web_user_attendance' || moduleKey === 'tools_health') return
+    if (
+      moduleKey === 'mobile_user_attendance' ||
+      moduleKey === 'web_user_attendance' ||
+      moduleKey === 'tools_health'
+    )
+      return
     if (state.hasFull) {
       codes.add(`${prefix}.view_all`)
     } else if (state.hasAny) {
@@ -522,12 +532,16 @@ export function buildPermissionCodes(permissionModules: PermissionModules): stri
       codes.add('schedule.edit')
       codes.add('schedule.delete')
       codes.add('schedule.approve')
+      codes.add('schedule.run.basic')
+      codes.add('schedule.run.advanced')
     } else {
       if (merged.view) codes.add('schedule.view')
       if (merged.create) codes.add('schedule.create')
       if (merged.edit) codes.add('schedule.edit')
       if (merged.delete) codes.add('schedule.delete')
       if (merged.approve) codes.add('schedule.approve')
+      if (merged.create || merged.edit || merged.approve) codes.add('schedule.run.basic')
+      if (merged.edit || merged.approve) codes.add('schedule.run.advanced')
     }
   }
 
@@ -616,12 +630,16 @@ export function buildPermissionCodes(permissionModules: PermissionModules): stri
       codes.add('schedule.edit')
       codes.add('schedule.delete')
       codes.add('schedule.approve')
+      codes.add('schedule.run.basic')
+      codes.add('schedule.run.advanced')
     } else {
       if (merged.view) codes.add('schedule.view')
       if (merged.create) codes.add('schedule.create')
       if (merged.edit) codes.add('schedule.edit')
       if (merged.delete) codes.add('schedule.delete')
       if (merged.approve) codes.add('schedule.approve')
+      if (merged.create || merged.edit || merged.approve) codes.add('schedule.run.basic')
+      if (merged.edit || merged.approve) codes.add('schedule.run.advanced')
     }
   }
 

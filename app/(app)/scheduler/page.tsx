@@ -30,13 +30,23 @@ import {
   SchedulerPersonnelProfileInput,
 } from '@/app/lib/features/scheduling/personnel-v2'
 import {
+  FLOW_DENSE_ROW_THRESHOLD,
+  PieceRenderPolicy,
+  applyPieceSlice,
   buildPieceFlowRows,
   filterPieceFlowRows,
   formatImportFailureAlert,
   formatSchedulingFailureAlert,
+  resolvePieceRenderMode,
   normalizeMachineLane,
   safelyEvaluate,
 } from '@/app/lib/features/scheduling/piece-flow-helpers'
+import {
+  deriveRunPermissionsFromCodes,
+  isRunActionDisabled,
+  resolveProfileForExecution,
+  resolveRunPermissions,
+} from '@/app/lib/features/scheduling/run-access-ui'
 import {
   Settings,
   Calendar as CalendarIcon,
@@ -62,9 +72,26 @@ import {
   Lock,
   Unlock,
   XCircle,
+  Sun,
+  Moon,
+  Check,
+  ChevronUp,
 } from 'lucide-react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { verifyPieceFlow } from '../../lib/features/scheduling/piece-flow-verifier'
+import { HexagonBackground } from '@/components/ui/hexagon-background'
+import { useTheme } from '@/app/lib/contexts/theme-context'
+import { SidebarTrigger } from '@/components/animate-ui/components/radix/sidebar'
+import { Separator } from '@/components/ui/separator'
+import { ActionDock } from '@/components/ActionDock'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface Order {
   id: string
@@ -117,6 +144,12 @@ interface Breakdown {
   reason: string
 }
 
+interface RunAccessState {
+  loaded: boolean
+  canRunBasic: boolean
+  canRunAdvanced: boolean
+}
+
 interface PieceFlowRow {
   id: string
   part: string
@@ -126,6 +159,28 @@ interface PieceFlowRow {
   machine: string
   start: Date
   end: Date
+  status: string
+}
+
+interface PieceFlowLogRow {
+  key: string
+  partNumber: string
+  orderQty: number
+  priority: string
+  batchId: string
+  batchQty: number
+  piece: number
+  operationSeq: number
+  operationName: string
+  machine: string
+  runPerson: string
+  setupPerson: string
+  setupStart: Date
+  setupEnd: Date
+  runStart: Date
+  runEnd: Date
+  timing: string
+  dueDate: string
   status: string
 }
 
@@ -203,6 +258,57 @@ const MACHINE_LANES = [
   'VMC 10',
 ]
 
+const FLOW_LOG_PAGE_SIZE = 250
+const FLOW_RENDER_CHUNK_SIZE = 500
+const FLOW_RENDER_ALL_CONFIRM_THRESHOLD = 25_000
+const FLOW_TRACE_LINK_PREVIEW_LIMIT = 120
+
+type FlowLinkVisibility = 'auto' | 'selected' | 'all' | 'none'
+type FlowRenderProfile = 'balanced' | 'quality'
+
+interface FlowRenderProgress {
+  phase: 'idle' | 'prepare' | 'render' | 'done' | 'cancelled' | 'error'
+  total: number
+  processed: number
+  message: string
+  startedAtMs?: number
+  speedRowsPerSec?: number
+  etaSeconds?: number
+}
+
+interface FlowNode {
+  id: string
+  key: string
+  x: number
+  y: number
+  width: number
+  height: number
+  startTs: number
+  endTs: number
+  label: string
+  shortLabel: string
+  fill: string
+  stroke: string
+  showLabel: boolean
+  tooltip: string
+  part: string
+  batch: string
+  operationSeq: number
+  machine: string
+  piece?: number
+  pieceKey?: string
+  status?: string
+  runPerson?: string
+  setupPerson?: string
+}
+
+interface FlowLink {
+  id: string
+  d: string
+  color: string
+  pieceKey?: string
+}
+
 const toDate = (value: any): Date | null => {
   if (!value) return null
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value
@@ -225,6 +331,35 @@ const parseWindowMinutes = (window: string): [number, number] | null => {
 }
 
 const toLocalDateTimeInput = (date: Date): string => format(date, "yyyy-MM-dd'T'HH:mm")
+
+const extractPieceIdentity = (key: string | null): string | null => {
+  if (!key) return null
+  const parts = key.split('|')
+  if (parts.length < 3) return null
+  const piece = Number(parts[2])
+  if (!Number.isFinite(piece)) return null
+  return `${parts[0]}|${parts[1]}|${piece}`
+}
+
+const getTooltipPosition = (x: number, y: number): { left: number; top: number } => {
+  const fallback = { left: x + 15, top: y + 15 }
+  if (typeof window === 'undefined') return fallback
+  const maxLeft = Math.max(16, window.innerWidth - 360)
+  const maxTop = Math.max(16, window.innerHeight - 220)
+  return {
+    left: Math.max(16, Math.min(maxLeft, x + 15)),
+    top: Math.max(16, Math.min(maxTop, y + 15)),
+  }
+}
+
+const formatEta = (seconds?: number): string => {
+  if (!Number.isFinite(seconds) || !seconds || seconds <= 0) return '0s'
+  const whole = Math.max(0, Math.round(seconds))
+  const mins = Math.floor(whole / 60)
+  const secs = whole % 60
+  if (mins > 0) return `${mins}m ${secs}s`
+  return `${secs}s`
+}
 
 const isWithinWindow = (date: Date, window: string): boolean => {
   const parsed = parseWindowMinutes(window)
@@ -254,6 +389,26 @@ const formatDurationShort = (totalMinutes: number): string => {
   return `${minutes}m`
 }
 
+const chooseTickStepHours = (spanHours: number): number => {
+  if (spanHours <= 24) return 2
+  if (spanHours <= 72) return 6
+  if (spanHours <= 240) return 12
+  return 24
+}
+
+const alignLocalTickStartMs = (ts: number, stepHours: number): number => {
+  const date = new Date(ts)
+  const base = new Date(date)
+  base.setSeconds(0, 0)
+  const midnight = new Date(base)
+  midnight.setHours(0, 0, 0, 0)
+  const minutesSinceMidnight = base.getHours() * 60 + base.getMinutes()
+  const stepMinutes = Math.max(60, stepHours * 60)
+  const flooredMinutes = Math.floor(minutesSinceMidnight / stepMinutes) * stepMinutes
+  midnight.setMinutes(flooredMinutes)
+  return midnight.getTime()
+}
+
 const evaluateScheduleQuality = (
   scheduleRows: any[],
   setupWindow: string,
@@ -261,7 +416,8 @@ const evaluateScheduleQuality = (
   pieceRows: PieceFlowRow[],
   holidays: Holiday[],
   pieceTimeline: any[] = [],
-  productionWindows: string[] = []
+  productionWindows: string[] = [],
+  profileMode: 'basic' | 'advanced' = 'advanced'
 ): QualityReport => {
   const issues: QualityIssue[] = []
 
@@ -306,30 +462,30 @@ const evaluateScheduleQuality = (
     const setupPerson =
       String(
         row.setupPersonName ||
-          row.setupPerson ||
-          row.setup_person_name ||
-          row.setup_person ||
-          row.person ||
-          row.operator ||
-          ''
+        row.setupPerson ||
+        row.setup_person_name ||
+        row.setup_person ||
+        row.person ||
+        row.operator ||
+        ''
       ).trim() || 'Unassigned'
     const productionPerson =
       String(
         row.productionPersonName ||
-          row.productionPerson ||
-          row.production_person_name ||
-          row.production_person ||
-          row.person ||
-          row.operator ||
-          ''
+        row.productionPerson ||
+        row.production_person_name ||
+        row.production_person ||
+        row.person ||
+        row.operator ||
+        ''
       ).trim() || 'Unassigned'
     const handleModeRaw = String(
       row.handleMode ||
-        row.handle_mode ||
-        row.HandleMode ||
-        row.HandleMachines ||
-        row.handleMachines ||
-        ''
+      row.handle_mode ||
+      row.HandleMode ||
+      row.HandleMachines ||
+      row.handleMachines ||
+      ''
     )
       .trim()
       .toLowerCase()
@@ -357,12 +513,14 @@ const evaluateScheduleQuality = (
       return
     }
 
-    if (setupEnd <= setupStart || runEnd <= runStart) {
+    // In Basic mode, zero-duration setup is expected (no setup step)
+    const setupInvalid = profileMode === 'basic' ? false : setupEnd <= setupStart
+    if (setupInvalid || runEnd <= runStart) {
       addIssue({
         code: 'negative_duration',
         rule: 'Duration Validity',
         severity: 'critical',
-        message: `${ref} has non-positive setup/run duration.`,
+        message: `${ref} has non-positive ${setupInvalid ? 'setup' : 'run'} duration.`,
         entityRefs: [ref],
         timeWindow: { start: setupStart.toLocaleString(), end: runEnd.toLocaleString() },
       })
@@ -376,13 +534,19 @@ const evaluateScheduleQuality = (
     runMinutesByMachine.set(machine, (runMinutesByMachine.get(machine) || 0) + runMinutes)
 
     const setupMinutes = minutesBetween(setupStart, setupEnd)
-    personActiveMinutes.set(setupPerson, (personActiveMinutes.get(setupPerson) || 0) + setupMinutes)
+    // In Basic mode there's no setup; don't pollute person minutes
+    if (profileMode !== 'basic' && setupPerson && setupPerson !== 'Unassigned') {
+      personActiveMinutes.set(
+        setupPerson,
+        (personActiveMinutes.get(setupPerson) || 0) + setupMinutes
+      )
+    }
     personActiveMinutes.set(
       productionPerson,
       (personActiveMinutes.get(productionPerson) || 0) + runMinutes
     )
 
-    if (setupEnd > runStart) {
+    if (profileMode !== 'basic' && setupEnd > runStart) {
       addIssue({
         code: 'machine_setup_run_overlap',
         rule: 'Setup vs Run',
@@ -393,7 +557,10 @@ const evaluateScheduleQuality = (
       })
     }
 
-    if (!isWithinWindow(setupStart, setupWindow) || !isWithinWindow(setupEnd, setupWindow)) {
+    if (
+      profileMode !== 'basic' &&
+      (!isWithinWindow(setupStart, setupWindow) || !isWithinWindow(setupEnd, setupWindow))
+    ) {
       addIssue({
         code: 'setup_window_violation',
         rule: 'Setup Window',
@@ -769,9 +936,8 @@ const evaluateScheduleQuality = (
       start: toDate(holiday.startDateTime),
       end: toDate(holiday.endDateTime),
     }))
-    .filter(
-      (interval): interval is { start: Date; end: Date } =>
-        Boolean(interval.start && interval.end && interval.end > interval.start)
+    .filter((interval): interval is { start: Date; end: Date } =>
+      Boolean(interval.start && interval.end && interval.end > interval.start)
     )
 
   const breakdownByMachine = new Map<string, Array<{ start: Date; end: Date }>>()
@@ -779,12 +945,12 @@ const evaluateScheduleQuality = (
     const start = toDate(item.startDateTime)
     const end = toDate(item.endDateTime)
     if (!start || !end || end <= start) return
-    ;(item.machines || []).forEach(machine => {
-      const lane = normalizeMachineLane(machine)
-      const bucket = breakdownByMachine.get(lane) || []
-      bucket.push({ start, end })
-      breakdownByMachine.set(lane, bucket)
-    })
+      ; (item.machines || []).forEach(machine => {
+        const lane = normalizeMachineLane(machine)
+        const bucket = breakdownByMachine.get(lane) || []
+        bucket.push({ start, end })
+        breakdownByMachine.set(lane, bucket)
+      })
   })
 
   const inHoliday = (date: Date): boolean =>
@@ -800,9 +966,7 @@ const evaluateScheduleQuality = (
       ? new Date(earliestTs)
       : null
   const rangeEnd =
-    Number.isFinite(latestTs) && latestTs !== Number.NEGATIVE_INFINITY
-      ? new Date(latestTs)
-      : null
+    Number.isFinite(latestTs) && latestTs !== Number.NEGATIVE_INFINITY ? new Date(latestTs) : null
 
   let availableMachineMinutes = 0
   let availablePersonMinutes = 0
@@ -830,7 +994,10 @@ const evaluateScheduleQuality = (
     }
   }
 
-  const totalRunMinutes = Array.from(runMinutesByMachine.values()).reduce((sum, value) => sum + value, 0)
+  const totalRunMinutes = Array.from(runMinutesByMachine.values()).reduce(
+    (sum, value) => sum + value,
+    0
+  )
   const totalPersonActiveMinutes = Array.from(personActiveMinutes.values()).reduce(
     (sum, value) => sum + value,
     0
@@ -838,7 +1005,9 @@ const evaluateScheduleQuality = (
   const machineUtilizationPct =
     availableMachineMinutes > 0 ? clampPct((totalRunMinutes / availableMachineMinutes) * 100) : 0
   const personUtilizationPct =
-    availablePersonMinutes > 0 ? clampPct((totalPersonActiveMinutes / availablePersonMinutes) * 100) : 0
+    availablePersonMinutes > 0
+      ? clampPct((totalPersonActiveMinutes / availablePersonMinutes) * 100)
+      : 0
   const flowEfficiencyPct =
     totalActivePieceMinutes + totalQueueMinutes > 0
       ? clampPct((totalActivePieceMinutes / (totalActivePieceMinutes + totalQueueMinutes)) * 100)
@@ -851,9 +1020,7 @@ const evaluateScheduleQuality = (
   const delivery = clampPct(onTimePct - Math.min(40, avgLatenessMinutes / 30))
   const utilization = clampPct(machineUtilizationPct * 0.65 + personUtilizationPct * 0.35)
   const flow = clampPct(flowEfficiencyPct - Math.min(30, avgQueueGapHours * 1.5))
-  const score = Math.round(
-    feasibility * 0.4 + delivery * 0.2 + utilization * 0.2 + flow * 0.2
-  )
+  const score = Math.round(feasibility * 0.4 + delivery * 0.2 + utilization * 0.2 + flow * 0.2)
   const status: QualityReport['status'] =
     criticalCount > 0 ? 'BAD' : warningCount > 0 ? 'WARNING' : 'GOOD'
 
@@ -891,6 +1058,15 @@ const evaluateScheduleQuality = (
 }
 
 function SchedulerPageContent() {
+  const themeContext = useTheme()
+  const theme = themeContext?.theme || 'light'
+  const toggleTheme = themeContext?.toggleTheme || (() => { })
+  const [scheduleProfile, setScheduleProfile] = useState<'basic' | 'advanced'>('advanced')
+  const [runAccess, setRunAccess] = useState<RunAccessState>({
+    loaded: false,
+    canRunBasic: false,
+    canRunAdvanced: false,
+  })
   const [activeTab, setActiveTab] = useState('orders')
   const [orders, setOrders] = useState<Order[]>([])
   const [holidays, setHolidays] = useState<Holiday[]>([])
@@ -903,13 +1079,44 @@ function SchedulerPageContent() {
   const [pieceFlowRows, setPieceFlowRows] = useState<PieceFlowRow[]>([])
   const [isApproximateView, setIsApproximateView] = useState(false)
   const [qualityReport, setQualityReport] = useState<QualityReport | null>(null)
+  const [engineQualityMetrics, setEngineQualityMetrics] = useState<{
+    machineUtilPct: number
+    personUtilPct: number
+    avgQueueHours: number
+    totalSpanHours: number
+    activeMachines: number
+    activePersons: number
+  } | null>(null)
   const [qualityScope, setQualityScope] = useState<'all' | 'filtered'>('all')
   const [flowPartFilter, setFlowPartFilter] = useState('ALL')
+  const [flowBatchFilter, setFlowBatchFilter] = useState('ALL')
+  const [flowOpFilter, setFlowOpFilter] = useState('ALL')
+  const [flowMachineFilter, setFlowMachineFilter] = useState('ALL')
+  const [flowPersonFilter, setFlowPersonFilter] = useState('ALL')
   const [pieceRange, setPieceRange] = useState({ from: 1, to: 20 })
-  const [flowMapMode, setFlowMapMode] = useState<'blocks' | 'trace' | 'playback'>('trace')
-  const [hoveredNode, setHoveredNode] = useState<{ node: any; x: number; y: number } | null>(null)
+  const [flowRenderProfile, setFlowRenderProfile] = useState<FlowRenderProfile>('quality')
+  const [flowRenderPolicy, setFlowRenderPolicy] = useState<PieceRenderPolicy>('all')
+  const [flowRenderProgress, setFlowRenderProgress] = useState<FlowRenderProgress>({
+    phase: 'idle',
+    total: 0,
+    processed: 0,
+    message: '',
+  })
+  const [renderAllProcessedCount, setRenderAllProcessedCount] = useState(0)
+  const [flowMapMode, setFlowMapMode] = useState<'blocks' | 'trace' | 'playback' | 'logs'>('trace')
+  const [hoveredNode, setHoveredNode] = useState<{ node: FlowNode; x: number; y: number } | null>(
+    null
+  )
+  const [flowLinkVisibility, setFlowLinkVisibility] = useState<FlowLinkVisibility>('auto')
+  const [flowFocusActivePiece, setFlowFocusActivePiece] = useState(true)
+  const [traceNodeScale, setTraceNodeScale] = useState(1)
+  const [traceLaneSpread, setTraceLaneSpread] = useState(1)
+  const [traceLabelEveryPiece, setTraceLabelEveryPiece] = useState(24)
+  const [traceLinkThickness, setTraceLinkThickness] = useState(1.25)
+  const [traceBackgroundLinkOpacity, setTraceBackgroundLinkOpacity] = useState(0.16)
   const [flowMapZoom, setFlowMapZoom] = useState(1)
   const [verificationFilteredOnly, setVerificationFilteredOnly] = useState(false)
+  const [autoVerifyAfterRender, setAutoVerifyAfterRender] = useState(true)
   const [playbackDelayMs, setPlaybackDelayMs] = useState(150)
   const [playbackStepMinutes, setPlaybackStepMinutes] = useState(5)
   const [playbackCursorMs, setPlaybackCursorMs] = useState<number | null>(null)
@@ -919,8 +1126,94 @@ function SchedulerPageContent() {
     end: '',
   })
   const [selectedFlowKey, setSelectedFlowKey] = useState<string | null>(null)
+  const [pendingFlowScrollKey, setPendingFlowScrollKey] = useState<string | null>(null)
   const [showPersonTimeline, setShowPersonTimeline] = useState(true)
+  const [flowLogPage, setFlowLogPage] = useState(1)
   const playbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const flowViewportRef = useRef<HTMLDivElement | null>(null)
+  const renderAllSessionRef = useRef(0)
+  const autoVerifySessionRef = useRef(0)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const savedProfile = window.localStorage.getItem('scheduler.flow.renderProfile.v1')
+    if (savedProfile === 'balanced' || savedProfile === 'quality') {
+      setFlowRenderProfile(savedProfile)
+      if (savedProfile === 'quality') {
+        setFlowRenderPolicy('all')
+      }
+    }
+
+    const savedView = window.localStorage.getItem('scheduler.flow.viewSettings.v1')
+    if (!savedView) return
+    try {
+      const parsed = JSON.parse(savedView) as Partial<{
+        traceNodeScale: number
+        traceLaneSpread: number
+        traceLabelEveryPiece: number
+        traceLinkThickness: number
+        traceBackgroundLinkOpacity: number
+        autoVerifyAfterRender: boolean
+      }>
+      if (Number.isFinite(parsed.traceNodeScale)) {
+        setTraceNodeScale(Math.max(0.7, Math.min(1.6, Number(parsed.traceNodeScale))))
+      }
+      if (Number.isFinite(parsed.traceLaneSpread)) {
+        setTraceLaneSpread(Math.max(0.85, Math.min(1.8, Number(parsed.traceLaneSpread))))
+      }
+      if (Number.isFinite(parsed.traceLabelEveryPiece)) {
+        setTraceLabelEveryPiece(
+          Math.max(6, Math.min(160, Math.round(Number(parsed.traceLabelEveryPiece))))
+        )
+      }
+      if (Number.isFinite(parsed.traceLinkThickness)) {
+        setTraceLinkThickness(Math.max(0.8, Math.min(2.8, Number(parsed.traceLinkThickness))))
+      }
+      if (Number.isFinite(parsed.traceBackgroundLinkOpacity)) {
+        setTraceBackgroundLinkOpacity(
+          Math.max(0.04, Math.min(0.5, Number(parsed.traceBackgroundLinkOpacity)))
+        )
+      }
+      if (typeof parsed.autoVerifyAfterRender === 'boolean') {
+        setAutoVerifyAfterRender(parsed.autoVerifyAfterRender)
+      }
+    } catch {
+      // Ignore malformed persisted settings.
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('scheduler.flow.renderProfile.v1', flowRenderProfile)
+  }, [flowRenderProfile])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(
+      'scheduler.flow.viewSettings.v1',
+      JSON.stringify({
+        traceNodeScale,
+        traceLaneSpread,
+        traceLabelEveryPiece,
+        traceLinkThickness,
+        traceBackgroundLinkOpacity,
+        autoVerifyAfterRender,
+      })
+    )
+  }, [
+    traceNodeScale,
+    traceLaneSpread,
+    traceLabelEveryPiece,
+    traceLinkThickness,
+    traceBackgroundLinkOpacity,
+    autoVerifyAfterRender,
+  ])
+
+  useEffect(() => {
+    if (flowRenderProfile === 'quality' && flowRenderPolicy !== 'all') {
+      setFlowRenderPolicy('all')
+    }
+  }, [flowRenderProfile, flowRenderPolicy])
 
   // Part number management state
   const [partNumbers, setPartNumbers] = useState<PartNumber[]>([])
@@ -1008,6 +1301,44 @@ function SchedulerPageContent() {
   const canEdit = hasPermissionCode('schedule.edit')
   const canDelete = hasPermissionCode('schedule.delete')
   const canApprove = hasPermissionCode('schedule.approve')
+  const fallbackRunPermissions = deriveRunPermissionsFromCodes({
+    hasRunBasicCode: hasPermissionCode('schedule.run.basic'),
+    hasRunAdvancedCode: hasPermissionCode('schedule.run.advanced'),
+    canCreate,
+    canEdit,
+  })
+  const canRunBasicByCode = fallbackRunPermissions.canRunBasic
+  const canRunAdvancedByCode = fallbackRunPermissions.canRunAdvanced
+  const resolvedRunPermissions = resolveRunPermissions(runAccess, fallbackRunPermissions)
+  const canRunBasic = resolvedRunPermissions.canRunBasic
+  const canRunAdvanced = resolvedRunPermissions.canRunAdvanced
+
+  const loadRunAccess = async () => {
+    try {
+      const response = await apiClient('/api/schedule/run-access', { method: 'GET' })
+      if (!response.ok) {
+        setRunAccess({
+          loaded: true,
+          canRunBasic: canRunBasicByCode,
+          canRunAdvanced: canRunAdvancedByCode,
+        })
+        return
+      }
+
+      const payload = await response.json().catch(() => null)
+      setRunAccess({
+        loaded: true,
+        canRunBasic: Boolean(payload?.data?.canRunBasic),
+        canRunAdvanced: Boolean(payload?.data?.canRunAdvanced),
+      })
+    } catch {
+      setRunAccess({
+        loaded: true,
+        canRunBasic: canRunBasicByCode,
+        canRunAdvanced: canRunAdvancedByCode,
+      })
+    }
+  }
 
   const applySavedSettings = (savedData: any) => {
     setSettingsLocked(savedData.is_locked || false)
@@ -1064,7 +1395,7 @@ function SchedulerPageContent() {
     let isMounted = true
 
     if (userEmail) {
-      ;(async () => {
+      ; (async () => {
         const response = await apiClient('/api/save-advanced-settings', {
           method: 'GET',
           headers: {
@@ -1078,7 +1409,7 @@ function SchedulerPageContent() {
         if (isMounted && result.success && result.data?.machine_data) {
           applySavedSettings(result.data.machine_data)
         }
-      })().catch(() => {})
+      })().catch(() => { })
     }
 
     return () => {
@@ -1086,10 +1417,31 @@ function SchedulerPageContent() {
     }
   }, [userEmail])
 
+  useEffect(() => {
+    if (!userEmail) {
+      setRunAccess({
+        loaded: true,
+        canRunBasic: canRunBasicByCode,
+        canRunAdvanced: canRunAdvancedByCode,
+      })
+      return
+    }
+
+    void loadRunAccess()
+  }, [userEmail, canRunBasicByCode, canRunAdvancedByCode])
+
+  useEffect(() => {
+    const nextProfile = resolveProfileForExecution(scheduleProfile, {
+      canRunBasic,
+      canRunAdvanced,
+    })
+    if (nextProfile !== scheduleProfile) setScheduleProfile(nextProfile)
+  }, [scheduleProfile, canRunAdvanced, canRunBasic])
+
   // Initialize backend services and load part numbers on component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      ;(window as any).XLSX = XLSX
+      ; (window as any).XLSX = XLSX
     }
 
     initializeBackendServices()
@@ -1105,7 +1457,7 @@ function SchedulerPageContent() {
     }
 
     // Listen for XLSX loaded event
-    const handleXLSXLoaded = () => {}
+    const handleXLSXLoaded = () => { }
 
     if (typeof window !== 'undefined') {
       window.addEventListener('xlsxLoaded', handleXLSXLoaded)
@@ -1195,17 +1547,26 @@ function SchedulerPageContent() {
       setIsApproximateView(false)
       setQualityReport(null)
       setQualityScope('all')
+      setFlowPartFilter('ALL')
+      setFlowBatchFilter('ALL')
+      setFlowOpFilter('ALL')
+      setFlowMachineFilter('ALL')
+      setFlowPersonFilter('ALL')
+      setFlowLogPage(1)
       setPlaybackCursorMs(null)
       setIsPlaybackRunning(false)
       setFlowTimeWindow({ start: '', end: '' })
       setSelectedFlowKey(null)
+      setPendingFlowScrollKey(null)
       return
     }
 
     const { rows: flowRows, isApproximate } = buildPieceFlowRows(results, pieceTimelinePayload)
     const maxPiece = flowRows.reduce((max, row) => Math.max(max, row.piece), 1)
-    const minTs = flowRows.length > 0 ? Math.min(...flowRows.map(row => row.start.getTime())) : Date.now()
-    const maxTs = flowRows.length > 0 ? Math.max(...flowRows.map(row => row.end.getTime())) : Date.now()
+    const minTs =
+      flowRows.length > 0 ? Math.min(...flowRows.map(row => row.start.getTime())) : Date.now()
+    const maxTs =
+      flowRows.length > 0 ? Math.max(...flowRows.map(row => row.end.getTime())) : Date.now()
 
     setPieceFlowRows(flowRows)
     setIsApproximateView(isApproximate)
@@ -1261,7 +1622,8 @@ function SchedulerPageContent() {
             advancedSettings.productionWindowShift1,
             advancedSettings.productionWindowShift2,
             advancedSettings.productionWindowShift3,
-          ]
+          ],
+          scheduleProfile
         ),
       fallbackReport
     )
@@ -1271,6 +1633,11 @@ function SchedulerPageContent() {
     }
     setQualityScope('all')
     setFlowPartFilter('ALL')
+    setFlowBatchFilter('ALL')
+    setFlowOpFilter('ALL')
+    setFlowMachineFilter('ALL')
+    setFlowPersonFilter('ALL')
+    setFlowLogPage(1)
     setPieceRange({ from: 1, to: Math.min(20, maxPiece) })
     setFlowMapMode('trace')
     setFlowMapZoom(1)
@@ -1281,6 +1648,7 @@ function SchedulerPageContent() {
       end: toLocalDateTimeInput(new Date(maxTs)),
     })
     setSelectedFlowKey(null)
+    setPendingFlowScrollKey(null)
   }, [
     results,
     pieceTimelinePayload,
@@ -1678,8 +2046,41 @@ function SchedulerPageContent() {
     return { rows: [], pieceTimeline: [] }
   }
 
-  const handleRunSchedule = async () => {
+  const verifyRunProfileAccess = async (profileMode: 'basic' | 'advanced'): Promise<void> => {
+    const response = await apiClient('/api/schedule/run-access', {
+      method: 'POST',
+      body: JSON.stringify({ profileMode }),
+    })
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null)
+      const detail = payload?.error || 'Run permission denied for selected profile.'
+      throw new Error(detail)
+    }
+
+    const payload = await response.json().catch(() => null)
+    if (payload?.data) {
+      setRunAccess({
+        loaded: true,
+        canRunBasic: Boolean(payload.data.canRunBasic),
+        canRunAdvanced: Boolean(payload.data.canRunAdvanced),
+      })
+    }
+  }
+
+  const handleRunSchedule = async (profileOverride?: 'basic' | 'advanced') => {
+    const activeProfile = profileOverride ?? scheduleProfile
     if (orders.length === 0) return
+
+    if (activeProfile === 'advanced' && !canRunAdvanced) {
+      alert('Advanced profile requires setup + run permission.')
+      return
+    }
+
+    if (activeProfile === 'basic' && !canRunBasic) {
+      alert('Basic profile requires run permission.')
+      return
+    }
 
     if (!backendService) {
       alert('Scheduling engine is still initializing. Please wait a moment and try again.')
@@ -1690,6 +2091,8 @@ function SchedulerPageContent() {
     setShowResults(false)
 
     try {
+      await verifyRunProfileAccess(activeProfile)
+
       // Align default global start to setup-window start for deterministic schedules.
       const startDateTime =
         advancedSettings.globalStartDateTime ||
@@ -1729,13 +2132,17 @@ function SchedulerPageContent() {
         holidays: holidays,
         breakdowns: breakdowns,
         personnelProfiles: importedPersonnelProfiles,
+        profileMode: activeProfile,
       })
 
       const normalizedResponse = normalizeScheduleResponse(scheduleResponse)
       setResults(normalizedResponse.rows)
       setPieceTimelinePayload(normalizedResponse.pieceTimeline)
+      if (scheduleResponse?.qualityMetrics) {
+        setEngineQualityMetrics(scheduleResponse.qualityMetrics)
+      }
       setShowResults(true)
-      setShowFlowMap(true)
+      // Piece Flow Map remains hidden until the user explicitly clicks "Open Piece Flow"
     } catch (error) {
       setResults([])
       setPieceTimelinePayload([])
@@ -2164,6 +2571,7 @@ function SchedulerPageContent() {
           },
           qualityReport,
           generatedAt: new Date(),
+          profileMode: scheduleProfile,
         },
         filename
       )
@@ -2451,30 +2859,28 @@ function SchedulerPageContent() {
     () => toDate(flowTimeWindow.start),
     [flowTimeWindow.start]
   )
-  const flowWindowEndDate = React.useMemo(
-    () => toDate(flowTimeWindow.end),
-    [flowTimeWindow.end]
+  const flowWindowEndDate = React.useMemo(() => toDate(flowTimeWindow.end), [flowTimeWindow.end])
+  const hasFlowWindow = Boolean(
+    flowWindowStartDate && flowWindowEndDate && flowWindowEndDate > flowWindowStartDate
   )
-  const hasFlowWindow =
-    Boolean(flowWindowStartDate && flowWindowEndDate && flowWindowEndDate > flowWindowStartDate)
   const flowWindowHours =
     hasFlowWindow && flowWindowStartDate && flowWindowEndDate
       ? minutesBetween(flowWindowStartDate, flowWindowEndDate) / 60
       : 0
 
-  const filteredFlowRows = React.useMemo(() => {
+  const filteredFlowRowsBase = React.useMemo(() => {
     const baseRows = filterPieceFlowRows(pieceFlowRows, {
       part: flowPartFilter,
-      pieceFrom: pieceRange.from,
-      pieceTo: pieceRange.to,
     })
 
     if (!flowWindowStartDate || !flowWindowEndDate || flowWindowEndDate <= flowWindowStartDate) {
       return baseRows
     }
 
-    return baseRows.filter(row => overlaps(row.start, row.end, flowWindowStartDate, flowWindowEndDate))
-  }, [pieceFlowRows, flowPartFilter, pieceRange, flowWindowStartDate, flowWindowEndDate])
+    return baseRows.filter(row =>
+      overlaps(row.start, row.end, flowWindowStartDate, flowWindowEndDate)
+    )
+  }, [pieceFlowRows, flowPartFilter, flowWindowStartDate, flowWindowEndDate])
 
   const setFlowWindowFromDates = (start: Date, end: Date) => {
     if (!start || !end || end <= start) return
@@ -2492,7 +2898,9 @@ function SchedulerPageContent() {
   const handleFlowWindowPreset = (hours: number) => {
     if (!flowDataBounds) return
     const start = new Date(flowDataBounds.minTs)
-    const end = new Date(Math.min(flowDataBounds.maxTs, flowDataBounds.minTs + hours * 60 * 60 * 1000))
+    const end = new Date(
+      Math.min(flowDataBounds.maxTs, flowDataBounds.minTs + hours * 60 * 60 * 1000)
+    )
     setFlowWindowFromDates(start, end)
   }
 
@@ -2533,6 +2941,139 @@ function SchedulerPageContent() {
     return lookup
   }, [results])
 
+  const scheduleRowByKey = React.useMemo(() => {
+    const lookup = new Map<string, any>()
+    results.forEach((row: any) => {
+      lookup.set(buildScheduleRowKey(row), row)
+    })
+    return lookup
+  }, [results])
+
+  const flowLogRows = React.useMemo(() => {
+    const logs = pieceFlowRows.map((row): PieceFlowLogRow => {
+      const key = `${row.part}|${row.batch}|${row.piece}|${row.operationSeq}|${normalizeMachineLane(row.machine)}`
+      const scheduleRow = scheduleRowByKey.get(
+        `${row.part}|${row.batch}|${row.operationSeq}|${normalizeMachineLane(row.machine)}`
+      )
+      const setupStart = toDate(scheduleRow?.setupStart || scheduleRow?.setup_start) || row.start
+      const setupEnd = toDate(scheduleRow?.setupEnd || scheduleRow?.setup_end) || row.start
+      const runStart = toDate(scheduleRow?.runStart || scheduleRow?.run_start) || row.start
+      const runEnd = toDate(scheduleRow?.runEnd || scheduleRow?.run_end) || row.end
+
+      return {
+        key,
+        partNumber: String(scheduleRow?.partNumber || row.part),
+        orderQty: Number(scheduleRow?.orderQty || scheduleRow?.order_quantity || 0),
+        priority: String(scheduleRow?.priority || 'Normal'),
+        batchId: String(scheduleRow?.batchId || scheduleRow?.batch_id || row.batch),
+        batchQty: Number(scheduleRow?.batchQty || scheduleRow?.batch_qty || 0),
+        piece: row.piece,
+        operationSeq: row.operationSeq,
+        operationName: String(
+          scheduleRow?.operationName || scheduleRow?.operation_name || 'Operation'
+        ),
+        machine: normalizeMachineLane(scheduleRow?.machine || row.machine),
+        runPerson: String(scheduleRow?.productionPersonName || scheduleRow?.person || 'Unassigned'),
+        setupPerson: String(scheduleRow?.setupPersonName || scheduleRow?.person || 'Unassigned'),
+        setupStart,
+        setupEnd,
+        runStart,
+        runEnd,
+        timing:
+          String(scheduleRow?.timing || '').trim() ||
+          formatDurationShort(minutesBetween(runStart, runEnd)),
+        dueDate: String(scheduleRow?.dueDate || scheduleRow?.due_date || 'N/A'),
+        status: String(scheduleRow?.status || row.status || 'Scheduled'),
+      }
+    })
+    logs.sort(
+      (a, b) =>
+        a.runStart.getTime() - b.runStart.getTime() ||
+        a.partNumber.localeCompare(b.partNumber) ||
+        a.batchId.localeCompare(b.batchId) ||
+        a.piece - b.piece ||
+        a.operationSeq - b.operationSeq
+    )
+    return logs
+  }, [pieceFlowRows, scheduleRowByKey])
+
+  const availableFlowBatches = React.useMemo(
+    () => Array.from(new Set(flowLogRows.map(row => row.batchId))).sort(),
+    [flowLogRows]
+  )
+
+  const availableFlowOps = React.useMemo(
+    () => Array.from(new Set(flowLogRows.map(row => row.operationSeq))).sort((a, b) => a - b),
+    [flowLogRows]
+  )
+
+  const availableFlowMachines = React.useMemo(
+    () => Array.from(new Set(flowLogRows.map(row => row.machine))).sort(),
+    [flowLogRows]
+  )
+
+  const availableFlowPeople = React.useMemo(
+    () => Array.from(new Set(flowLogRows.flatMap(row => [row.setupPerson, row.runPerson]))).sort(),
+    [flowLogRows]
+  )
+
+  const filteredFlowLogs = React.useMemo(() => {
+    return flowLogRows.filter(row => {
+      if (flowPartFilter !== 'ALL' && row.partNumber !== flowPartFilter) return false
+      if (flowBatchFilter !== 'ALL' && row.batchId !== flowBatchFilter) return false
+      if (flowOpFilter !== 'ALL' && String(row.operationSeq) !== flowOpFilter) return false
+      if (flowMachineFilter !== 'ALL' && row.machine !== flowMachineFilter) return false
+      if (
+        flowPersonFilter !== 'ALL' &&
+        row.setupPerson !== flowPersonFilter &&
+        row.runPerson !== flowPersonFilter
+      ) {
+        return false
+      }
+      if (flowWindowStartDate && row.runEnd < flowWindowStartDate) return false
+      if (flowWindowEndDate && row.runStart > flowWindowEndDate) return false
+      return true
+    })
+  }, [
+    flowLogRows,
+    flowPartFilter,
+    flowBatchFilter,
+    flowOpFilter,
+    flowMachineFilter,
+    flowPersonFilter,
+    flowWindowStartDate,
+    flowWindowEndDate,
+  ])
+
+  const flowLogPageCount = Math.max(1, Math.ceil(filteredFlowLogs.length / FLOW_LOG_PAGE_SIZE))
+  const flowLogCurrentPage = Math.min(flowLogPage, flowLogPageCount)
+  const pagedFlowLogs = React.useMemo(() => {
+    const start = (flowLogCurrentPage - 1) * FLOW_LOG_PAGE_SIZE
+    return filteredFlowLogs.slice(start, start + FLOW_LOG_PAGE_SIZE)
+  }, [filteredFlowLogs, flowLogCurrentPage])
+
+  useEffect(() => {
+    setFlowLogPage(1)
+  }, [
+    flowPartFilter,
+    flowBatchFilter,
+    flowOpFilter,
+    flowMachineFilter,
+    flowPersonFilter,
+    flowWindowStartDate,
+    flowWindowEndDate,
+  ])
+
+  useEffect(() => {
+    if (!selectedFlowKey) return
+    const index = filteredFlowLogs.findIndex(row => row.key === selectedFlowKey)
+    if (index < 0) return
+    const nextPage = Math.floor(index / FLOW_LOG_PAGE_SIZE) + 1
+    if (nextPage !== flowLogPage) {
+      setFlowLogPage(nextPage)
+    }
+  }, [selectedFlowKey, filteredFlowLogs, flowLogPage])
+
   const productionWindows = React.useMemo(
     () =>
       [
@@ -2548,6 +3089,186 @@ function SchedulerPageContent() {
       advancedSettings.productionWindowShift3,
     ]
   )
+
+  const scopedFlowRowsBase = React.useMemo(() => {
+    return filteredFlowRowsBase.filter(row => {
+      if (flowBatchFilter !== 'ALL' && row.batch !== flowBatchFilter) return false
+      if (flowOpFilter !== 'ALL' && String(row.operationSeq) !== flowOpFilter) return false
+      const machine = normalizeMachineLane(row.machine)
+      if (flowMachineFilter !== 'ALL' && machine !== flowMachineFilter) return false
+      if (flowPersonFilter !== 'ALL') {
+        const meta = scheduleMetaByKey.get(
+          `${row.part}|${row.batch}|${row.operationSeq}|${normalizeMachineLane(row.machine)}`
+        )
+        if (meta?.setupPerson !== flowPersonFilter && meta?.runPerson !== flowPersonFilter) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [
+    filteredFlowRowsBase,
+    flowBatchFilter,
+    flowOpFilter,
+    flowMachineFilter,
+    flowPersonFilter,
+    scheduleMetaByKey,
+  ])
+
+  const scopedFlowRowsSliced = React.useMemo(
+    () => applyPieceSlice(scopedFlowRowsBase, pieceRange.from, pieceRange.to),
+    [scopedFlowRowsBase, pieceRange]
+  )
+
+  const effectiveRenderPolicy: PieceRenderPolicy =
+    flowRenderProfile === 'quality' ? 'all' : flowRenderPolicy
+
+  const resolvedRenderMode = React.useMemo(
+    () =>
+      resolvePieceRenderMode(
+        effectiveRenderPolicy,
+        scopedFlowRowsBase.length,
+        FLOW_DENSE_ROW_THRESHOLD
+      ),
+    [effectiveRenderPolicy, scopedFlowRowsBase.length]
+  )
+
+  const isAutoDenseSlice = effectiveRenderPolicy === 'auto' && resolvedRenderMode === 'slice'
+  const isRenderAllMode = effectiveRenderPolicy === 'all'
+  const renderAllTotalRows = scopedFlowRowsBase.length
+  const renderAllEstimatedMemoryMb = React.useMemo(
+    () => Math.round((renderAllTotalRows * 260) / (1024 * 1024)),
+    [renderAllTotalRows]
+  )
+
+  const renderFlowRows = React.useMemo(() => {
+    if (resolvedRenderMode === 'slice') {
+      return scopedFlowRowsSliced
+    }
+    if (effectiveRenderPolicy === 'all') {
+      const safeCount = Math.max(0, Math.min(renderAllProcessedCount, scopedFlowRowsBase.length))
+      return scopedFlowRowsBase.slice(0, safeCount)
+    }
+    return scopedFlowRowsBase
+  }, [
+    resolvedRenderMode,
+    scopedFlowRowsSliced,
+    effectiveRenderPolicy,
+    renderAllProcessedCount,
+    scopedFlowRowsBase,
+  ])
+
+  const isRenderAllRunning =
+    flowRenderProgress.phase === 'prepare' || flowRenderProgress.phase === 'render'
+
+  useEffect(() => {
+    if (!showFlowMap || effectiveRenderPolicy !== 'all') {
+      renderAllSessionRef.current += 1
+      setRenderAllProcessedCount(0)
+      setFlowRenderProgress(prev =>
+        prev.phase === 'idle' && prev.total === 0
+          ? prev
+          : {
+            phase: 'idle',
+            total: 0,
+            processed: 0,
+            message: '',
+          }
+      )
+      return
+    }
+
+    const total = scopedFlowRowsBase.length
+    const session = renderAllSessionRef.current + 1
+    renderAllSessionRef.current = session
+
+    const startedAtMs = Date.now()
+    setRenderAllProcessedCount(0)
+    setFlowRenderProgress({
+      phase: total > 0 ? 'prepare' : 'done',
+      total,
+      processed: 0,
+      message: total > 0 ? 'Preparing full piece render...' : 'No rows to render in current scope.',
+      startedAtMs,
+      speedRowsPerSec: 0,
+      etaSeconds: total > 0 ? undefined : 0,
+    })
+
+    if (total === 0) return
+
+    let processed = 0
+    let cancelled = false
+    const chunkSize =
+      flowRenderProfile === 'quality'
+        ? Math.max(180, Math.floor(FLOW_RENDER_CHUNK_SIZE * 0.7))
+        : FLOW_RENDER_CHUNK_SIZE
+
+    const scheduleNext = (callback: () => void) => {
+      if (typeof window === 'undefined') return
+      const requester = (window as any).requestIdleCallback
+      if (typeof requester === 'function') {
+        requester(() => callback())
+        return
+      }
+      window.setTimeout(callback, 0)
+    }
+
+    const pump = () => {
+      if (cancelled || renderAllSessionRef.current !== session) return
+      processed = Math.min(total, processed + chunkSize)
+      const elapsedSec = Math.max(0.01, (Date.now() - startedAtMs) / 1000)
+      const speedRowsPerSec = processed / elapsedSec
+      const remaining = Math.max(0, total - processed)
+      const etaSeconds = speedRowsPerSec > 0 ? remaining / speedRowsPerSec : undefined
+      setRenderAllProcessedCount(processed)
+      setFlowRenderProgress({
+        phase: processed < total ? 'render' : 'done',
+        total,
+        processed,
+        message:
+          processed < total
+            ? `Rendering ${processed.toLocaleString()} / ${total.toLocaleString()} pieces`
+            : `Rendered ${total.toLocaleString()} pieces.`,
+        startedAtMs,
+        speedRowsPerSec,
+        etaSeconds: processed < total ? etaSeconds : 0,
+      })
+      if (processed < total) {
+        scheduleNext(pump)
+      }
+    }
+
+    scheduleNext(pump)
+
+    return () => {
+      cancelled = true
+    }
+  }, [showFlowMap, effectiveRenderPolicy, scopedFlowRowsBase, flowRenderProfile])
+
+  const handleRenderAllPieces = React.useCallback(() => {
+    if (renderAllTotalRows > FLOW_RENDER_ALL_CONFIRM_THRESHOLD) {
+      const proceed = window.confirm(
+        `Render ${renderAllTotalRows.toLocaleString()} pieces now? This may use high browser memory.`
+      )
+      if (!proceed) return
+    }
+    if (flowRenderProfile !== 'quality') {
+      setFlowRenderProfile('quality')
+    }
+    setFlowRenderPolicy('all')
+  }, [renderAllTotalRows, flowRenderProfile])
+
+  const handleCancelRenderAll = React.useCallback(() => {
+    renderAllSessionRef.current += 1
+    setFlowRenderProgress(prev => ({
+      ...prev,
+      phase: 'cancelled',
+      message: `Full render cancelled at ${prev.processed.toLocaleString()} / ${prev.total.toLocaleString()}.`,
+    }))
+    setRenderAllProcessedCount(0)
+    setFlowRenderPolicy('slice')
+    setFlowRenderProfile('balanced')
+  }, [])
 
   const selectedPieceRows = React.useMemo(() => {
     if (!selectedFlowKey) return []
@@ -2640,6 +3361,65 @@ function SchedulerPageContent() {
     return { activeMinutes, queueMinutes, flowEfficiencyPct }
   }, [selectedPieceDetails])
 
+  const selectedPieceIdentity = React.useMemo(
+    () => extractPieceIdentity(selectedFlowKey),
+    [selectedFlowKey]
+  )
+
+  const pieceIdentityAnchors = React.useMemo(() => {
+    const anchorByPiece = new Map<string, { key: string; startTs: number }>()
+    scopedFlowRowsBase.forEach(row => {
+      const pieceIdentity = `${row.part}|${row.batch}|${row.piece}`
+      const key = `${row.part}|${row.batch}|${row.piece}|${row.operationSeq}|${normalizeMachineLane(row.machine)}`
+      const candidateStart = row.start.getTime()
+      const existing = anchorByPiece.get(pieceIdentity)
+      if (!existing || candidateStart < existing.startTs) {
+        anchorByPiece.set(pieceIdentity, { key, startTs: candidateStart })
+      }
+    })
+    const orderedIdentities = Array.from(anchorByPiece.entries())
+      .sort((a, b) => a[1].startTs - b[1].startTs || a[0].localeCompare(b[0]))
+      .map(entry => entry[0])
+    return {
+      orderedIdentities,
+      anchorByPiece,
+    }
+  }, [scopedFlowRowsBase])
+
+  const focusPieceIdentity = React.useCallback(
+    (pieceIdentity: string) => {
+      const anchor = pieceIdentityAnchors.anchorByPiece.get(pieceIdentity)
+      if (!anchor) return
+      if (effectiveRenderPolicy !== 'all') {
+        const parts = pieceIdentity.split('|')
+        const piece = Number(parts[2] || 1)
+        if (Number.isFinite(piece)) {
+          const from = Math.max(1, piece - 2)
+          setPieceRange({ from, to: Math.max(from, piece + 2) })
+        }
+      }
+      setFlowMapMode('trace')
+      setSelectedFlowKey(anchor.key)
+      setPendingFlowScrollKey(anchor.key)
+    },
+    [pieceIdentityAnchors.anchorByPiece, effectiveRenderPolicy]
+  )
+
+  const handleStepPieceFocus = React.useCallback(
+    (direction: -1 | 1) => {
+      const identities = pieceIdentityAnchors.orderedIdentities
+      if (identities.length === 0) return
+      if (!selectedPieceIdentity) {
+        focusPieceIdentity(identities[0])
+        return
+      }
+      const currentIndex = Math.max(0, identities.indexOf(selectedPieceIdentity))
+      const nextIndex = Math.max(0, Math.min(identities.length - 1, currentIndex + direction))
+      focusPieceIdentity(identities[nextIndex])
+    },
+    [pieceIdentityAnchors.orderedIdentities, selectedPieceIdentity, focusPieceIdentity]
+  )
+
   const runQualityEvaluation = (filteredOnly: boolean) => {
     if (!showResults || results.length === 0) return
 
@@ -2647,9 +3427,9 @@ function SchedulerPageContent() {
     let pieceRowsForValidation = pieceFlowRows
 
     if (filteredOnly) {
-      const keySet = new Set(filteredFlowRows.map(buildPieceRowKey))
+      const keySet = new Set(renderFlowRows.map(buildPieceRowKey))
       scheduleRows = results.filter((row: any) => keySet.has(buildScheduleRowKey(row)))
-      pieceRowsForValidation = filteredFlowRows
+      pieceRowsForValidation = renderFlowRows
     }
 
     const fallbackReport = {
@@ -2704,7 +3484,8 @@ function SchedulerPageContent() {
             advancedSettings.productionWindowShift1,
             advancedSettings.productionWindowShift2,
             advancedSettings.productionWindowShift3,
-          ]
+          ],
+          scheduleProfile
         ),
       fallbackReport
     )
@@ -2715,11 +3496,31 @@ function SchedulerPageContent() {
     setQualityScope(filteredOnly ? 'filtered' : 'all')
   }
 
+  useEffect(() => {
+    if (!showFlowMap) return
+    if (!isRenderAllMode) return
+    if (!autoVerifyAfterRender) return
+    if (flowRenderProgress.phase !== 'done') return
+    if (flowRenderProgress.total === 0) return
+    const session = renderAllSessionRef.current
+    if (autoVerifySessionRef.current === session) return
+    autoVerifySessionRef.current = session
+    runQualityEvaluation(verificationFilteredOnly)
+  }, [
+    showFlowMap,
+    isRenderAllMode,
+    autoVerifyAfterRender,
+    flowRenderProgress.phase,
+    flowRenderProgress.total,
+    verificationFilteredOnly,
+    renderFlowRows.length,
+  ])
+
   const flowMapModel = React.useMemo(() => {
     const leftPad = 190
     const rightPad = 210
-    const laneHeight = 64
-    const topPad = 104
+    const laneHeight = Math.round(72 * traceLaneSpread)
+    const topPad = 108 + Math.max(0, Math.round((traceLaneSpread - 1) * 18))
     const lanes = MACHINE_LANES.map((machine, index) => ({
       machine,
       y: topPad + index * laneHeight,
@@ -2730,22 +3531,8 @@ function SchedulerPageContent() {
       width: 1700,
       height: topPad + MACHINE_LANES.length * laneHeight + 84,
       lanes,
-      nodes: [] as Array<{
-        id: string
-        key: string
-        x: number
-        y: number
-        width: number
-        startTs: number
-        endTs: number
-        label: string
-        shortLabel: string
-        fill: string
-        stroke: string
-        showLabel: boolean
-        tooltip: string
-      }>,
-      links: [] as Array<{ id: string; d: string; color: string }>,
+      nodes: [] as FlowNode[],
+      links: [] as FlowLink[],
       operationLegend: [] as number[],
       timeTicks: [] as Array<{ x: number; dateLabel: string; timeLabel: string }>,
       resolvedMode: flowMapMode,
@@ -2758,15 +3545,14 @@ function SchedulerPageContent() {
       },
     }
 
-    if (filteredFlowRows.length === 0) {
+    if (renderFlowRows.length === 0) {
       return emptyState
     }
 
-    const minTs = Math.min(...filteredFlowRows.map(row => row.start.getTime()))
-    const maxTs = Math.max(...filteredFlowRows.map(row => row.end.getTime()))
+    const minTs = Math.min(...renderFlowRows.map(row => row.start.getTime()))
+    const maxTs = Math.max(...renderFlowRows.map(row => row.end.getTime()))
     const span = Math.max(1, maxTs - minTs)
-    const denseThreshold = 420
-    const isDense = filteredFlowRows.length > denseThreshold
+    const isDense = renderFlowRows.length > FLOW_DENSE_ROW_THRESHOLD
     const resolvedMode = flowMapMode
     const zoom = Math.max(0.6, Math.min(2, flowMapZoom))
     const width = Math.max(1700, Math.round((isDense ? 2600 : 1900) * zoom))
@@ -2788,23 +3574,13 @@ function SchedulerPageContent() {
     }
 
     const toX = (ts: number) => leftPad + ((ts - minTs) / span) * trackWidth
+    const selectedPieceIdentityFromKey = extractPieceIdentity(selectedFlowKey)
+    const blockNodeHeight = Math.max(16, Math.round(24 * traceNodeScale))
+    const traceNodeHeight = Math.max(14, Math.round((isDense ? 20 : 24) * traceNodeScale))
+    const labelEveryPiece = Math.max(6, Math.min(160, Math.round(traceLabelEveryPiece)))
 
-    let nodes: Array<{
-      id: string
-      key: string
-      x: number
-      y: number
-      width: number
-      startTs: number
-      endTs: number
-      label: string
-      shortLabel: string
-      fill: string
-      stroke: string
-      showLabel: boolean
-      tooltip: string
-    }> = []
-    const links: Array<{ id: string; d: string; color: string }> = []
+    let nodes: FlowNode[] = []
+    const links: FlowLink[] = []
 
     if (resolvedMode === 'blocks') {
       const grouped = new Map<
@@ -2823,7 +3599,7 @@ function SchedulerPageContent() {
         }
       >()
 
-      filteredFlowRows.forEach(row => {
+      renderFlowRows.forEach(row => {
         const key = `${row.part}|${row.batch}|${row.machine}|${row.operationSeq}`
         const start = row.start.getTime()
         const end = row.end.getTime()
@@ -2867,10 +3643,10 @@ function SchedulerPageContent() {
         const widthPx = Math.max(18, endX - startX)
         const opOrder = laneOps.get(group.machine) || []
         const opIndex = Math.max(0, opOrder.indexOf(group.operationSeq))
-        const laneOffset = ((opIndex % 6) - 2.5) * 6
+        const laneOffset = ((opIndex % 6) - 2.5) * 7
         const y =
           (machineY.get(group.machine) ?? topPad + MACHINE_LANES.length * laneHeight) -
-          15 +
+          blockNodeHeight / 2 +
           laneOffset
         const pieceLabel =
           group.pieceMin === group.pieceMax
@@ -2882,6 +3658,7 @@ function SchedulerPageContent() {
           x: startX,
           y,
           width: widthPx,
+          height: blockNodeHeight,
           startTs: group.start,
           endTs: group.end,
           label: `${group.part} | OP${group.operationSeq} | ${pieceLabel}`,
@@ -2890,6 +3667,12 @@ function SchedulerPageContent() {
           stroke: '#72e4ff',
           showLabel: widthPx >= 70,
           tooltip: `${group.part} ${group.batch} | OP${group.operationSeq} | ${group.machine}\nPieces ${pieceLabel} (${group.pieceCount})\n${new Date(group.start).toLocaleString()} -> ${new Date(group.end).toLocaleString()}`,
+          part: group.part,
+          batch: group.batch,
+          operationSeq: group.operationSeq,
+          machine: group.machine,
+          pieceKey: `${group.part}|${group.batch}`,
+          status: 'Grouped',
         }
       })
 
@@ -2911,22 +3694,24 @@ function SchedulerPageContent() {
           const currNode = nodeById.get(sorted[i].id)
           if (!prevNode || !currNode) continue
           const fromX = prevNode.x + prevNode.width
-          const fromY = prevNode.y + 14
+          const fromY = prevNode.y + prevNode.height / 2
           const toXValue = currNode.x
-          const toY = currNode.y + 14
+          const toY = currNode.y + currNode.height / 2
           const cx = (fromX + toXValue) / 2
           links.push({
             id: `${key}-blocks-${i}`,
             d: `M ${fromX.toFixed(2)} ${fromY.toFixed(2)} L ${cx.toFixed(2)} ${fromY.toFixed(2)} L ${cx.toFixed(2)} ${toY.toFixed(2)} L ${toXValue.toFixed(2)} ${toY.toFixed(2)}`,
             color: opShade(sorted[i].part, sorted[i].operationSeq),
+            pieceKey: `${sorted[i].part}|${sorted[i].batch}`,
           })
         }
       })
     } else {
       const laneSlotCounts = new Map<string, number>()
       const bucketSpanMs = Math.max(3 * 60_000, Math.floor(span / 260))
-      const stackDepth = 5
-      const sortedRows = [...filteredFlowRows].sort(
+      const stackDepth = isDense ? Math.max(8, Math.round(10 * traceLaneSpread)) : Math.max(6, Math.round(7 * traceLaneSpread))
+      const stackStep = (isDense ? 3.2 : 4.8) * traceLaneSpread
+      const sortedRows = [...renderFlowRows].sort(
         (a, b) =>
           a.start.getTime() - b.start.getTime() ||
           a.operationSeq - b.operationSeq ||
@@ -2938,21 +3723,36 @@ function SchedulerPageContent() {
         const endMs = row.end.getTime()
         const startX = toX(startMs)
         const endX = toX(endMs)
-        const widthPx = Math.max(10, endX - startX)
+        const widthPx = Math.max(8, endX - startX)
+        const normalizedMachine = normalizeMachineLane(row.machine)
+        const scheduleLookupKey = `${row.part}|${row.batch}|${row.operationSeq}|${normalizedMachine}`
+        const scheduleMeta = scheduleMetaByKey.get(scheduleLookupKey)
         const bucket = Math.floor((startMs - minTs) / bucketSpanMs)
         const slotKey = `${row.machine}|${bucket}`
         const slot = laneSlotCounts.get(slotKey) || 0
         laneSlotCounts.set(slotKey, slot + 1)
-        const offset = (slot % stackDepth) * 6 - (stackDepth - 1) * 3
+        const offset = ((slot % stackDepth) - (stackDepth - 1) / 2) * stackStep
         const y =
-          (machineY.get(row.machine) ?? topPad + MACHINE_LANES.length * laneHeight) - 15 + offset
-        const showLabel = widthPx >= 46 && (row.piece <= 12 || row.piece % 25 === 0)
+          (machineY.get(row.machine) ?? topPad + MACHINE_LANES.length * laneHeight) -
+          traceNodeHeight / 2 +
+          offset
+        const pieceKey = `${row.part}|${row.batch}|${row.piece}`
+        const showLabel =
+          pieceKey === selectedPieceIdentityFromKey ||
+          (!isDense && widthPx >= 52 && row.piece % labelEveryPiece === 0) ||
+          (isDense && widthPx >= 72 && row.piece % Math.max(labelEveryPiece, 100) === 0)
+        const nodeKey = `${row.part}|${row.batch}|${row.piece}|${row.operationSeq}|${normalizedMachine}`
+        const isSelected = selectedFlowKey === nodeKey
+        const runPerson = scheduleMeta?.runPerson || 'Unassigned'
+        const setupPerson = scheduleMeta?.setupPerson || runPerson
+        const status = row.status || 'Scheduled'
         return {
           id: row.id,
-          key: `${row.part}|${row.batch}|${row.piece}|${row.operationSeq}`,
+          key: nodeKey,
           x: startX,
           y,
           width: widthPx,
+          height: traceNodeHeight,
           startTs: startMs,
           endTs: endMs,
           label:
@@ -2961,15 +3761,24 @@ function SchedulerPageContent() {
               : `P${row.piece}-OP${row.operationSeq}`,
           shortLabel: `P${row.piece}`,
           fill: opShade(row.part, row.operationSeq),
-          stroke: row.piece === 1 ? '#ecfeff' : pieceStroke(row.piece),
+          stroke: isSelected ? '#f8fafc' : row.piece === 1 ? '#ecfeff' : pieceStroke(row.piece),
           showLabel,
-          tooltip: `${row.part} ${row.batch} | Piece ${row.piece} | OP${row.operationSeq} | ${row.machine}\n${row.start.toLocaleString()} -> ${row.end.toLocaleString()}`,
+          tooltip: `${row.part} ${row.batch} | Piece ${row.piece} | OP${row.operationSeq} | ${normalizedMachine}\nSetup ${setupPerson} | Run ${runPerson}\n${row.start.toLocaleString()} -> ${row.end.toLocaleString()} | ${status}`,
+          part: row.part,
+          batch: row.batch,
+          piece: row.piece,
+          pieceKey,
+          operationSeq: row.operationSeq,
+          machine: normalizedMachine,
+          status,
+          runPerson,
+          setupPerson,
         }
       })
 
       const nodeByKey = new Map(nodes.map(node => [node.key, node]))
       const grouped = new Map<string, PieceFlowRow[]>()
-      filteredFlowRows.forEach(row => {
+      renderFlowRows.forEach(row => {
         const key = `${row.part}|${row.batch}|${row.piece}`
         const existing = grouped.get(key) || []
         existing.push(row)
@@ -2980,37 +3789,50 @@ function SchedulerPageContent() {
         const sorted = [...rows].sort((a, b) => a.operationSeq - b.operationSeq)
         for (let i = 1; i < sorted.length; i++) {
           const prevNode = nodeByKey.get(
-            `${sorted[i - 1].part}|${sorted[i - 1].batch}|${sorted[i - 1].piece}|${sorted[i - 1].operationSeq}`
+            `${sorted[i - 1].part}|${sorted[i - 1].batch}|${sorted[i - 1].piece}|${sorted[i - 1].operationSeq}|${normalizeMachineLane(sorted[i - 1].machine)}`
           )
           const currNode = nodeByKey.get(
-            `${sorted[i].part}|${sorted[i].batch}|${sorted[i].piece}|${sorted[i].operationSeq}`
+            `${sorted[i].part}|${sorted[i].batch}|${sorted[i].piece}|${sorted[i].operationSeq}|${normalizeMachineLane(sorted[i].machine)}`
           )
           if (!prevNode || !currNode) continue
           const fromX = prevNode.x + prevNode.width
-          const fromY = prevNode.y + 14
+          const fromY = prevNode.y + prevNode.height / 2
           const toXValue = currNode.x
-          const toY = currNode.y + 14
+          const toY = currNode.y + currNode.height / 2
           const pieceOffset = (sorted[i].piece % 5) * 3 - 6
           const cx = (fromX + toXValue) / 2 + pieceOffset
-          const cy = (fromY + toY) / 2 + pieceOffset
           links.push({
             id: `${key}-trace-${i}`,
             d: `M ${fromX.toFixed(2)} ${fromY.toFixed(2)} L ${cx.toFixed(2)} ${fromY.toFixed(2)} L ${cx.toFixed(2)} ${toY.toFixed(2)} L ${toXValue.toFixed(2)} ${toY.toFixed(2)}`,
             color: pieceStroke(sorted[i].piece),
+            pieceKey: key,
           })
         }
       })
     }
 
-    const operationLegend = Array.from(new Set(filteredFlowRows.map(row => row.operationSeq))).sort(
+    const operationLegend = Array.from(new Set(renderFlowRows.map(row => row.operationSeq))).sort(
       (a, b) => a - b
     )
 
     const spanHours = span / (60 * 60 * 1000)
-    const tickCount = spanHours <= 24 ? 8 : spanHours <= 72 ? 10 : 12
-    const timeTicks = Array.from({ length: tickCount + 1 }, (_, index) => {
-      const ratio = index / tickCount
-      const tickMs = minTs + span * ratio
+    const stepHours = chooseTickStepHours(spanHours)
+    const stepMs = stepHours * 60 * 60 * 1000
+    let tickTs = alignLocalTickStartMs(minTs, stepHours)
+    while (tickTs < minTs) {
+      tickTs += stepMs
+    }
+    const tickValues: number[] = [minTs]
+    while (tickTs < maxTs) {
+      tickValues.push(tickTs)
+      tickTs += stepMs
+    }
+    if (tickValues[tickValues.length - 1] !== maxTs) {
+      tickValues.push(maxTs)
+    }
+
+    const timeTicks = Array.from(new Set(tickValues)).map(tickMs => {
+      const ratio = (tickMs - minTs) / span
       const tickDate = new Date(tickMs)
       return {
         x: leftPad + trackWidth * ratio,
@@ -3032,7 +3854,81 @@ function SchedulerPageContent() {
       isDense,
       timeline: { minTs, maxTs, leftPad, trackWidth },
     }
-  }, [filteredFlowRows, availableFlowParts, flowMapMode, flowMapZoom])
+  }, [
+    renderFlowRows,
+    availableFlowParts,
+    flowMapMode,
+    flowMapZoom,
+    selectedFlowKey,
+    scheduleMetaByKey,
+    traceLaneSpread,
+    traceNodeScale,
+    traceLabelEveryPiece,
+  ])
+  const hoveredPieceIdentity = hoveredNode?.node.pieceKey || null
+  const activePieceIdentity = hoveredPieceIdentity || selectedPieceIdentity
+
+  const effectiveLinkVisibility = React.useMemo<FlowLinkVisibility>(() => {
+    if (flowMapMode === 'blocks') return 'all'
+    if (flowLinkVisibility !== 'auto') return flowLinkVisibility
+    if (!flowMapModel.isDense && flowMapModel.links.length <= 700) return 'all'
+    if (activePieceIdentity) return 'selected'
+    return 'none'
+  }, [
+    flowMapMode,
+    flowLinkVisibility,
+    flowMapModel.isDense,
+    flowMapModel.links.length,
+    activePieceIdentity,
+  ])
+
+  const visibleFlowLinks = React.useMemo(() => {
+    if (effectiveLinkVisibility === 'all') return flowMapModel.links
+    if (effectiveLinkVisibility === 'none') return [] as FlowLink[]
+    if (effectiveLinkVisibility === 'selected') {
+      if (activePieceIdentity) {
+        return flowMapModel.links.filter(link => link.pieceKey === activePieceIdentity)
+      }
+      return flowMapModel.links.slice(0, FLOW_TRACE_LINK_PREVIEW_LIMIT)
+    }
+    return flowMapModel.links
+  }, [effectiveLinkVisibility, flowMapModel.links, activePieceIdentity])
+
+  useEffect(() => {
+    if (!pendingFlowScrollKey) return
+    const viewport = flowViewportRef.current
+    if (!viewport) return
+    const node = flowMapModel.nodes.find(candidate => candidate.key === pendingFlowScrollKey)
+    if (!node) return
+    viewport.scrollLeft = Math.max(0, node.x - viewport.clientWidth * 0.35)
+    setPendingFlowScrollKey(null)
+  }, [pendingFlowScrollKey, flowMapModel.nodes])
+
+  const focusFlowLogOnMap = (log: PieceFlowLogRow) => {
+    const marginMs = 6 * 60 * 60 * 1000
+    if (
+      !flowWindowStartDate ||
+      !flowWindowEndDate ||
+      log.runStart < flowWindowStartDate ||
+      log.runEnd > flowWindowEndDate
+    ) {
+      setFlowWindowFromDates(
+        new Date(log.runStart.getTime() - marginMs),
+        new Date(log.runEnd.getTime() + marginMs)
+      )
+    }
+
+    setPieceRange(prev => {
+      if (log.piece >= prev.from && log.piece <= prev.to) return prev
+      const from = Math.max(1, log.piece - 2)
+      return { from, to: Math.max(from, log.piece + 2) }
+    })
+    setSelectedFlowKey(log.key)
+    setFlowMapMode('trace')
+    setPlaybackCursorMs(log.runStart.getTime())
+    setIsPlaybackRunning(false)
+    setPendingFlowScrollKey(log.key)
+  }
 
   const personTimelineModel = React.useMemo(() => {
     if (!flowMapModel.timeline || !showPersonTimeline) {
@@ -3061,7 +3957,7 @@ function SchedulerPageContent() {
       selectedPieceRows.map(row => `${row.part}|${row.batch}|${row.operationSeq}`)
     )
     const toX = (ts: number) => leftPad + ((ts - minTs) / span) * trackWidth
-    const keySet = new Set(filteredFlowRows.map(buildPieceRowKey))
+    const keySet = new Set(renderFlowRows.map(buildPieceRowKey))
     const relevantScheduleRows = results.filter((row: any) => keySet.has(buildScheduleRowKey(row)))
     const laneOrder = new Set<string>()
     const seeds: Array<{
@@ -3173,7 +4069,7 @@ function SchedulerPageContent() {
     flowMapModel.timeline,
     flowMapModel.width,
     showPersonTimeline,
-    filteredFlowRows,
+    renderFlowRows,
     results,
     selectedPieceRows,
   ])
@@ -3255,13 +4151,21 @@ function SchedulerPageContent() {
     'bg-white border border-gray-200 shadow-sm dark:bg-slate-900 dark:border-slate-800'
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-48 dark:bg-slate-950">
+    <div className="relative min-h-screen bg-neutral-100 pb-48 dark:bg-neutral-900">
+      <div className="fixed inset-0 z-0 pointer-events-auto">
+        <HexagonBackground />
+      </div>
+
       {/* Premium Header */}
-      <header className="border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <header className="relative z-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+        <div className="w-full px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:hidden">
+                  <SidebarTrigger className="-ml-1" />
+                  <Separator orientation="vertical" className="mr-2 h-4" />
+                </div>
                 <div className="w-10 h-10 flex items-center justify-center">
                   <img src="/Epsilologo.svg" alt="Epsilon Logo" className="w-10 h-10" />
                 </div>
@@ -3272,41 +4176,88 @@ function SchedulerPageContent() {
                   <p className="text-sm text-gray-600 dark:text-slate-300">
                     Advanced Manufacturing Scheduling System
                   </p>
-                  {userEmail && (
-                    <p className="text-xs text-gray-500 dark:text-slate-400">
-                      Welcome, {userEmail}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Badge
-                variant="outline"
-                className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-300"
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               >
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                System Online
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push('/')}
-                className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
-              >
-                <img src="/Epsilologo.svg" alt="Epsilon Logo" className="w-4 h-4 mr-2" />
-                Dashboard
-              </Button>
-              <Button variant="outline" size="sm" onClick={logout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
+                {theme === 'light' ? (
+                  <Moon className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                ) : (
+                  <Sun className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                )}
+              </button>
+              <div className="relative hidden sm:block">
+                <button className="relative p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-bell w-4 h-4 text-slate-700 dark:text-slate-300"
+                  >
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+                  </svg>
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+              </div>
+              <div className="relative">
+                <button
+                  onClick={logout}
+                  className="flex items-center space-x-2 px-2.5 py-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-gray-200 dark:border-slate-800"
+                >
+                  <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-user w-3.5 h-3.5 text-white"
+                    >
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium hidden sm:inline text-slate-700 dark:text-slate-300">
+                    {userEmail ? userEmail.split('@')[0] : 'mr1398463'}
+                  </span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-chevron-down w-3.5 h-3.5 text-slate-700 dark:text-slate-300"
+                  >
+                    <path d="m6 9 6 6 6-6"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
         {/* Navigation Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 lg:w-[400px] bg-white border border-gray-200 dark:bg-slate-900 dark:border-slate-800">
@@ -3507,9 +4458,8 @@ function SchedulerPageContent() {
                                 return (
                                   <div
                                     key={`${operation}-${index}`}
-                                    className={`px-3 py-2 cursor-pointer rounded transition-colors ${
-                                      isSelected ? 'bg-gray-200' : 'hover:bg-gray-100'
-                                    }`}
+                                    className={`px-3 py-2 cursor-pointer rounded transition-colors ${isSelected ? 'bg-gray-200' : 'hover:bg-gray-100'
+                                      }`}
                                     onClick={e => {
                                       e.preventDefault()
                                       e.stopPropagation()
@@ -3519,11 +4469,10 @@ function SchedulerPageContent() {
                                     <div className="flex items-center gap-3">
                                       {/* Simple Checkbox */}
                                       <div
-                                        className={`w-4 h-4 rounded border flex items-center justify-center ${
-                                          isSelected
+                                        className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected
                                             ? 'bg-gray-400 border-gray-400'
                                             : 'border-gray-300'
-                                        }`}
+                                          }`}
                                       >
                                         {isSelected && (
                                           <div className="w-2 h-2 bg-white rounded-sm"></div>
@@ -3731,10 +4680,20 @@ function SchedulerPageContent() {
                   <Button onClick={handleClearForm} variant="outline">
                     🗑️ Clear Form
                   </Button>
-                  {canEdit && (
+                  {(canRunBasic || canRunAdvanced) && (
                     <Button
-                      onClick={handleRunSchedule}
-                      disabled={orders.length === 0 || loading}
+                      onClick={() => {
+                        const fallbackProfile = canRunAdvanced ? scheduleProfile : 'basic'
+                        if (fallbackProfile !== scheduleProfile) {
+                          setScheduleProfile(fallbackProfile)
+                        }
+                        void handleRunSchedule(fallbackProfile)
+                      }}
+                      disabled={isRunActionDisabled({
+                        ordersCount: orders.length,
+                        loading,
+                        access: { canRunBasic, canRunAdvanced },
+                      })}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       {loading ? (
@@ -3888,9 +4847,22 @@ function SchedulerPageContent() {
             {showResults && (
               <Card id="schedule-results" className={cardSurfaceClass}>
                 <CardHeader>
-                  <CardTitle className="text-xl text-gray-900 dark:text-slate-100">
-                    📊 Schedule Results
-                  </CardTitle>
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-xl text-gray-900 dark:text-slate-100">
+                      📊 Schedule Results
+                    </CardTitle>
+                    <Badge
+                      className={
+                        scheduleProfile === 'basic'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-700 text-xs font-semibold'
+                          : 'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-950/30 dark:text-violet-300 dark:border-violet-700 text-xs font-semibold'
+                      }
+                    >
+                      {scheduleProfile === 'basic'
+                        ? '⚡ Basic — Run Only'
+                        : '🔧 Advanced — Setup + Run'}
+                    </Badge>
+                  </div>
                   <CardDescription className="dark:text-slate-400">
                     Generated production schedule
                   </CardDescription>
@@ -3925,14 +4897,18 @@ function SchedulerPageContent() {
                             Machine
                           </th>
                           <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">
-                            Run/Setup Person
+                            {scheduleProfile === 'basic' ? 'Run Person' : 'Run/Setup Person'}
                           </th>
-                          <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">
-                            Setup Start
-                          </th>
-                          <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">
-                            Setup End
-                          </th>
+                          {scheduleProfile === 'advanced' && (
+                            <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">
+                              Setup Start
+                            </th>
+                          )}
+                          {scheduleProfile === 'advanced' && (
+                            <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">
+                              Setup End
+                            </th>
+                          )}
                           <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">
                             Run Start
                           </th>
@@ -3983,22 +4959,32 @@ function SchedulerPageContent() {
                               {result.machine}
                             </td>
                             <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
-                              <div className="leading-tight">
+                              {scheduleProfile === 'basic' ? (
                                 <div>
-                                  Run:{' '}
                                   {result.productionPersonName || result.person || 'Unassigned'}
                                 </div>
-                                <div className="text-[11px] text-gray-500 dark:text-slate-400">
-                                  Setup: {result.setupPersonName || result.person || 'Unassigned'}
+                              ) : (
+                                <div className="leading-tight">
+                                  <div>
+                                    Run:{' '}
+                                    {result.productionPersonName || result.person || 'Unassigned'}
+                                  </div>
+                                  <div className="text-[11px] text-gray-500 dark:text-slate-400">
+                                    Setup: {result.setupPersonName || result.person || 'Unassigned'}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
-                              {new Date(result.setupStart).toLocaleString()}
-                            </td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
-                              {new Date(result.setupEnd).toLocaleString()}
-                            </td>
+                            {scheduleProfile === 'advanced' && (
+                              <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
+                                {new Date(result.setupStart).toLocaleString()}
+                              </td>
+                            )}
+                            {scheduleProfile === 'advanced' && (
+                              <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
+                                {new Date(result.setupEnd).toLocaleString()}
+                              </td>
+                            )}
                             <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
                               {new Date(result.runStart).toLocaleString()}
                             </td>
@@ -4085,22 +5071,77 @@ function SchedulerPageContent() {
                           <span className="rounded border border-gray-300 bg-white px-2 py-0.5 dark:border-slate-700 dark:bg-slate-950">
                             Flow {Math.round(qualityReport.kpi.flow)}%
                           </span>
-                          <span className="rounded border border-cyan-300 bg-cyan-50 px-2 py-0.5 text-cyan-800 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-200">
-                            Machine Util {qualityReport.kpi.machineUtilizationPct.toFixed(1)}%
+                          <span
+                            className={cn(
+                              'rounded border px-2 py-0.5',
+                              engineQualityMetrics && engineQualityMetrics.machineUtilPct >= 70
+                                ? 'border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-200'
+                                : engineQualityMetrics && engineQualityMetrics.machineUtilPct >= 50
+                                  ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
+                                  : 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200'
+                            )}
+                            title="Machine actively running / total window from first to last run per machine"
+                          >
+                            Machine Util{' '}
+                            {engineQualityMetrics
+                              ? `${engineQualityMetrics.machineUtilPct.toFixed(1)}%`
+                              : `${qualityReport.kpi.machineUtilizationPct.toFixed(1)}%`}
                           </span>
-                          <span className="rounded border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-                            Person Util {qualityReport.kpi.personUtilizationPct.toFixed(1)}%
+                          <span
+                            className={cn(
+                              'rounded border px-2 py-0.5',
+                              (engineQualityMetrics
+                                ? engineQualityMetrics.personUtilPct
+                                : qualityReport.kpi.personUtilizationPct) >= 75
+                                ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200'
+                                : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
+                            )}
+                            title="Run-only person busy/window ratio (setup time excluded)"
+                          >
+                            Run Util{' '}
+                            {engineQualityMetrics
+                              ? `${engineQualityMetrics.personUtilPct.toFixed(1)}%`
+                              : `${qualityReport.kpi.personUtilizationPct.toFixed(1)}%`}
                           </span>
                           <span className="rounded border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-200">
                             On-time {qualityReport.kpi.onTimePct.toFixed(1)}%
                           </span>
-                          <span className="rounded border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-                            Avg Queue {qualityReport.kpi.avgQueueGapHours.toFixed(2)}h
+                          <span
+                            className={cn(
+                              'rounded border px-2 py-0.5',
+                              (engineQualityMetrics
+                                ? engineQualityMetrics.avgQueueHours
+                                : qualityReport.kpi.avgQueueGapHours) < 20
+                                ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200'
+                                : (engineQualityMetrics
+                                  ? engineQualityMetrics.avgQueueHours
+                                  : qualityReport.kpi.avgQueueGapHours) < 40
+                                  ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
+                                  : 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200'
+                            )}
+                            title="Avg wait time between consecutive operations per batch"
+                          >
+                            Avg Queue{' '}
+                            {engineQualityMetrics
+                              ? `${engineQualityMetrics.avgQueueHours.toFixed(1)}h`
+                              : `${qualityReport.kpi.avgQueueGapHours.toFixed(2)}h`}
                           </span>
+                          {engineQualityMetrics && (
+                            <span
+                              className="rounded border border-violet-300 bg-violet-50 px-2 py-0.5 text-violet-800 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-200"
+                              title="Total schedule duration from first run start to last run end"
+                            >
+                              Span {engineQualityMetrics.totalSpanHours.toFixed(0)}h
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-slate-400">
                           <span>
-                            Params: Setup {qualityReport.parameters.setupWindow} | Breakdowns{' '}
+                            Profile:{' '}
+                            {scheduleProfile === 'basic'
+                              ? 'Basic (Run Only)'
+                              : 'Advanced (Setup + Run)'}{' '}
+                            | Setup {qualityReport.parameters.setupWindow} | Breakdowns{' '}
                             {qualityReport.parameters.breakdownCount} | Holidays{' '}
                             {qualityReport.parameters.holidayCount} | Ops{' '}
                             {qualityReport.parameters.operationRows} | Pieces{' '}
@@ -4181,35 +5222,42 @@ function SchedulerPageContent() {
                             <button
                               type="button"
                               onClick={() => setFlowMapMode('blocks')}
-                              className={`h-8 px-3 text-xs font-medium ${
-                                flowMapMode === 'blocks'
+                              className={`h-8 px-3 text-xs font-medium ${flowMapMode === 'blocks'
                                   ? 'bg-cyan-500/20 text-cyan-100'
                                   : 'bg-slate-900 text-cyan-300'
-                              }`}
+                                }`}
                             >
-                              Blocks
+                              Stacked
                             </button>
                             <button
                               type="button"
                               onClick={() => setFlowMapMode('trace')}
-                              className={`h-8 px-3 text-xs font-medium ${
-                                flowMapMode === 'trace'
+                              className={`h-8 px-3 text-xs font-medium ${flowMapMode === 'trace'
                                   ? 'bg-cyan-500/20 text-cyan-100'
                                   : 'bg-slate-900 text-cyan-300'
-                              }`}
+                                }`}
                             >
-                              Trace
+                              Detail
                             </button>
                             <button
                               type="button"
                               onClick={() => setFlowMapMode('playback')}
-                              className={`h-8 px-3 text-xs font-medium ${
-                                flowMapMode === 'playback'
+                              className={`h-8 px-3 text-xs font-medium ${flowMapMode === 'playback'
                                   ? 'bg-cyan-500/20 text-cyan-100'
                                   : 'bg-slate-900 text-cyan-300'
-                              }`}
+                                }`}
                             >
                               Playback
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFlowMapMode('logs')}
+                              className={`h-8 px-3 text-xs font-medium ${flowMapMode === 'logs'
+                                  ? 'bg-cyan-500/20 text-cyan-100'
+                                  : 'bg-slate-900 text-cyan-300'
+                                }`}
+                            >
+                              Logs
                             </button>
                           </div>
                           <select
@@ -4224,45 +5272,164 @@ function SchedulerPageContent() {
                               </option>
                             ))}
                           </select>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={pieceRange.from}
-                            onChange={e =>
-                              setPieceRange(prev => ({
-                                ...prev,
-                                from: Math.max(1, Number(e.target.value) || 1),
-                              }))
-                            }
-                            className="h-8 w-20 border-cyan-700 bg-slate-900 text-cyan-100"
-                          />
-                          <Input
-                            type="number"
-                            min={pieceRange.from}
-                            value={pieceRange.to}
-                            onChange={e =>
-                              setPieceRange(prev => ({
-                                ...prev,
-                                to: Math.max(prev.from, Number(e.target.value) || prev.from),
-                              }))
-                            }
-                            className="h-8 w-20 border-cyan-700 bg-slate-900 text-cyan-100"
-                          />
-                          <div className="flex h-8 items-center gap-2 rounded-md border border-cyan-700 bg-slate-900 px-2">
-                            <span className="text-[11px] text-cyan-300">Zoom</span>
-                            <input
-                              type="range"
-                              min={0.6}
-                              max={2}
-                              step={0.1}
-                              value={flowMapZoom}
-                              onChange={e => setFlowMapZoom(Number(e.target.value))}
-                              className="w-20 accent-cyan-400"
-                            />
-                            <span className="text-[11px] text-cyan-200">
-                              {Math.round(flowMapZoom * 100)}%
-                            </span>
-                          </div>
+                          <select
+                            value={flowBatchFilter}
+                            onChange={e => setFlowBatchFilter(e.target.value)}
+                            className="h-8 rounded-md border border-cyan-700 bg-slate-900 px-2 text-xs text-cyan-100"
+                          >
+                            <option value="ALL">All Batches</option>
+                            {availableFlowBatches.map(batch => (
+                              <option key={batch} value={batch}>
+                                {batch}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={flowOpFilter}
+                            onChange={e => setFlowOpFilter(e.target.value)}
+                            className="h-8 rounded-md border border-cyan-700 bg-slate-900 px-2 text-xs text-cyan-100"
+                          >
+                            <option value="ALL">All Ops</option>
+                            {availableFlowOps.map(op => (
+                              <option key={op} value={String(op)}>
+                                OP{op}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={flowMachineFilter}
+                            onChange={e => setFlowMachineFilter(e.target.value)}
+                            className="h-8 rounded-md border border-cyan-700 bg-slate-900 px-2 text-xs text-cyan-100"
+                          >
+                            <option value="ALL">All Machines</option>
+                            {availableFlowMachines.map(machine => (
+                              <option key={machine} value={machine}>
+                                {machine}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={flowPersonFilter}
+                            onChange={e => setFlowPersonFilter(e.target.value)}
+                            className="h-8 rounded-md border border-cyan-700 bg-slate-900 px-2 text-xs text-cyan-100"
+                          >
+                            <option value="ALL">All People</option>
+                            {availableFlowPeople.map(person => (
+                              <option key={person} value={person}>
+                                {person}
+                              </option>
+                            ))}
+                          </select>
+                          {flowMapMode !== 'logs' && (
+                            <>
+                              <select
+                                value={flowRenderProfile}
+                                onChange={e =>
+                                  setFlowRenderProfile(e.target.value as FlowRenderProfile)
+                                }
+                                className="h-8 rounded-md border border-cyan-700 bg-slate-900 px-2 text-xs text-cyan-100"
+                              >
+                                <option value="quality">Profile: Quality (Always Full)</option>
+                                <option value="balanced">Profile: Balanced</option>
+                              </select>
+                              <select
+                                value={flowRenderPolicy}
+                                onChange={e =>
+                                  setFlowRenderPolicy(e.target.value as PieceRenderPolicy)
+                                }
+                                disabled={flowRenderProfile === 'quality'}
+                                className="h-8 rounded-md border border-cyan-700 bg-slate-900 px-2 text-xs text-cyan-100"
+                              >
+                                <option value="auto">Render: Auto</option>
+                                <option value="slice">Render: Slice</option>
+                                <option value="all">Render: All (Progressive)</option>
+                              </select>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={handleRenderAllPieces}
+                                disabled={renderAllTotalRows === 0 || isRenderAllRunning}
+                                className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                              >
+                                Render All ({renderAllTotalRows.toLocaleString()})
+                              </Button>
+                              {isRenderAllRunning && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelRenderAll}
+                                  className="h-8 border-amber-700 bg-amber-900/20 text-amber-200 hover:bg-amber-900/30"
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                              <Input
+                                type="number"
+                                min={1}
+                                value={pieceRange.from}
+                                disabled={effectiveRenderPolicy === 'all'}
+                                onChange={e =>
+                                  setPieceRange(prev => ({
+                                    ...prev,
+                                    from: Math.max(1, Number(e.target.value) || 1),
+                                  }))
+                                }
+                                className="h-8 w-20 border-cyan-700 bg-slate-900 text-cyan-100"
+                              />
+                              <Input
+                                type="number"
+                                min={pieceRange.from}
+                                value={pieceRange.to}
+                                disabled={effectiveRenderPolicy === 'all'}
+                                onChange={e =>
+                                  setPieceRange(prev => ({
+                                    ...prev,
+                                    to: Math.max(prev.from, Number(e.target.value) || prev.from),
+                                  }))
+                                }
+                                className="h-8 w-20 border-cyan-700 bg-slate-900 text-cyan-100"
+                              />
+                              <div className="flex h-8 items-center gap-2 rounded-md border border-cyan-700 bg-slate-900 px-2">
+                                <span className="text-[11px] text-cyan-300">Zoom</span>
+                                <input
+                                  type="range"
+                                  min={0.6}
+                                  max={2}
+                                  step={0.1}
+                                  value={flowMapZoom}
+                                  onChange={e => setFlowMapZoom(Number(e.target.value))}
+                                  className="w-20 accent-cyan-400"
+                                />
+                                <span className="text-[11px] text-cyan-200">
+                                  {Math.round(flowMapZoom * 100)}%
+                                </span>
+                              </div>
+                              <select
+                                value={flowLinkVisibility}
+                                onChange={e =>
+                                  setFlowLinkVisibility(e.target.value as FlowLinkVisibility)
+                                }
+                                className="h-8 rounded-md border border-cyan-700 bg-slate-900 px-2 text-xs text-cyan-100"
+                                title="Link visibility"
+                              >
+                                <option value="auto">Links: Auto</option>
+                                <option value="selected">Links: Selected Piece</option>
+                                <option value="all">Links: All</option>
+                                <option value="none">Links: Hidden</option>
+                              </select>
+                              <label className="inline-flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-900 px-2 h-8 text-[11px] text-cyan-200">
+                                <input
+                                  type="checkbox"
+                                  checked={flowFocusActivePiece}
+                                  onChange={e => setFlowFocusActivePiece(e.target.checked)}
+                                  className="accent-cyan-400"
+                                />
+                                Focus active piece
+                              </label>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-cyan-800 bg-slate-900/70 px-3 py-2">
@@ -4367,93 +5534,370 @@ function SchedulerPageContent() {
                           </span>
                         )}
                       </div>
-                      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-cyan-800 bg-slate-900/70 px-3 py-2">
-                        <span className="text-xs font-semibold text-cyan-200">
-                          Playback Controls
-                        </span>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={handlePlaybackToggle}
-                          className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
-                        >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          {isPlaybackRunning ? 'Pause' : 'Play'}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={handlePlaybackReset}
-                          className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
-                        >
-                          Reset
-                        </Button>
-                        <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
-                          <span className="text-[11px] text-cyan-300">Delay (ms)</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={2000}
-                            value={playbackDelayMs}
-                            onChange={e =>
-                              setPlaybackDelayMs(
-                                Math.max(0, Math.min(2000, Number(e.target.value) || 0))
-                              )
-                            }
-                            className="h-6 w-20 border-cyan-700 bg-slate-900 text-cyan-100"
-                          />
+                      {flowMapMode !== 'logs' && (
+                        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-cyan-800 bg-slate-900/70 px-3 py-2">
+                          <span className="text-xs font-semibold text-cyan-200">
+                            Playback Controls
+                          </span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={handlePlaybackToggle}
+                            className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                          >
+                            <PlayCircle className="w-4 h-4 mr-2" />
+                            {isPlaybackRunning ? 'Pause' : 'Play'}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={handlePlaybackReset}
+                            className="h-8 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                          >
+                            Reset
+                          </Button>
+                          <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                            <span className="text-[11px] text-cyan-300">Delay (ms)</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={2000}
+                              value={playbackDelayMs}
+                              onChange={e =>
+                                setPlaybackDelayMs(
+                                  Math.max(0, Math.min(2000, Number(e.target.value) || 0))
+                                )
+                              }
+                              className="h-6 w-20 border-cyan-700 bg-slate-900 text-cyan-100"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                            <span className="text-[11px] text-cyan-300">Step (min)</span>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={120}
+                              value={playbackStepMinutes}
+                              onChange={e =>
+                                setPlaybackStepMinutes(
+                                  Math.max(1, Math.min(120, Number(e.target.value) || 1))
+                                )
+                              }
+                              className="h-6 w-20 border-cyan-700 bg-slate-900 text-cyan-100"
+                            />
+                          </div>
+                          <label className="inline-flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8 text-[11px] text-cyan-200">
+                            <input
+                              type="checkbox"
+                              checked={verificationFilteredOnly}
+                              onChange={e => setVerificationFilteredOnly(e.target.checked)}
+                              className="accent-cyan-400"
+                            />
+                            Filtered-only scope
+                          </label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => runQualityEvaluation(verificationFilteredOnly)}
+                            className="h-8 bg-cyan-600 hover:bg-cyan-700 text-white"
+                          >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Run Verification
+                          </Button>
                         </div>
-                        <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
-                          <span className="text-[11px] text-cyan-300">Step (min)</span>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={120}
-                            value={playbackStepMinutes}
-                            onChange={e =>
-                              setPlaybackStepMinutes(
-                                Math.max(1, Math.min(120, Number(e.target.value) || 1))
-                              )
-                            }
-                            className="h-6 w-20 border-cyan-700 bg-slate-900 text-cyan-100"
-                          />
+                      )}
+                      {flowMapMode !== 'logs' && (
+                        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-cyan-800/80 bg-slate-900/60 px-3 py-2">
+                          <span className="text-xs font-semibold text-cyan-200">Clarity</span>
+                          <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                            <span className="text-[11px] text-cyan-300">Node</span>
+                            <input
+                              type="range"
+                              min={0.7}
+                              max={1.6}
+                              step={0.05}
+                              value={traceNodeScale}
+                              onChange={e => setTraceNodeScale(Number(e.target.value))}
+                              className="w-20 accent-cyan-400"
+                            />
+                            <span className="text-[11px] text-cyan-100">{traceNodeScale.toFixed(2)}x</span>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                            <span className="text-[11px] text-cyan-300">Lane</span>
+                            <input
+                              type="range"
+                              min={0.85}
+                              max={1.8}
+                              step={0.05}
+                              value={traceLaneSpread}
+                              onChange={e => setTraceLaneSpread(Number(e.target.value))}
+                              className="w-20 accent-cyan-400"
+                            />
+                            <span className="text-[11px] text-cyan-100">{traceLaneSpread.toFixed(2)}x</span>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                            <span className="text-[11px] text-cyan-300">Label every</span>
+                            <Input
+                              type="number"
+                              min={6}
+                              max={160}
+                              value={traceLabelEveryPiece}
+                              onChange={e =>
+                                setTraceLabelEveryPiece(
+                                  Math.max(6, Math.min(160, Number(e.target.value) || 6))
+                                )
+                              }
+                              className="h-6 w-16 border-cyan-700 bg-slate-900 text-cyan-100"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                            <span className="text-[11px] text-cyan-300">Link width</span>
+                            <input
+                              type="range"
+                              min={0.8}
+                              max={2.8}
+                              step={0.1}
+                              value={traceLinkThickness}
+                              onChange={e => setTraceLinkThickness(Number(e.target.value))}
+                              className="w-20 accent-cyan-400"
+                            />
+                            <span className="text-[11px] text-cyan-100">{traceLinkThickness.toFixed(1)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8">
+                            <span className="text-[11px] text-cyan-300">Bg link</span>
+                            <input
+                              type="range"
+                              min={0.04}
+                              max={0.5}
+                              step={0.01}
+                              value={traceBackgroundLinkOpacity}
+                              onChange={e => setTraceBackgroundLinkOpacity(Number(e.target.value))}
+                              className="w-20 accent-cyan-400"
+                            />
+                            <span className="text-[11px] text-cyan-100">{traceBackgroundLinkOpacity.toFixed(2)}</span>
+                          </div>
+                          <label className="inline-flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8 text-[11px] text-cyan-200">
+                            <input
+                              type="checkbox"
+                              checked={autoVerifyAfterRender}
+                              onChange={e => setAutoVerifyAfterRender(e.target.checked)}
+                              className="accent-cyan-400"
+                            />
+                            Auto-verify when render done
+                          </label>
                         </div>
-                        <label className="inline-flex items-center gap-2 rounded-md border border-cyan-700 bg-slate-950 px-2 h-8 text-[11px] text-cyan-200">
-                          <input
-                            type="checkbox"
-                            checked={verificationFilteredOnly}
-                            onChange={e => setVerificationFilteredOnly(e.target.checked)}
-                            className="accent-cyan-400"
-                          />
-                          Filtered-only scope
-                        </label>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => runQualityEvaluation(verificationFilteredOnly)}
-                          className="h-8 bg-cyan-600 hover:bg-cyan-700 text-white"
-                        >
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          Run Verification
-                        </Button>
-                      </div>
-                      {flowMapMode === 'trace' && flowMapModel.isDense && (
+                      )}
+                      {flowMapMode !== 'logs' && isRenderAllMode && (
+                        <div className="mb-3 rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <span>
+                                {flowRenderProgress.message || 'Preparing full piece render...'}
+                              </span>
+                              {Number.isFinite(flowRenderProgress.speedRowsPerSec) && (
+                                <span className="text-cyan-200/90">
+                                  {Math.round(flowRenderProgress.speedRowsPerSec || 0).toLocaleString()} rows/s
+                                </span>
+                              )}
+                              {(flowRenderProgress.phase === 'prepare' ||
+                                flowRenderProgress.phase === 'render') && (
+                                  <span className="text-cyan-200/90">
+                                    ETA {formatEta(flowRenderProgress.etaSeconds)}
+                                  </span>
+                                )}
+                            </div>
+                            <span className="text-cyan-200/90 font-semibold">
+                              {flowRenderProgress.processed.toLocaleString()} /{' '}
+                              {flowRenderProgress.total.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-cyan-950/80">
+                            <div
+                              className="h-full bg-cyan-400 transition-all"
+                              style={{
+                                width: `${flowRenderProgress.total > 0
+                                    ? Math.min(
+                                      100,
+                                      Math.round(
+                                        (flowRenderProgress.processed /
+                                          flowRenderProgress.total) *
+                                        100
+                                      )
+                                    )
+                                    : 0
+                                  }%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {flowMapMode !== 'logs' && renderAllEstimatedMemoryMb >= 24 && (
+                        <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                          Full render estimate: ~{renderAllEstimatedMemoryMb} MB for current filtered scope.
+                          Quality profile will still render all rows.
+                        </div>
+                      )}
+                      {flowMapMode === 'trace' && isAutoDenseSlice && (
                         <p className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                          Too dense to render every piece clearly. Showing the selected piece slice
-                          ({pieceRange.from}-{pieceRange.to}). Narrow part/piece filters or reduce
-                          range for clean one-by-one tracing.
+                          Too dense for clean trace in Auto mode. Showing piece slice (
+                          {pieceRange.from}-{pieceRange.to}). Click{' '}
+                          <span className="font-semibold">Render All</span> to load the full
+                          filtered piece set.
+                        </p>
+                      )}
+                      {flowMapMode === 'trace' &&
+                        effectiveRenderPolicy === 'slice' &&
+                        flowRenderProgress.phase !== 'render' && (
+                          <p className="mb-3 rounded-md border border-cyan-600/35 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-200">
+                            Slice mode active: showing pieces {pieceRange.from}-{pieceRange.to}.
+                          </p>
+                        )}
+                      {flowMapMode !== 'logs' && (
+                        <p className="mb-3 rounded-md border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-xs text-cyan-200/90">
+                          {effectiveLinkVisibility === 'all'
+                            ? `Showing all ${flowMapModel.links.length.toLocaleString()} piece links.`
+                            : effectiveLinkVisibility === 'selected'
+                              ? activePieceIdentity
+                                ? `Showing links for active piece ${activePieceIdentity.split('|').join(' / ')}.`
+                                : `Showing preview links (${Math.min(FLOW_TRACE_LINK_PREVIEW_LIMIT, flowMapModel.links.length)}). Hover or click a piece to focus links.`
+                              : effectiveLinkVisibility === 'none'
+                                ? 'Links hidden. Use "Links: Selected Piece" or "Links: All" for full path lines.'
+                                : 'Auto link mode active.'}
                         </p>
                       )}
 
-                      {filteredFlowRows.length === 0 ? (
+                      {flowMapMode === 'logs' ? (
+                        <div className="rounded-lg border border-cyan-900/60 bg-[#070b12] p-2">
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+                            <div className="text-xs text-cyan-100">
+                              Showing {filteredFlowLogs.length.toLocaleString()} /{' '}
+                              {flowLogRows.length.toLocaleString()} logs
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] text-cyan-300">
+                                Page {flowLogCurrentPage} / {flowLogPageCount}
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setFlowLogPage(prev => Math.max(1, prev - 1))}
+                                disabled={flowLogCurrentPage <= 1}
+                                className="h-7 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                              >
+                                Prev
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  setFlowLogPage(prev => Math.min(flowLogPageCount, prev + 1))
+                                }
+                                disabled={flowLogCurrentPage >= flowLogPageCount}
+                                className="h-7 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                              >
+                                Next
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="max-h-[560px] overflow-auto rounded border border-cyan-900/60">
+                            <table className="w-full min-w-[2000px] text-xs text-cyan-100">
+                              <thead className="sticky top-0 z-10 bg-slate-900">
+                                <tr className="border-b border-cyan-900/70 text-cyan-300">
+                                  <th className="px-2 py-2 text-left">Part</th>
+                                  <th className="px-2 py-2 text-left">Batch</th>
+                                  <th className="px-2 py-2 text-left">Piece</th>
+                                  <th className="px-2 py-2 text-left">OP</th>
+                                  <th className="px-2 py-2 text-left">Operation</th>
+                                  <th className="px-2 py-2 text-left">Machine</th>
+                                  {scheduleProfile === 'advanced' && (
+                                    <th className="px-2 py-2 text-left">Setup Person</th>
+                                  )}
+                                  <th className="px-2 py-2 text-left">Run Person</th>
+                                  {scheduleProfile === 'advanced' && (
+                                    <th className="px-2 py-2 text-left">Setup Start</th>
+                                  )}
+                                  {scheduleProfile === 'advanced' && (
+                                    <th className="px-2 py-2 text-left">Setup End</th>
+                                  )}
+                                  <th className="px-2 py-2 text-left">Run Start</th>
+                                  <th className="px-2 py-2 text-left">Run End</th>
+                                  <th className="px-2 py-2 text-left">Timing</th>
+                                  <th className="px-2 py-2 text-left">Order Qty</th>
+                                  <th className="px-2 py-2 text-left">Batch Qty</th>
+                                  <th className="px-2 py-2 text-left">Priority</th>
+                                  <th className="px-2 py-2 text-left">Due Date</th>
+                                  <th className="px-2 py-2 text-left">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {pagedFlowLogs.length === 0 ? (
+                                  <tr>
+                                    <td
+                                      colSpan={scheduleProfile === 'advanced' ? 18 : 15}
+                                      className="px-2 py-8 text-center text-cyan-300/80"
+                                    >
+                                      No logs in the selected filter window.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  pagedFlowLogs.map(log => (
+                                    <tr
+                                      key={log.key}
+                                      className={`cursor-pointer border-b border-cyan-900/30 hover:bg-cyan-900/20 ${selectedFlowKey === log.key ? 'bg-cyan-900/35' : ''
+                                        }`}
+                                      onClick={() => focusFlowLogOnMap(log)}
+                                    >
+                                      <td className="px-2 py-1.5">{log.partNumber}</td>
+                                      <td className="px-2 py-1.5">{log.batchId}</td>
+                                      <td className="px-2 py-1.5">{log.piece}</td>
+                                      <td className="px-2 py-1.5">OP{log.operationSeq}</td>
+                                      <td className="px-2 py-1.5">{log.operationName}</td>
+                                      <td className="px-2 py-1.5">{log.machine}</td>
+                                      {scheduleProfile === 'advanced' && (
+                                        <td className="px-2 py-1.5">{log.setupPerson}</td>
+                                      )}
+                                      <td className="px-2 py-1.5">{log.runPerson}</td>
+                                      {scheduleProfile === 'advanced' && (
+                                        <td className="px-2 py-1.5">
+                                          {log.setupStart.toLocaleString()}
+                                        </td>
+                                      )}
+                                      {scheduleProfile === 'advanced' && (
+                                        <td className="px-2 py-1.5">
+                                          {log.setupEnd.toLocaleString()}
+                                        </td>
+                                      )}
+                                      <td className="px-2 py-1.5">
+                                        {log.runStart.toLocaleString()}
+                                      </td>
+                                      <td className="px-2 py-1.5">{log.runEnd.toLocaleString()}</td>
+                                      <td className="px-2 py-1.5">{log.timing}</td>
+                                      <td className="px-2 py-1.5">{log.orderQty || 'N/A'}</td>
+                                      <td className="px-2 py-1.5">{log.batchQty || 'N/A'}</td>
+                                      <td className="px-2 py-1.5">{log.priority}</td>
+                                      <td className="px-2 py-1.5">{log.dueDate || 'N/A'}</td>
+                                      <td className="px-2 py-1.5">{log.status}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ) : renderFlowRows.length === 0 ? (
                         <p className="text-sm text-cyan-100/80">
                           No piece-level rows for selected filter.
                         </p>
                       ) : (
                         <>
-                          <div className="overflow-x-auto rounded-lg border border-cyan-900/60 bg-[#070b12]">
+                          <div
+                            ref={flowViewportRef}
+                            className="overflow-x-auto rounded-lg border border-cyan-900/60 bg-[#070b12]"
+                          >
                             <svg
                               width={flowMapModel.width}
                               height={flowMapModel.height}
@@ -4526,11 +5970,11 @@ function SchedulerPageContent() {
                                   >
                                     {playbackCursorMs
                                       ? new Date(playbackCursorMs).toLocaleString([], {
-                                          month: 'short',
-                                          day: '2-digit',
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                        })
+                                        month: 'short',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })
                                       : ''}
                                   </text>
                                 </g>
@@ -4571,114 +6015,181 @@ function SchedulerPageContent() {
                                 </text>
                               ))}
 
-                              {flowMapModel.links.map(link => (
+                              {visibleFlowLinks.map(link => (
                                 <path
                                   key={link.id}
                                   d={link.d}
                                   fill="none"
                                   stroke={link.color}
-                                  strokeOpacity={0.9}
-                                  strokeWidth={1.4}
+                                  strokeOpacity={
+                                    flowMapMode === 'blocks'
+                                      ? 0.82
+                                      : activePieceIdentity && link.pieceKey !== activePieceIdentity
+                                        ? traceBackgroundLinkOpacity
+                                        : 0.88
+                                  }
+                                  strokeWidth={
+                                    flowMapMode === 'blocks'
+                                      ? 1.5
+                                      : activePieceIdentity && link.pieceKey === activePieceIdentity
+                                        ? traceLinkThickness + 0.9
+                                        : traceLinkThickness
+                                  }
                                   markerEnd="url(#flowArrow)"
                                 />
                               ))}
 
-                              {flowMapModel.nodes.map(node => (
-                                <g key={node.id}>
-                                  <title>{node.tooltip}</title>
-                                  <rect
-                                    x={node.x}
-                                    y={node.y}
-                                    width={node.width}
-                                    height={28}
-                                    rx={6}
-                                    fill={node.fill}
-                                    stroke={
-                                      playbackCursorMs !== null &&
-                                      node.startTs <= playbackCursorMs &&
-                                      node.endTs >= playbackCursorMs
-                                        ? '#fef08a'
-                                        : node.stroke
-                                    }
-                                    strokeWidth={
-                                      playbackCursorMs !== null &&
-                                      node.startTs <= playbackCursorMs &&
-                                      node.endTs >= playbackCursorMs
-                                        ? 2.8
-                                        : node.stroke === '#ecfeff'
-                                          ? 2.3
-                                          : 1.2
-                                    }
-                                    opacity={
-                                      playbackCursorMs === null || node.endTs <= playbackCursorMs
-                                        ? 1
-                                        : node.startTs <= playbackCursorMs
-                                          ? 1
-                                          : 0.25
-                                    }
-                                  />
-                                  <rect
-                                    x={node.x}
-                                    y={node.y}
-                                    width={node.width}
-                                    height={28}
-                                    rx={6}
-                                    fill="transparent"
-                                    cursor="crosshair"
-                                    onClick={() => setSelectedFlowKey(node.key)}
-                                    onMouseEnter={e =>
-                                      setHoveredNode({ node, x: e.clientX, y: e.clientY })
-                                    }
-                                    onMouseMove={e =>
-                                      setHoveredNode(prev =>
-                                        prev ? { ...prev, x: e.clientX, y: e.clientY } : null
-                                      )
-                                    }
-                                    onMouseLeave={() => setHoveredNode(null)}
-                                  />
-                                  {node.showLabel && (
-                                    <text
-                                      x={node.x + 7}
-                                      y={node.y + 18}
-                                      fill="#04111d"
-                                      fontSize={11}
-                                      fontWeight={700}
-                                      opacity={
-                                        playbackCursorMs === null || node.endTs <= playbackCursorMs
-                                          ? 1
-                                          : node.startTs <= playbackCursorMs
-                                            ? 1
-                                            : 0.45
+                              {flowMapModel.nodes.map(node => {
+                                const isActivePiece =
+                                  Boolean(activePieceIdentity) &&
+                                  node.pieceKey === activePieceIdentity
+                                const playbackActive =
+                                  playbackCursorMs !== null &&
+                                  node.startTs <= playbackCursorMs &&
+                                  node.endTs >= playbackCursorMs
+                                const selected = selectedFlowKey === node.key
+                                const playbackOpacity =
+                                  playbackCursorMs === null || node.endTs <= playbackCursorMs
+                                    ? 1
+                                    : node.startTs <= playbackCursorMs
+                                      ? 1
+                                      : 0.24
+                                const focusOpacity =
+                                  flowFocusActivePiece &&
+                                    flowMapMode !== 'blocks' &&
+                                    Boolean(activePieceIdentity) &&
+                                    !isActivePiece
+                                    ? 0.2
+                                    : 1
+                                const nodeOpacity = Math.max(0.12, playbackOpacity * focusOpacity)
+                                const stroke = playbackActive
+                                  ? '#fef08a'
+                                  : selected
+                                    ? '#f8fafc'
+                                    : isActivePiece
+                                      ? '#dbeafe'
+                                      : node.stroke
+                                const strokeWidth = playbackActive
+                                  ? 2.8
+                                  : selected || isActivePiece
+                                    ? 2.4
+                                    : node.stroke === '#ecfeff'
+                                      ? 2
+                                      : 1.1
+                                const labelOpacity =
+                                  playbackCursorMs === null || node.endTs <= playbackCursorMs
+                                    ? 1
+                                    : node.startTs <= playbackCursorMs
+                                      ? 1
+                                      : 0.45
+
+                                return (
+                                  <g key={node.id}>
+                                    <title>{node.tooltip}</title>
+                                    <rect
+                                      x={node.x}
+                                      y={node.y}
+                                      width={node.width}
+                                      height={node.height}
+                                      rx={6}
+                                      fill={node.fill}
+                                      stroke={stroke}
+                                      strokeWidth={strokeWidth}
+                                      opacity={nodeOpacity}
+                                    />
+                                    <rect
+                                      x={node.x}
+                                      y={node.y}
+                                      width={node.width}
+                                      height={node.height}
+                                      rx={6}
+                                      fill="transparent"
+                                      cursor="crosshair"
+                                      onClick={() => {
+                                        if (node.key.split('|').length >= 5) {
+                                          setSelectedFlowKey(node.key)
+                                        }
+                                      }}
+                                      onMouseEnter={e =>
+                                        setHoveredNode({ node, x: e.clientX, y: e.clientY })
                                       }
-                                    >
-                                      {node.width > 180 ? node.label : node.shortLabel}
-                                    </text>
-                                  )}
-                                </g>
-                              ))}
+                                      onMouseMove={e =>
+                                        setHoveredNode(prev =>
+                                          prev ? { ...prev, x: e.clientX, y: e.clientY } : null
+                                        )
+                                      }
+                                      onMouseLeave={() => setHoveredNode(null)}
+                                    />
+                                    {node.showLabel && (
+                                      <text
+                                        x={node.x + 7}
+                                        y={node.y + node.height - 7}
+                                        fill="#04111d"
+                                        fontSize={11}
+                                        fontWeight={700}
+                                        opacity={labelOpacity}
+                                      >
+                                        {node.width > 180 ? node.label : node.shortLabel}
+                                      </text>
+                                    )}
+                                  </g>
+                                )
+                              })}
                             </svg>
                           </div>
                           {hoveredNode && hoveredNode.node && (
                             <div
                               className="pointer-events-none fixed z-50 flex flex-col gap-1 rounded-md border border-cyan-800 bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-sm shadow-black/50"
-                              style={{
-                                top: hoveredNode.y + 15,
-                                left: hoveredNode.x + 15,
-                              }}
+                              style={getTooltipPosition(hoveredNode.x, hoveredNode.y)}
                             >
-                              <div className="font-bold text-cyan-100">
-                                {hoveredNode.node.label || hoveredNode.node.shortLabel}
+                              <div className="font-bold text-cyan-100 leading-tight">
+                                {hoveredNode.node.part} {hoveredNode.node.batch}
+                                {typeof hoveredNode.node.piece === 'number'
+                                  ? ` | Piece ${hoveredNode.node.piece}`
+                                  : ''}{' '}
+                                | OP{hoveredNode.node.operationSeq}
                               </div>
+                              <div className="text-cyan-300/90">
+                                <span className="inline-block w-14 text-slate-500">Machine:</span>
+                                {hoveredNode.node.machine}
+                              </div>
+                              {hoveredNode.node.setupPerson && (
+                                <div className="text-cyan-300/90">
+                                  <span className="inline-block w-14 text-slate-500">Setup:</span>
+                                  {hoveredNode.node.setupPerson}
+                                </div>
+                              )}
+                              {hoveredNode.node.runPerson && (
+                                <div className="text-cyan-300/90">
+                                  <span className="inline-block w-14 text-slate-500">Run:</span>
+                                  {hoveredNode.node.runPerson}
+                                </div>
+                              )}
                               <div className="text-cyan-300/80">
-                                <span className="inline-block w-12 text-slate-500">Start:</span>
+                                <span className="inline-block w-14 text-slate-500">Start:</span>
                                 {new Date(hoveredNode.node.startTs).toLocaleString()}
                               </div>
                               <div className="text-cyan-300/80">
-                                <span className="inline-block w-12 text-slate-500">End:</span>
+                                <span className="inline-block w-14 text-slate-500">End:</span>
                                 {new Date(hoveredNode.node.endTs).toLocaleString()}
                               </div>
+                              <div className="text-cyan-300/80">
+                                <span className="inline-block w-14 text-slate-500">Duration:</span>
+                                {formatDurationShort(
+                                  minutesBetween(
+                                    new Date(hoveredNode.node.startTs),
+                                    new Date(hoveredNode.node.endTs)
+                                  )
+                                )}
+                              </div>
+                              {hoveredNode.node.status && (
+                                <div className="text-cyan-300/80">
+                                  <span className="inline-block w-14 text-slate-500">Status:</span>
+                                  {hoveredNode.node.status}
+                                </div>
+                              )}
                               <div className="mt-1 border-t border-cyan-800/50 pt-1 text-[10px] text-slate-400 whitespace-pre-wrap">
-                                {hoveredNode.node.tooltip.split('\n')[0]}
+                                {hoveredNode.node.tooltip}
                               </div>
                             </div>
                           )}
@@ -4687,17 +6198,43 @@ function SchedulerPageContent() {
                               <h5 className="text-xs font-semibold uppercase tracking-wide text-cyan-200">
                                 Selected Piece Inspector
                               </h5>
-                              {selectedPieceDetails.length > 0 && (
-                                <span className="text-[11px] text-cyan-100">
-                                  {selectedPieceDetails[0].row.part} {selectedPieceDetails[0].row.batch}{' '}
-                                  | Piece {selectedPieceDetails[0].row.piece}
+                              <div className="flex flex-wrap items-center gap-2">
+                                {selectedPieceDetails.length > 0 && (
+                                  <span className="text-[11px] text-cyan-100">
+                                    {selectedPieceDetails[0].row.part}{' '}
+                                    {selectedPieceDetails[0].row.batch} | Piece{' '}
+                                    {selectedPieceDetails[0].row.piece}
+                                  </span>
+                                )}
+                                <span className="text-[11px] text-cyan-300/90">
+                                  {pieceIdentityAnchors.orderedIdentities.length.toLocaleString()} pieces
                                 </span>
-                              )}
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleStepPieceFocus(-1)}
+                                  disabled={pieceIdentityAnchors.orderedIdentities.length === 0}
+                                  className="h-7 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                                >
+                                  Prev Piece
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleStepPieceFocus(1)}
+                                  disabled={pieceIdentityAnchors.orderedIdentities.length === 0}
+                                  className="h-7 border-cyan-700 bg-slate-950 text-cyan-100 hover:bg-cyan-950/40"
+                                >
+                                  Next Piece
+                                </Button>
+                              </div>
                             </div>
                             {selectedPieceDetails.length === 0 ? (
                               <p className="text-xs text-cyan-100/80">
-                                Click a piece node in Trace/Playback mode to inspect OP chain, people,
-                                and queue reasons.
+                                Click a piece node in Trace/Playback mode to inspect OP chain,
+                                people, and queue reasons.
                               </p>
                             ) : (
                               <>
@@ -4716,21 +6253,27 @@ function SchedulerPageContent() {
                                   {selectedPieceDetails.map(detail => {
                                     const setupStart =
                                       toDate(detail.scheduleMeta?.setupStart) || detail.row.start
-                                    const setupEnd = toDate(detail.scheduleMeta?.setupEnd) || detail.row.start
-                                    const runStart = toDate(detail.scheduleMeta?.runStart) || detail.row.start
-                                    const runEnd = toDate(detail.scheduleMeta?.runEnd) || detail.row.end
+                                    const setupEnd =
+                                      toDate(detail.scheduleMeta?.setupEnd) || detail.row.start
+                                    const runStart =
+                                      toDate(detail.scheduleMeta?.runStart) || detail.row.start
+                                    const runEnd =
+                                      toDate(detail.scheduleMeta?.runEnd) || detail.row.end
                                     return (
                                       <div
                                         key={detail.row.id}
                                         className="rounded border border-cyan-900/70 bg-[#07121f] px-3 py-2"
                                       >
                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-cyan-100">
-                                          <span className="font-semibold">OP{detail.row.operationSeq}</span>
+                                          <span className="font-semibold">
+                                            OP{detail.row.operationSeq}
+                                          </span>
                                           <span>{detail.row.machine}</span>
                                           <span>
                                             Setup:{' '}
                                             {detail.scheduleMeta?.setupPerson || 'Unassigned'} (
-                                            {setupStart.toLocaleString()} - {setupEnd.toLocaleString()})
+                                            {setupStart.toLocaleString()} -{' '}
+                                            {setupEnd.toLocaleString()})
                                           </span>
                                           <span>
                                             Run: {detail.scheduleMeta?.runPerson || 'Unassigned'} (
@@ -4739,7 +6282,8 @@ function SchedulerPageContent() {
                                         </div>
                                         {detail.gapMinutes > 0 && (
                                           <div className="mt-1 text-[11px] text-amber-300">
-                                            Gap before this OP: {formatDurationShort(detail.gapMinutes)} (
+                                            Gap before this OP:{' '}
+                                            {formatDurationShort(detail.gapMinutes)} (
                                             {detail.gapReason})
                                           </div>
                                         )}
@@ -4785,8 +6329,7 @@ function SchedulerPageContent() {
                                         <line
                                           x1={personTimelineModel.leftPad}
                                           x2={
-                                            personTimelineModel.width -
-                                            personTimelineModel.rightPad
+                                            personTimelineModel.width - personTimelineModel.rightPad
                                           }
                                           y1={lane.y}
                                           y2={lane.y}
@@ -4861,11 +6404,10 @@ function SchedulerPageContent() {
                   </div>
                   <button
                     onClick={handleToggleSettingsLock}
-                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                      settingsLocked
+                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${settingsLocked
                         ? 'bg-transparent border-gray-400 text-gray-600 hover:border-gray-500 dark:border-slate-500 dark:text-slate-300 dark:hover:border-slate-300'
                         : 'bg-transparent border-gray-300 text-gray-500 hover:border-gray-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-500'
-                    }`}
+                      }`}
                     title={
                       settingsLocked
                         ? 'Click to unlock and edit settings'
@@ -5244,80 +6786,27 @@ function SchedulerPageContent() {
       </div>
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30 px-4">
-        <div className="bg-white/95 backdrop-blur-sm border border-gray-200 dark:bg-slate-900/95 dark:border-slate-700 rounded-full px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-300">
-          <div className="flex items-center gap-3">
-            {/* Dashboard Button */}
-            <Button
-              onClick={handleShowDashboard}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 rounded-full px-4 py-2 transition-all duration-200 hover:scale-105"
-              title="Dashboard"
-            >
-              <Home className="w-4 h-4 mr-2" />
-              Dashboard
-            </Button>
-
-            {/* Import Excel Button */}
-            <Button
-              onClick={handleImportExcel}
-              className="bg-cyan-500 hover:bg-cyan-600 text-white border-cyan-500 rounded-full px-4 py-2 transition-all duration-200 hover:scale-105"
-              title="Import Excel"
-            >
-              <FileUp className="w-4 h-4 mr-2" />
-              Import Excel
-            </Button>
-
-            {/* Schedule Generate Button */}
-            <Button
-              onClick={handleRunSchedule}
-              disabled={orders.length === 0 || loading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 rounded-full px-6 py-2 relative overflow-hidden transition-all duration-200 hover:scale-105"
-              title="Schedule Generate"
-            >
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                <span>Schedule Generate</span>
-              </div>
-              {loading && (
-                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                </div>
-              )}
-            </Button>
-
-            {/* Export Excel Button */}
-            <Button
-              onClick={handleExportExcel}
-              disabled={results.length === 0}
-              className="bg-gray-600 hover:bg-gray-700 text-white border-gray-600 rounded-full px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 disabled:hover:scale-100"
-              title={results.length === 0 ? 'Export Excel (No results available)' : 'Export Excel'}
-            >
-              <FileDown className="w-4 h-4 mr-2" />
-              Export Excel
-            </Button>
-
-            {/* Chart Button */}
-            <Button
-              onClick={handleShowChart}
-              className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600 rounded-full px-4 py-2 transition-all duration-200 hover:scale-105"
-              title="Chart"
-            >
-              <PieChart className="w-4 h-4 mr-2" />
-              Chart
-            </Button>
-
-            {/* Clear Session Button */}
-            <Button
-              onClick={handleClearSession}
-              className="bg-red-600 hover:bg-red-700 text-white border-red-500 rounded-full px-4 py-2 transition-all duration-200 hover:scale-105"
-              title="Clear Session"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Clear
-            </Button>
-          </div>
-        </div>
-      </div>
+      <ActionDock
+        resultsAvailable={results.length > 0}
+        canGenerate={!isRunActionDisabled({
+          ordersCount: orders.length,
+          loading,
+          access: { canRunBasic, canRunAdvanced },
+        })}
+        canRunBasic={canRunBasic}
+        canRunAdvanced={canRunAdvanced}
+        onDashboard={handleShowDashboard}
+        onImportExcel={handleImportExcel}
+        onGenerate={(mode) => {
+          if (mode === 'basic' && !canRunBasic) return
+          if (mode === 'advanced' && !canRunAdvanced) return
+          setScheduleProfile(mode)
+          void handleRunSchedule(mode)
+        }}
+        onExportExcel={handleExportExcel}
+        onChart={handleShowChart}
+        onClear={handleClearSession}
+      />
     </div>
   )
 }

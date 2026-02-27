@@ -85,9 +85,7 @@ const validateBreakdowns = (raw: unknown): string[] => {
         ? [breakdown.machine]
         : []
 
-    const normalized = machines
-      .map(machine => String(machine || '').trim())
-      .filter(Boolean)
+    const normalized = machines.map(machine => String(machine || '').trim()).filter(Boolean)
     if (normalized.length === 0) {
       errors.push(`breakdowns[${idx}] must include at least one machine`)
     }
@@ -98,13 +96,18 @@ const validateBreakdowns = (raw: unknown): string[] => {
 
 export async function POST(request: NextRequest) {
   // ✅ Check: main_scheduling.Schedule Generator.edit permission
-  const authResult = await requireGranularPermission(request, 'main_scheduling', 'Schedule Generator', 'edit')
+  const authResult = await requireGranularPermission(
+    request,
+    'main_scheduling',
+    'Schedule Generator',
+    'edit'
+  )
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
   try {
     const supabase = getSupabaseAdminClient()
-    
+
     const body = (await request.json()) as Record<string, unknown>
     const {
       user_email,
@@ -120,10 +123,10 @@ export async function POST(request: NextRequest) {
       breakdowns,
       is_locked,
       locked_at,
-      role
+      role,
     } = body
 
-    const userEmail = request.headers.get('X-User-Email') || user_email || user.email || 'default@user.com'
+    const userEmail = user.email || user_email || 'default@user.com'
 
     const hasSettingsPayload = [
       'global_start_datetime',
@@ -157,15 +160,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: 'Advanced settings unlocked successfully',
-        data: null
+        data: null,
       })
     }
 
     if (!hasSettingsPayload) {
-      return NextResponse.json(
-        { error: 'No advanced settings fields provided' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'No advanced settings fields provided' }, { status: 400 })
     }
 
     const validationErrors: string[] = []
@@ -222,9 +222,9 @@ export async function POST(request: NextRequest) {
       holidays: Array.isArray(holidays) ? holidays : [],
       breakdowns: Array.isArray(breakdowns) ? breakdowns : [],
       is_locked: lockRequested,
-      locked_at: lockRequested ? (locked_at || new Date().toISOString()) : null,
+      locked_at: lockRequested ? locked_at || new Date().toISOString() : null,
       role: role || 'operator',
-      user_email: userEmail
+      user_email: userEmail,
     }
 
     const { data, error } = await supabase
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
         timeline_view: 'advanced_settings',
         chart_data: {},
         machine_data: settingsData,
-        is_active: true
+        is_active: true,
       })
       .select()
 
@@ -252,11 +252,14 @@ export async function POST(request: NextRequest) {
       message: lockRequested
         ? 'Advanced settings locked successfully'
         : 'Advanced settings saved successfully',
-      data: data[0]
+      data: data[0],
     })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     )
   }
@@ -264,15 +267,20 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   // ✅ Check: main_scheduling.Schedule Generator.view permission
-  const authResult = await requireGranularPermission(request, 'main_scheduling', 'Schedule Generator', 'view')
+  const authResult = await requireGranularPermission(
+    request,
+    'main_scheduling',
+    'Schedule Generator',
+    'view'
+  )
   if (authResult instanceof NextResponse) return authResult
   const user = authResult
 
   try {
     const supabase = getSupabaseAdminClient()
-    
-    const userEmail = request.headers.get('X-User-Email') || user.email || 'default@user.com'
-    
+
+    const userEmail = user.email || 'default@user.com'
+
     // Get the most recent active settings for this user from dashboard_data
     const { data, error } = await supabase
       .from('dashboard_data')
@@ -292,12 +300,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: data[0] || null
+      data: data[0] || null,
     })
-
   } catch (error) {
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     )
   }

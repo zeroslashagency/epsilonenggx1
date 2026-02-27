@@ -14,6 +14,8 @@
     "test": "jest --watch",
     "test:ci": "jest --ci --coverage",
     "test:coverage": "jest --coverage",
+    "test:scheduler:profile-isolation": "jest --runInBand app/api/schedule/run-access/__tests__/route.test.ts app/lib/features/auth/__tests__/permission-mapping.test.ts",
+    "test:scheduler:excel-contract": "jest --runInBand app/lib/features/scheduling/__tests__/excel-export.test.ts",
     "audit:settings-api": "node scripts/audit-settings-apis.js",
     "rbac:gate": "node scripts/check-rbac-role-mapping-report.mjs",
     "validate": "npm run type-check && npm run lint && npm run test:ci"

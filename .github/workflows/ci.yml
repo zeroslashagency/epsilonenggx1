@@ -2,33 +2,33 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   # Job 1: Linting and Type Checking
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run ESLint
         run: npm run lint
         continue-on-error: true
-      
+
       - name: Type check
         run: npx tsc --noEmit
         continue-on-error: true
@@ -37,23 +37,23 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run tests
         run: npm run test:ci
-      
+
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
@@ -62,28 +62,70 @@ jobs:
           name: codecov-umbrella
         continue-on-error: true
 
-  # Job 3: Build
-  build:
-    name: Build Application
+  # Job 3: Scheduler profile isolation gate
+  scheduler-profile-isolation:
+    name: Scheduler Profile Isolation Gate
     runs-on: ubuntu-latest
-    needs: [lint, test]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
+      - name: Run scheduler profile isolation tests
+        run: npm run test:scheduler:profile-isolation
+
+  # Job 4: Scheduler Excel contract gate
+  scheduler-excel-contract:
+    name: Scheduler Excel Contract Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run scheduler Excel contract tests
+        run: npm run test:scheduler:excel-contract
+
+  # Job 5: Build
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [lint, test, scheduler-profile-isolation, scheduler-excel-contract]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Build application
         run: npm run build
-      
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -91,7 +133,7 @@ jobs:
           path: .next
           retention-days: 7
 
-  # Job 4: RBAC Health Gate (blocks promotion when role mapping drifts)
+  # Job 6: RBAC Health Gate (blocks promotion when role mapping drifts)
   rbac-health-gate:
     name: RBAC Health Gate
     runs-on: ubuntu-latest
@@ -132,29 +174,29 @@ jobs:
           RBAC_HEALTHCHECK_TIMEOUT_MS: 20000
         run: npm run rbac:gate
 
-  # Job 5: Security Audit
+  # Job 7: Security Audit
   security:
     name: Security Audit
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Run npm audit
         run: npm audit --audit-level=high
         continue-on-error: true
-      
+
       - name: Check for vulnerabilities
         run: |
           echo "Checking for security vulnerabilities..."
           npm audit --json > audit-report.json || true
-      
+
       - name: Upload audit report
         uses: actions/upload-artifact@v3
         with:

@@ -57,17 +57,30 @@ interface ParsedSettings {
   productionPersonnel: PersonnelSpec[]
   holidayIntervals: Interval[]
   breakdownByMachine: Map<string, Interval[]>
+  profileMode: 'basic' | 'advanced'
 }
 
-const DEFAULT_MACHINES = ['VMC 1', 'VMC 2', 'VMC 3', 'VMC 4', 'VMC 5', 'VMC 6', 'VMC 7', 'VMC 8', 'VMC 9', 'VMC 10']
+const DEFAULT_MACHINES = [
+  'VMC 1',
+  'VMC 2',
+  'VMC 3',
+  'VMC 4',
+  'VMC 5',
+  'VMC 6',
+  'VMC 7',
+  'VMC 8',
+  'VMC 9',
+  'VMC 10',
+]
 const DEFAULT_OPERATOR_WINDOW = '06:00-22:00'
 const DEFAULT_PRODUCTION_WINDOW = '00:00-23:59'
+const SETUP_FALLBACK_RUN_TOLERANCE_MIN = 30
 
 const PRIORITY_SCORE: Record<string, number> = {
   urgent: 0,
   high: 1,
   normal: 2,
-  low: 3
+  low: 3,
 }
 
 export class DeterministicSchedulingEngine {
@@ -77,7 +90,7 @@ export class DeterministicSchedulingEngine {
     this.masterData = Array.isArray(masterData) ? masterData : []
   }
 
-  runSchedule(orders: any[], settings: any): { rows: any[]; pieceTimeline: any[] } {
+  runSchedule(orders: any[], settings: any): { rows: any[]; pieceTimeline: any[]; qualityMetrics: ReturnType<DeterministicSchedulingEngine['computeQualityMetrics']> } {
     const parsedSettings = this.parseSettings(settings)
     const machineNextFree = new Map<string, Date>()
     const personCalendars = new Map<string, PersonReservation[]>()
@@ -99,7 +112,8 @@ export class DeterministicSchedulingEngine {
       const operationSeqs = this.parseOperationSeq(order?.operationSeq)
       const operationSpecs = this.resolveOperationSpecs(partNumber, operationSeqs, order)
       if (operationSpecs.length === 0) continue
-      const orderStart = orderStartOverrides.get(String(order?.id || '')) || parsedSettings.globalStart
+      const orderStart =
+        orderStartOverrides.get(String(order?.id || '')) || parsedSettings.globalStart
 
       const batchQuantities = this.splitBatchQuantities(
         orderQty,
@@ -112,7 +126,9 @@ export class DeterministicSchedulingEngine {
 
       const dueDate = this.tryParseDate(order?.dueDate)
 
-      const batchIds = batchQuantities.map(() => `B${String(globalBatchCounter++).padStart(2, '0')}`)
+      const batchIds = batchQuantities.map(
+        () => `B${String(globalBatchCounter++).padStart(2, '0')}`
+      )
       let upstreamPieceCompletionsByBatch = new Map<string, Date[]>()
       const previousMachineByBatch = new Map<string, string | null>()
 
@@ -136,16 +152,28 @@ export class DeterministicSchedulingEngine {
           const predecessorReady = arrivals[0] || orderStart
           const prevMachine = previousMachineByBatch.get(batchId) || null
 
-          const candidate = this.pickBestMachineAndOperator({
-            operation,
-            orderStart,
-            predecessorReady,
-            arrivals,
-            prevMachine,
-            parsedSettings,
-            machineNextFree,
-            personCalendars
-          })
+          const candidate =
+            parsedSettings.profileMode === 'basic'
+              ? this.pickBestMachineAndOperatorBasic({
+                operation,
+                orderStart,
+                predecessorReady,
+                arrivals,
+                prevMachine,
+                parsedSettings,
+                machineNextFree,
+                personCalendars,
+              })
+              : this.pickBestMachineAndOperator({
+                operation,
+                orderStart,
+                predecessorReady,
+                arrivals,
+                prevMachine,
+                parsedSettings,
+                machineNextFree,
+                personCalendars,
+              })
 
           machineNextFree.set(candidate.machine, new Date(candidate.runEnd))
           this.reservePersonSetup(
@@ -182,9 +210,13 @@ export class DeterministicSchedulingEngine {
             setupEnd: this.toLocalIso(candidate.setupEnd),
             runStart: this.toLocalIso(candidate.runStart),
             runEnd: this.toLocalIso(candidate.runEnd),
-            timing: this.formatTiming(candidate.setupStart, candidate.runEnd, candidate.runPausedMin),
+            timing: this.formatTiming(
+              candidate.setupStart,
+              candidate.runEnd,
+              candidate.runPausedMin
+            ),
             dueDate: dueDate ? this.toLocalIso(dueDate) : 'N/A',
-            status: 'Scheduled'
+            status: 'Scheduled',
           })
 
           candidate.pieceRuns.forEach((pieceRun, pieceIndex) => {
@@ -199,7 +231,7 @@ export class DeterministicSchedulingEngine {
               handleMode: operation.handleMode,
               runStart: this.toLocalIso(pieceRun.start),
               runEnd: this.toLocalIso(pieceRun.end),
-              status: 'Scheduled'
+              status: 'Scheduled',
             })
           })
 
@@ -213,7 +245,8 @@ export class DeterministicSchedulingEngine {
 
     return {
       rows: scheduleRows,
-      pieceTimeline
+      pieceTimeline,
+      qualityMetrics: this.computeQualityMetrics(scheduleRows, parsedSettings),
     }
   }
 
@@ -232,12 +265,12 @@ export class DeterministicSchedulingEngine {
 
   private buildOrderStartOverrides(orders: any[], globalStart: Date): Map<string, Date> {
     const map = new Map<string, Date>()
-    ;(orders || []).forEach((order: any) => {
-      const id = String(order?.id || '')
-      if (!id) return
-      const startCandidate = this.tryParseDate(order?.startDateTime || order?.startDate)
-      map.set(id, startCandidate || globalStart)
-    })
+      ; (orders || []).forEach((order: any) => {
+        const id = String(order?.id || '')
+        if (!id) return
+        const startCandidate = this.tryParseDate(order?.startDateTime || order?.startDate)
+        map.set(id, startCandidate || globalStart)
+      })
     return map
   }
 
@@ -251,7 +284,11 @@ export class DeterministicSchedulingEngine {
     return values.length > 0 ? Array.from(new Set(values)) : [1]
   }
 
-  private resolveOperationSpecs(partNumber: string, requestedSeqs: number[], order?: any): OperationSpec[] {
+  private resolveOperationSpecs(
+    partNumber: string,
+    requestedSeqs: number[],
+    order?: any
+  ): OperationSpec[] {
     const orderOps = this.resolveOrderOperationDetails(order)
     const orderOpMap = new Map(orderOps.map(op => [op.operationSeq, op]))
 
@@ -287,7 +324,9 @@ export class DeterministicSchedulingEngine {
           cycleTimeMin: Math.max(1, Number(source.CycleTime_Min) || 1),
           minimumBatchSize: Math.max(1, Number(source.Minimum_BatchSize) || 200),
           eligibleMachines: machines.length > 0 ? machines : ['VMC 1', 'VMC 2', 'VMC 3', 'VMC 4'],
-          handleMode: this.parseHandleMode((source as any).HandleMachines || (source as any).handle_machines)
+          handleMode: this.parseHandleMode(
+            (source as any).HandleMachines || (source as any).handle_machines
+          ),
         } satisfies OperationSpec
       })
       .sort((a, b) => a.operationSeq - b.operationSeq)
@@ -312,8 +351,9 @@ export class DeterministicSchedulingEngine {
           1,
           Number(item?.minimumBatchSize || item?.Minimum_BatchSize) || 200
         )
-        const fixedMachine = String(item?.fixedMachine || item?.machine || item?.Machine || '')
-          .trim()
+        const fixedMachine = String(
+          item?.fixedMachine || item?.machine || item?.Machine || ''
+        ).trim()
         const parsedEligible = Array.isArray(item?.eligibleMachines)
           ? item.eligibleMachines.map((value: any) => String(value).trim()).filter(Boolean)
           : this.parseMachines(item?.eligibleMachines || item?.EligibleMachines || '')
@@ -334,7 +374,7 @@ export class DeterministicSchedulingEngine {
           handleMode: this.parseHandleMode(
             item?.handleMode || item?.HandleMode || item?.HandleMachines || item?.handle_machines
           ),
-          fixedMachine: fixedMachine || undefined
+          fixedMachine: fixedMachine || undefined,
         } satisfies OperationSpec
       })
       .filter((value: OperationSpec | null): value is OperationSpec => Boolean(value))
@@ -350,7 +390,10 @@ export class DeterministicSchedulingEngine {
     machineNextFree: Map<string, Date>
   ): number[] {
     const normalizedMode = batchMode.toLowerCase()
-    const minBatch = operations.reduce((min, op) => Math.min(min, op.minimumBatchSize), Number.MAX_SAFE_INTEGER)
+    const minBatch = operations.reduce(
+      (min, op) => Math.min(min, op.minimumBatchSize),
+      Number.MAX_SAFE_INTEGER
+    )
     const defaultMinBatch = Math.max(1, Number.isFinite(minBatch) ? minBatch : 200)
 
     if (normalizedMode === 'single-batch') {
@@ -413,7 +456,7 @@ export class DeterministicSchedulingEngine {
     const earliestReadyMachines = machineCandidates
       .map(machine => ({
         machine,
-        readyAt: machineNextFree.get(machine) || orderStart
+        readyAt: machineNextFree.get(machine) || orderStart,
       }))
       .sort((a, b) => a.readyAt.getTime() - b.readyAt.getTime())
 
@@ -454,7 +497,7 @@ export class DeterministicSchedulingEngine {
       prevMachine,
       parsedSettings,
       machineNextFree,
-      personCalendars
+      personCalendars,
     } = params
     const setupCandidates =
       parsedSettings.setupPersonnel.length > 0
@@ -466,23 +509,24 @@ export class DeterministicSchedulingEngine {
         ? parsedSettings.productionPersonnel
         : parsedSettings.personnel
 
-    const runCandidateMap = new Map<string, PersonnelSpec>()
-    productionPrimary.forEach(candidate => {
-      runCandidateMap.set(candidate.name, candidate)
+    const primaryRunCandidates = productionPrimary.filter(
+      candidate => candidate.sourceSection === 'production' && candidate.productionEligible
+    )
+    const fallbackRunCandidates = parsedSettings.setupPersonnel.filter(candidate => {
+      return (
+        candidate.productionEligible &&
+        !primaryRunCandidates.some(primary => primary.name === candidate.name)
+      )
     })
-    parsedSettings.setupPersonnel.forEach(candidate => {
-      if (!runCandidateMap.has(candidate.name)) {
-        runCandidateMap.set(candidate.name, candidate)
-      }
-    })
-    const runCandidates = Array.from(runCandidateMap.values())
 
-    let best: {
+    type CandidateSelection = {
       machine: string
       setupPerson: string
       productionPerson: string
       setupPriority: number
+      setupLoadMin: number
       productionPriority: number
+      productionRunLoadMin: number
       setupStart: Date
       setupEnd: Date
       runStart: Date
@@ -490,110 +534,348 @@ export class DeterministicSchedulingEngine {
       pieceRuns: PieceRun[]
       pieceCompletions: Date[]
       runPausedMin: number
-    } | null = null
+    }
 
-    const baseMachines = operation.fixedMachine ? [operation.fixedMachine] : operation.eligibleMachines
+    let bestPrimary: CandidateSelection | null = null
+    let bestFallback: CandidateSelection | null = null
+    let primaryCanStartWithinTolerance = false
+
+    const baseMachines = operation.fixedMachine
+      ? [operation.fixedMachine]
+      : operation.eligibleMachines
     const machines = this.uniqueMachines(baseMachines)
     const machineRank = new Map(machines.map((machine, index) => [machine, index]))
-    for (const machine of machines) {
-      const machineReady = machineNextFree.get(machine) || parsedSettings.globalStart
-      const baseCandidate = this.maxDate(orderStart, predecessorReady, machineReady)
+    const evaluateRunPool = (
+      runCandidates: PersonnelSpec[],
+      markTolerance: boolean
+    ): CandidateSelection | null => {
+      let bestForPool: CandidateSelection | null = null
+      for (const machine of machines) {
+        const machineReady = machineNextFree.get(machine) || parsedSettings.globalStart
+        const baseCandidate = this.maxDate(orderStart, predecessorReady, machineReady)
 
-      for (const setupPerson of setupCandidates) {
-        if (!this.windowsOverlap(parsedSettings.setupWindow, setupPerson.shift)) {
-          continue
-        }
-
-        const setupCandidate = this.maxDate(
-          baseCandidate,
-          this.nextPersonAvailability(personCalendars, setupPerson.name, baseCandidate)
-        )
-        const setupSlot = this.findContiguousSetupSlot(
-          setupCandidate,
-          operation.setupTimeMin,
-          machine,
-          setupPerson,
-          parsedSettings,
-          personCalendars
-        )
-
-        for (const productionPerson of runCandidates) {
-          const runResult = this.findFeasibleRunReservation({
-            setupEnd: setupSlot.end,
-            arrivals,
-            cycleTimeMin: operation.cycleTimeMin,
-            machine,
-            settings: parsedSettings,
-            personCalendars,
-            productionPerson: productionPerson.name,
-            handleMode: operation.handleMode,
-          })
-          if (!runResult) continue
-
-          const current = {
-            machine,
-            setupPerson: setupPerson.name,
-            productionPerson: productionPerson.name,
-            setupPriority: setupPerson.setupPriority,
-            productionPriority: productionPerson.setupPriority,
-            setupStart: setupSlot.start,
-            setupEnd: setupSlot.end,
-            runStart: runResult.runStart,
-            runEnd: runResult.runEnd,
-            pieceRuns: runResult.pieceRuns,
-            pieceCompletions: runResult.pieceCompletions,
-            runPausedMin: runResult.pausedMinutes
-          }
-
-          if (!best) {
-            best = current
+        for (const setupPerson of setupCandidates) {
+          if (!this.windowsOverlap(parsedSettings.setupWindow, setupPerson.shift)) {
             continue
           }
 
-          if (current.runEnd.getTime() < best.runEnd.getTime()) {
-            best = current
-            continue
-          }
-          if (current.runEnd.getTime() === best.runEnd.getTime()) {
-            if (prevMachine && best.machine === prevMachine && current.machine !== prevMachine) {
-              best = current
-              continue
-            }
+          const setupCandidate = this.maxDate(
+            baseCandidate,
+            this.nextPersonAvailability(personCalendars, setupPerson.name, baseCandidate)
+          )
+          const setupSlot = this.findContiguousSetupSlot(
+            setupCandidate,
+            operation.setupTimeMin,
+            machine,
+            setupPerson,
+            parsedSettings,
+            personCalendars
+          )
 
-            if (current.setupPriority < best.setupPriority) {
-              best = current
-              continue
-            }
+          for (const productionPerson of runCandidates) {
+            const runResult = this.findFeasibleRunReservation({
+              setupEnd: setupSlot.end,
+              arrivals,
+              cycleTimeMin: operation.cycleTimeMin,
+              machine,
+              settings: parsedSettings,
+              personCalendars,
+              productionPerson: productionPerson.name,
+              handleMode: operation.handleMode,
+            })
+            if (!runResult) continue
 
             if (
-              current.setupPriority === best.setupPriority &&
-              current.productionPriority < best.productionPriority
+              markTolerance &&
+              runResult.runStart.getTime() <=
+              this.addMinutes(setupSlot.end, SETUP_FALLBACK_RUN_TOLERANCE_MIN).getTime()
             ) {
-              best = current
-              continue
+              primaryCanStartWithinTolerance = true
             }
 
-            if (current.setupStart.getTime() < best.setupStart.getTime()) {
-              best = current
-              continue
+            const current = {
+              machine,
+              setupPerson: setupPerson.name,
+              productionPerson: productionPerson.name,
+              setupPriority: setupPerson.setupPriority,
+              setupLoadMin: this.getReservedSetupMinutes(personCalendars, setupPerson.name),
+              productionPriority: productionPerson.sourceSection === 'production' ? 1 : 2,
+              productionRunLoadMin: this.getReservedRunMinutes(
+                personCalendars,
+                productionPerson.name
+              ),
+              setupStart: setupSlot.start,
+              setupEnd: setupSlot.end,
+              runStart: runResult.runStart,
+              runEnd: runResult.runEnd,
+              pieceRuns: runResult.pieceRuns,
+              pieceCompletions: runResult.pieceCompletions,
+              runPausedMin: runResult.pausedMinutes,
             }
-            if (
-              current.setupStart.getTime() === best.setupStart.getTime() &&
-              (machineRank.get(current.machine) ?? Number.MAX_SAFE_INTEGER) <
-                (machineRank.get(best.machine) ?? Number.MAX_SAFE_INTEGER)
-            ) {
-              best = current
-              continue
-            }
+
+            bestForPool = this.pickBetterCandidate({
+              current,
+              best: bestForPool,
+              prevMachine,
+              machineRank,
+            })
           }
         }
       }
+      return bestForPool
     }
+
+    if (primaryRunCandidates.length > 0) {
+      bestPrimary = evaluateRunPool(primaryRunCandidates, true)
+    } else {
+      bestPrimary = evaluateRunPool(productionPrimary, true)
+    }
+
+    const shouldEvaluateFallback =
+      fallbackRunCandidates.length > 0 && (!bestPrimary || !primaryCanStartWithinTolerance)
+
+    if (shouldEvaluateFallback) {
+      bestFallback = evaluateRunPool(fallbackRunCandidates, false)
+    }
+
+    const best = this.pickBetterCandidate({
+      current: bestFallback,
+      best: bestPrimary,
+      prevMachine,
+      machineRank,
+    })
 
     if (!best) {
       throw new Error(`Unable to place ${operation.operationName} for available machines`)
     }
     return best
+  }
+
+  // ─── Basic-profile fast path ────────────────────────────────────────────────
+  // In Basic mode there are no setup persons and no setup window gating.
+  // We skip the nested setup-person loop entirely and schedule eachbatch
+  // directly from machine + production-person availability.
+  private pickBestMachineAndOperatorBasic(params: {
+    operation: OperationSpec
+    orderStart: Date
+    predecessorReady: Date
+    arrivals: Date[]
+    prevMachine: string | null
+    parsedSettings: ParsedSettings
+    machineNextFree: Map<string, Date>
+    personCalendars: Map<string, PersonReservation[]>
+  }): {
+    machine: string
+    setupPerson: string
+    productionPerson: string
+    setupStart: Date
+    setupEnd: Date
+    runStart: Date
+    runEnd: Date
+    pieceRuns: PieceRun[]
+    pieceCompletions: Date[]
+    runPausedMin: number
+  } {
+    const {
+      operation,
+      orderStart,
+      predecessorReady,
+      arrivals,
+      prevMachine,
+      parsedSettings,
+      machineNextFree,
+      personCalendars,
+    } = params
+
+    // In Basic mode, exclude setup-section personnel entirely (they should not run production)
+    const allProductionPool =
+      parsedSettings.productionPersonnel.length > 0
+        ? parsedSettings.productionPersonnel
+        : parsedSettings.personnel
+    const productionPool = allProductionPool.filter(
+      person => person.sourceSection !== 'setup'
+    )
+
+    const baseMachines = operation.fixedMachine
+      ? [operation.fixedMachine]
+      : operation.eligibleMachines
+    const machines = this.uniqueMachines(baseMachines)
+    const machineRank = new Map(machines.map((m, i) => [m, i]))
+
+    type CandidateSelection = {
+      machine: string
+      setupPerson: string
+      productionPerson: string
+      setupPriority: number
+      setupLoadMin: number
+      productionPriority: number
+      productionRunLoadMin: number
+      setupStart: Date
+      setupEnd: Date
+      runStart: Date
+      runEnd: Date
+      pieceRuns: PieceRun[]
+      pieceCompletions: Date[]
+      runPausedMin: number
+    }
+
+    let best: CandidateSelection | null = null
+
+    for (const machine of machines) {
+      const machineReady = machineNextFree.get(machine) || parsedSettings.globalStart
+      const baseCandidate = this.maxDate(orderStart, predecessorReady, machineReady)
+
+      for (const person of productionPool) {
+        // Person must be available (no setup window restriction in basic mode)
+        const personReady = this.nextPersonAvailability(
+          personCalendars,
+          person.name,
+          baseCandidate
+        )
+        // Run starts when both machine and person are free
+        const runReadyAt = this.maxDate(baseCandidate, personReady)
+
+        // Zero-duration setup (no setup in basic mode)
+        const setupStart = new Date(runReadyAt)
+        const setupEnd = new Date(runReadyAt)
+
+        const runResult = this.findFeasibleRunReservation({
+          setupEnd,
+          arrivals,
+          cycleTimeMin: operation.cycleTimeMin,
+          machine,
+          settings: parsedSettings,
+          personCalendars,
+          productionPerson: person.name,
+          handleMode: operation.handleMode,
+        })
+        if (!runResult) continue
+
+        const current: CandidateSelection = {
+          machine,
+          setupPerson: '',
+          productionPerson: person.name,
+          setupPriority: 99,
+          setupLoadMin: 0, // Basic mode has no setup — always zero
+          productionPriority: person.sourceSection === 'production' ? 1 : 2,
+          productionRunLoadMin: this.getReservedRunMinutes(personCalendars, person.name),
+          setupStart,
+          setupEnd,
+          runStart: runResult.runStart,
+          runEnd: runResult.runEnd,
+          pieceRuns: runResult.pieceRuns,
+          pieceCompletions: runResult.pieceCompletions,
+          runPausedMin: runResult.pausedMinutes,
+        }
+        best = this.pickBetterCandidate({ current, best, prevMachine, machineRank })
+      }
+    }
+
+    if (!best) {
+      throw new Error(`Unable to place ${operation.operationName} (basic mode) for available machines`)
+    }
+    return best
+  }
+
+  private pickBetterCandidate(params: {
+    current: {
+      machine: string
+      setupPerson: string
+      productionPerson: string
+      setupPriority: number
+      setupLoadMin: number
+      productionPriority: number
+      productionRunLoadMin: number
+      setupStart: Date
+      setupEnd: Date
+      runStart: Date
+      runEnd: Date
+      pieceRuns: PieceRun[]
+      pieceCompletions: Date[]
+      runPausedMin: number
+    } | null
+    best: {
+      machine: string
+      setupPerson: string
+      productionPerson: string
+      setupPriority: number
+      setupLoadMin: number
+      productionPriority: number
+      productionRunLoadMin: number
+      setupStart: Date
+      setupEnd: Date
+      runStart: Date
+      runEnd: Date
+      pieceRuns: PieceRun[]
+      pieceCompletions: Date[]
+      runPausedMin: number
+    } | null
+    prevMachine: string | null
+    machineRank: Map<string, number>
+  }) {
+    const { current, best, prevMachine, machineRank } = params
+    if (!current) return best
+    if (!best) return current
+
+    if (current.runEnd.getTime() < best.runEnd.getTime()) {
+      return current
+    }
+    if (current.runEnd.getTime() > best.runEnd.getTime()) {
+      return best
+    }
+
+    if (prevMachine && best.machine === prevMachine && current.machine !== prevMachine) {
+      return current
+    }
+
+    // Load-balance setup persons: prefer least-busy setup person over priority number.
+    // This ensures all setup persons (settings-1 through settings-4) get distributed work.
+    const currentSetupLoad = current.setupLoadMin ?? 0
+    const bestSetupLoad = best.setupLoadMin ?? 0
+    if (currentSetupLoad < bestSetupLoad) {
+      return current
+    }
+    if (currentSetupLoad > bestSetupLoad) {
+      return best
+    }
+
+    // Only fall back to setupPriority if load is equal
+    if (current.setupPriority < best.setupPriority) {
+      return current
+    }
+    if (current.setupPriority > best.setupPriority) {
+      return best
+    }
+
+    if (current.productionPriority < best.productionPriority) {
+      return current
+    }
+    if (current.productionPriority > best.productionPriority) {
+      return best
+    }
+
+    if (current.productionRunLoadMin < best.productionRunLoadMin) {
+      return current
+    }
+    if (current.productionRunLoadMin > best.productionRunLoadMin) {
+      return best
+    }
+
+    if (current.setupStart.getTime() < best.setupStart.getTime()) {
+      return current
+    }
+    if (current.setupStart.getTime() > best.setupStart.getTime()) {
+      return best
+    }
+
+    if (
+      (machineRank.get(current.machine) ?? Number.MAX_SAFE_INTEGER) <
+      (machineRank.get(best.machine) ?? Number.MAX_SAFE_INTEGER)
+    ) {
+      return current
+    }
+    return best
+
   }
 
   private findContiguousSetupSlot(
@@ -608,7 +890,11 @@ export class DeterministicSchedulingEngine {
     const maxSearch = 60 * 24 * 45
     for (let index = 0; index < maxSearch; index++) {
       if (!this.isSetupMinuteAllowed(cursor, machine, setupPerson, settings, personCalendars)) {
-        const nextCandidate = this.nextSetupCandidate(cursor, settings.setupWindow, setupPerson.shift)
+        const nextCandidate = this.nextSetupCandidate(
+          cursor,
+          settings.setupWindow,
+          setupPerson.shift
+        )
         cursor =
           nextCandidate.getTime() > cursor.getTime() ? nextCandidate : this.addMinutes(cursor, 1)
         continue
@@ -657,7 +943,13 @@ export class DeterministicSchedulingEngine {
     cycleTimeMin: number
     machine: string
     settings: ParsedSettings
-  }): { runStart: Date; runEnd: Date; pieceRuns: PieceRun[]; pieceCompletions: Date[]; pausedMinutes: number } {
+  }): {
+    runStart: Date
+    runEnd: Date
+    pieceRuns: PieceRun[]
+    pieceCompletions: Date[]
+    pausedMinutes: number
+  } {
     const { setupEnd, runReadyAt, arrivals, cycleTimeMin, machine, settings } = params
     const pieceArrivals = arrivals.length > 0 ? arrivals : [setupEnd]
     const pieceRuns: PieceRun[] = []
@@ -703,7 +995,7 @@ export class DeterministicSchedulingEngine {
       runEnd: new Date(cursor),
       pieceRuns,
       pieceCompletions,
-      pausedMinutes
+      pausedMinutes,
     }
   }
 
@@ -716,9 +1008,23 @@ export class DeterministicSchedulingEngine {
     personCalendars: Map<string, PersonReservation[]>
     productionPerson: string
     handleMode: HandleMode
-  }): { runStart: Date; runEnd: Date; pieceRuns: PieceRun[]; pieceCompletions: Date[]; pausedMinutes: number } | null {
-    const { setupEnd, arrivals, cycleTimeMin, machine, settings, personCalendars, productionPerson, handleMode } =
-      params
+  }): {
+    runStart: Date
+    runEnd: Date
+    pieceRuns: PieceRun[]
+    pieceCompletions: Date[]
+    pausedMinutes: number
+  } | null {
+    const {
+      setupEnd,
+      arrivals,
+      cycleTimeMin,
+      machine,
+      settings,
+      personCalendars,
+      productionPerson,
+      handleMode,
+    } = params
     const requiredUnits = this.runCapacityUnits(handleMode)
     let runReadyAt = new Date(setupEnd)
 
@@ -879,6 +1185,31 @@ export class DeterministicSchedulingEngine {
     return created
   }
 
+  private getReservedRunMinutes(
+    calendars: Map<string, PersonReservation[]>,
+    person: string
+  ): number {
+    return this.getPersonReservations(calendars, person)
+      .filter(reservation => reservation.type === 'run')
+      .reduce(
+        (total, reservation) => total + this.diffMinutes(reservation.start, reservation.end),
+        0
+      )
+  }
+
+  private getReservedSetupMinutes(
+    calendars: Map<string, PersonReservation[]>,
+    person: string
+  ): number {
+    return this.getPersonReservations(calendars, person)
+      .filter(reservation => reservation.type === 'setup')
+      .reduce(
+        (total, reservation) => total + this.diffMinutes(reservation.start, reservation.end),
+        0
+      )
+  }
+
+
   private addRunWorkMinutes(
     start: Date,
     workMinutes: number,
@@ -957,26 +1288,35 @@ export class DeterministicSchedulingEngine {
     return holidays.some(interval => interval.start <= date && date < interval.end)
   }
 
-  private isInBreakdown(date: Date, machine: string, breakdownByMachine: Map<string, Interval[]>): boolean {
+  private isInBreakdown(
+    date: Date,
+    machine: string,
+    breakdownByMachine: Map<string, Interval[]>
+  ): boolean {
     const intervals = breakdownByMachine.get(machine)
     if (!intervals || intervals.length === 0) return false
     return intervals.some(interval => interval.start <= date && date < interval.end)
   }
 
   private parseSettings(settings: any): ParsedSettings {
-    const setupWindow = this.parseWindow(String(settings?.globalSetupWindow || DEFAULT_OPERATOR_WINDOW))
-    const globalStart = this.tryParseDate(settings?.globalStartDateTime) || this.nextWindowStart(new Date(), setupWindow)
+    const setupWindow = this.parseWindow(
+      String(settings?.globalSetupWindow || DEFAULT_OPERATOR_WINDOW)
+    )
+    const globalStart =
+      this.tryParseDate(settings?.globalStartDateTime) ||
+      this.nextWindowStart(new Date(), setupWindow)
 
     const productionCandidates = [
       settings?.productionWindowShift1,
       settings?.productionWindowShift2,
-      settings?.productionWindowShift3
+      settings?.productionWindowShift3,
     ]
       .map(value => String(value || '').trim())
       .filter(Boolean)
 
-    const productionWindows = (productionCandidates.length > 0 ? productionCandidates : [DEFAULT_PRODUCTION_WINDOW])
-      .map(value => this.parseWindow(value))
+    const productionWindows = (
+      productionCandidates.length > 0 ? productionCandidates : [DEFAULT_PRODUCTION_WINDOW]
+    ).map(value => this.parseWindow(value))
 
     const enforceOperatorShifts = settings?.enforceOperatorShifts === true
     const shiftCandidates = [settings?.shift1, settings?.shift2, settings?.shift3]
@@ -1002,7 +1342,8 @@ export class DeterministicSchedulingEngine {
       setupPersonnel,
       productionPersonnel,
       holidayIntervals,
-      breakdownByMachine
+      breakdownByMachine,
+      profileMode: String(settings?.profileMode || 'advanced') === 'basic' ? 'basic' : 'advanced',
     }
   }
 
@@ -1011,7 +1352,9 @@ export class DeterministicSchedulingEngine {
     shiftWindows: TimeWindow[],
     setupWindow: TimeWindow
   ): PersonnelSpec[] {
-    const fromProfiles = Array.isArray(settings?.personnelProfiles) ? settings.personnelProfiles : []
+    const fromProfiles = Array.isArray(settings?.personnelProfiles)
+      ? settings.personnelProfiles
+      : []
     const uniqueByName = new Map<string, PersonnelSpec>()
 
     fromProfiles.forEach((entry: any, index: number) => {
@@ -1019,14 +1362,20 @@ export class DeterministicSchedulingEngine {
       if (!name) return
 
       const uid = String(entry?.uid || '').trim() || `UID-${index + 1}`
-      const sourceRaw = String(entry?.sourceSection || '').trim().toLowerCase()
+      const sourceRaw = String(entry?.sourceSection || '')
+        .trim()
+        .toLowerCase()
       const sourceSection: 'production' | 'setup' = sourceRaw === 'setup' ? 'setup' : 'production'
       const levelUp = Number(entry?.levelUp)
       const normalizedLevelUp = Number.isFinite(levelUp) ? (levelUp === 1 ? 1 : 0) : 0
+      const explicitProductionEligible =
+        typeof entry?.productionEligible === 'boolean' ? entry.productionEligible : null
       const setupEligible =
         entry?.setupEligible === true || sourceSection === 'setup' || normalizedLevelUp === 1
       const productionEligible =
-        entry?.productionEligible === true || sourceSection === 'production' || sourceSection === 'setup'
+        explicitProductionEligible !== null
+          ? explicitProductionEligible
+          : sourceSection === 'production' || normalizedLevelUp === 1
       const setupPriority =
         sourceSection === 'setup'
           ? 1
@@ -1093,7 +1442,10 @@ export class DeterministicSchedulingEngine {
       if (typeof item === 'string' || item instanceof Date) {
         const date = this.tryParseDate(item)
         if (!date) return
-        intervals.push({ start: this.startOfDay(date), end: this.addDays(this.startOfDay(date), 1) })
+        intervals.push({
+          start: this.startOfDay(date),
+          end: this.addDays(this.startOfDay(date), 1),
+        })
         return
       }
 
@@ -1104,7 +1456,10 @@ export class DeterministicSchedulingEngine {
         return
       }
       if (start) {
-        intervals.push({ start: this.startOfDay(start), end: this.addDays(this.startOfDay(start), 1) })
+        intervals.push({
+          start: this.startOfDay(start),
+          end: this.addDays(this.startOfDay(start), 1),
+        })
       }
     })
 
@@ -1159,7 +1514,7 @@ export class DeterministicSchedulingEngine {
       startMinute: start,
       endMinute: end,
       overnight: end <= start,
-      raw: window
+      raw: window,
     }
   }
 
@@ -1305,4 +1660,142 @@ export class DeterministicSchedulingEngine {
     const second = String(date.getSeconds()).padStart(2, '0')
     return `${year}-${month}-${day}T${hour}:${minute}:${second}`
   }
+
+  // ─── Quality Metrics ─────────────────────────────────────────────────────────
+  // Computes honest machine utilization (denominator = active shift span per
+  // machine, not full calendar), person utilization, and avg inter-op queue.
+  computeQualityMetrics(
+    rows: any[],
+    settings: ParsedSettings
+  ): {
+    machineUtilPct: number
+    personUtilPct: number
+    avgQueueHours: number
+    totalSpanHours: number
+    activeMachines: number
+    activePersons: number
+  } {
+    if (!rows || rows.length === 0) {
+      return { machineUtilPct: 0, personUtilPct: 0, avgQueueHours: 0, totalSpanHours: 0, activeMachines: 0, activePersons: 0 }
+    }
+
+    // ── Machine utilization ──────────────────────────────────────────────────
+    // Group run intervals by machine; compare busy minutes vs window minutes.
+    const machineIntervals = new Map<string, { start: Date; end: Date }[]>()
+    for (const row of rows) {
+      const machine = String(row.machine || '')
+      const start = new Date(row.runStart)
+      const end = new Date(row.runEnd)
+      if (!machine || isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) continue
+      const bucket = machineIntervals.get(machine) || []
+      bucket.push({ start, end })
+      machineIntervals.set(machine, bucket)
+    }
+
+    let totalMachineBusyMin = 0
+    let totalMachineWindowMin = 0
+
+    machineIntervals.forEach((intervals) => {
+      // Busy = sum of run durations
+      const busyMin = intervals.reduce(
+        (sum, iv) => sum + Math.round((iv.end.getTime() - iv.start.getTime()) / 60_000),
+        0
+      )
+      // Window = from first run start to last run end for that machine
+      const earliest = new Date(Math.min(...intervals.map(iv => iv.start.getTime())))
+      const latest = new Date(Math.max(...intervals.map(iv => iv.end.getTime())))
+      const windowMin = Math.round((latest.getTime() - earliest.getTime()) / 60_000)
+      totalMachineBusyMin += busyMin
+      totalMachineWindowMin += Math.max(busyMin, windowMin)
+    })
+
+    const machineUtilPct =
+      totalMachineWindowMin > 0
+        ? Math.round((totalMachineBusyMin / totalMachineWindowMin) * 1000) / 10
+        : 0
+
+    // ── Person utilization ───────────────────────────────────────────────────
+    const personIntervals = new Map<string, { start: Date; end: Date }[]>()
+    for (const row of rows) {
+      const person = String(row.productionPersonName || row.person || '')
+      const start = new Date(row.runStart)
+      const end = new Date(row.runEnd)
+      if (!person || person === 'Unassigned' || isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) continue
+      const bucket = personIntervals.get(person) || []
+      bucket.push({ start, end })
+      personIntervals.set(person, bucket)
+    }
+
+    let totalPersonBusyMin = 0
+    let totalPersonWindowMin = 0
+
+    personIntervals.forEach((intervals) => {
+      const busyMin = intervals.reduce(
+        (sum, iv) => sum + Math.round((iv.end.getTime() - iv.start.getTime()) / 60_000),
+        0
+      )
+      const earliest = new Date(Math.min(...intervals.map(iv => iv.start.getTime())))
+      const latest = new Date(Math.max(...intervals.map(iv => iv.end.getTime())))
+      const windowMin = Math.round((latest.getTime() - earliest.getTime()) / 60_000)
+      totalPersonBusyMin += busyMin
+      totalPersonWindowMin += Math.max(busyMin, windowMin)
+    })
+
+    const personUtilPct =
+      totalPersonWindowMin > 0
+        ? Math.round((totalPersonBusyMin / totalPersonWindowMin) * 1000) / 10
+        : 0
+
+    // ── Avg inter-op queue time ──────────────────────────────────────────────
+    // Group rows by (partNumber, batchId) and sort by operationSeq.
+    // Queue = time between end of OP(N) and start of OP(N+1) for the same batch.
+    const batchOps = new Map<string, any[]>()
+    for (const row of rows) {
+      const key = `${row.partNumber}|${row.batchId}`
+      const bucket = batchOps.get(key) || []
+      bucket.push(row)
+      batchOps.set(key, bucket)
+    }
+
+    let totalQueueMin = 0
+    let queueCount = 0
+
+    batchOps.forEach((ops) => {
+      const sorted = ops.slice().sort((a, b) => Number(a.operationSeq) - Number(b.operationSeq))
+      for (let i = 1; i < sorted.length; i++) {
+        const prevEnd = new Date(sorted[i - 1].runEnd)
+        const currStart = new Date(sorted[i].runStart)
+        if (isNaN(prevEnd.getTime()) || isNaN(currStart.getTime())) continue
+        const gapMin = Math.max(0, Math.round((currStart.getTime() - prevEnd.getTime()) / 60_000))
+        totalQueueMin += gapMin
+        queueCount++
+      }
+    })
+
+    const avgQueueHours = queueCount > 0 ? Math.round((totalQueueMin / queueCount / 60) * 10) / 10 : 0
+
+    // ── Total span ───────────────────────────────────────────────────────────
+    let globalStart: Date | null = null
+    let globalEnd: Date | null = null
+    for (const row of rows) {
+      const start = new Date(row.runStart)
+      const end = new Date(row.runEnd)
+      if (!isNaN(start.getTime()) && (!globalStart || start < globalStart)) globalStart = start
+      if (!isNaN(end.getTime()) && (!globalEnd || end > globalEnd)) globalEnd = end
+    }
+    const totalSpanHours =
+      globalStart && globalEnd
+        ? Math.round(((globalEnd.getTime() - globalStart.getTime()) / 3_600_000) * 10) / 10
+        : 0
+
+    return {
+      machineUtilPct,
+      personUtilPct,
+      avgQueueHours,
+      totalSpanHours,
+      activeMachines: machineIntervals.size,
+      activePersons: personIntervals.size,
+    }
+  }
 }
+
