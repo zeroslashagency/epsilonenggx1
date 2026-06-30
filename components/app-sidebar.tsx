@@ -20,6 +20,7 @@ import {
   Settings,
   User,
   Clock,
+  MapPin,
   Phone,
   Smartphone,
   ChevronRight,
@@ -248,9 +249,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const hasAddUsersAccess = isSuperAdmin || hasPermission('admin_add_users', 'Add Users', 'view')
     const hasRoleProfilesAccess = isSuperAdmin || hasPermission('admin_roles', 'Role Profiles', 'view')
     const hasActivityLoggingAccess = isSuperAdmin || hasPermission('admin_activity', 'Activity Logging', 'view')
+    const hasGeofenceAccess = isSuperAdmin || userRole === 'Admin' || userRole === 'Manager'
     const hasSystemSettingsAccess = isSuperAdmin || hasPermission('admin_system', 'System Settings', 'view')
     const hasAccountAccess = isSuperAdmin || hasPermission('admin_account', 'Organization Settings', 'view')
-    const hasAnySettingsAccess = hasUserManagementAccess || hasAddUsersAccess || hasRoleProfilesAccess || hasActivityLoggingAccess || hasSystemSettingsAccess
+    const hasAnySettingsAccess = hasUserManagementAccess || hasAddUsersAccess || hasRoleProfilesAccess || hasActivityLoggingAccess || hasSystemSettingsAccess || hasGeofenceAccess
 
     if (hasAnySettingsAccess) {
       const settingsSubItems: MenuItem[] = []
@@ -258,6 +260,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       if (hasAddUsersAccess) settingsSubItems.push({ id: 'add-users', label: 'Add Users', href: '/settings/add-users', icon: UserPlus })
       if (hasRoleProfilesAccess) settingsSubItems.push({ id: 'role-profiles', label: 'Role Profiles', href: '/settings/roles', icon: Shield })
       if (hasActivityLoggingAccess) settingsSubItems.push({ id: 'activity-logging', label: 'Activity Logging', href: '/settings/activity-logs', icon: Activity })
+      if (hasGeofenceAccess) settingsSubItems.push({ id: 'geofence-attendance', label: 'Geofence Attendance', href: '/settings/geofence', icon: MapPin })
 
       if (settingsSubItems.length > 0) {
         systemItems.push({ id: 'settings', label: 'Settings', icon: Settings, items: settingsSubItems })
