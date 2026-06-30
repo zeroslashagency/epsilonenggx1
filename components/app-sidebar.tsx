@@ -118,9 +118,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (isSuperAdmin || canUserAttendanceAttendance) {
       mainItems.push({ id: 'attendance', label: 'Attendance', href: '/attendance', icon: Clock })
     }
-    if (isSuperAdmin || hasPermission('main_attendance', 'Standalone Attendance', 'view')) {
-      mainItems.push({ id: 'standalone-attendance', label: 'Standalone Attendance', href: 'https://epsilon-attendance.vercel.app/', icon: UserCheck })
-    }
     if (mainItems.length > 0) {
       groups.push({ label: 'MAIN', items: mainItems })
     }
@@ -197,15 +194,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
 
-    // 4. MONITOR PERSON Section
+    // 4. MONITOR PERSON Section (FIR only; device-monitoring + call-recorder removed)
     const monitorPersonItems: MenuItem[] = []
-    if (isSuperAdmin || canUserAttendanceCalls) {
-      monitorPersonItems.push({ id: 'call-recorder', label: 'Call Recorder', href: '/monitor/call-logs', icon: Phone })
-    }
-    if (isSuperAdmin || canUserAttendanceDeviceMonitoring) {
-      monitorPersonItems.push({ id: 'monitor-device', label: 'Mobile Device Logs', href: '/monitor/device-logs', icon: Smartphone })
-      monitorPersonItems.push({ id: 'monitor-excal-dashboard', label: 'Excal Dashboard', href: '/monitor/excal-dashboard', icon: Activity })
-    }
     if (isSuperAdmin || canUserAttendanceFir) {
       monitorPersonItems.push({ id: 'monitor-fir', label: 'FIR Status', href: '/fir', icon: Shield })
     }

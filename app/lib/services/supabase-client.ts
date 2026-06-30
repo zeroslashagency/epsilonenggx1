@@ -28,6 +28,7 @@ let adminClientInstance: SupabaseClient | null = null
 declare global {
   var __supabaseInstance: SupabaseClient | undefined
   var __supabaseAdminInstance: SupabaseClient | undefined
+  var __supabaseAdminFallbackWarned: boolean | undefined
 }
 
 /**
@@ -134,11 +135,10 @@ export function getSupabaseAdminClient(): SupabaseClient {
       'NEXT_PUBLIC_SUPABASE_ANON_KEY are required. Check your .env.local file.'
     )
   }
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn(
-      '⚠️ SUPABASE_SERVICE_ROLE_KEY not set — admin client falling back to ' +
-      'the anon key (RLS-gated). Set the service role key for full access.'
-    )
+  if (process.env.NODE_ENV !== 'production' && !globalThis.__supabaseAdminFallbackWarned) {
+    globalThis.__supabaseAdminFallbackWarned = true
+    // One-time, value-free dev hint (no secrets logged).
+    console.info('[supabase] Using RLS-gated client (elevated server key not configured).')
   }
   return getSupabaseClient()
 }

@@ -50,8 +50,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { MachineStatusHub } from "@/components/dashboard/machine-status-hub"
-import { DeviceLogViewer } from "@/components/dashboard/device-log-viewer"
 
 // ✅ Helper to map machine data for the table
 function linkMachinesTableData(machines: any[]) {
@@ -94,14 +92,6 @@ interface RecentActivity {
 function DashboardPageContent() {
   const auth = useAuth()
   const router = useRouter()
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
-  const [isLogsOpen, setIsLogsOpen] = useState(false)
-
-  const handleViewLogs = (deviceId: string) => {
-    setSelectedDeviceId(deviceId)
-    setIsLogsOpen(true)
-  }
-
   // ⚡ PERFORMANCE: Use React Query with the aggregate summary API
   // Replaces 4-7 separate API calls and 200+ lines of manual state management
   const {
@@ -482,18 +472,6 @@ function DashboardPageContent() {
               </div>
             )}
 
-            {/* Live Machine Production Hub */}
-            <section className="mt-8">
-              <div className="flex items-center gap-2 mb-4">
-                <Activity className="w-5 h-5 text-blue-500" />
-                <h2 className="text-xl font-bold tracking-tight">Live Production Pulse</h2>
-                <Badge variant="outline" className="ml-2 animate-pulse bg-emerald-50 text-emerald-700 border-emerald-200">
-                  Live Tracking
-                </Badge>
-              </div>
-              <MachineStatusHub machines={machinesData?.data || machinesData || []} />
-            </section>
-
             {/* ROW B: Main Chart + Right Rail */}
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-start">
               {canViewMetrics && (
@@ -828,17 +806,7 @@ function DashboardPageContent() {
                               <span className="text-xs font-medium">{row.utilization}%</span>
                             </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                              onClick={() => handleViewLogs(row.machineId)}
-                            >
-                              <Activity className="w-3.5 h-3.5 mr-1" />
-                              Live Logs
-                            </Button>
-                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-400">—</td>
                         </tr>
                       ))) : (
                         <tr>
@@ -856,14 +824,6 @@ function DashboardPageContent() {
           </>
         )}
 
-        <Dialog open={isLogsOpen} onOpenChange={setIsLogsOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Device Logs: {selectedDeviceId}</DialogTitle>
-            </DialogHeader>
-            {selectedDeviceId && <DeviceLogViewer deviceId={selectedDeviceId} />}
-          </DialogContent>
-        </Dialog>
       </div>
     </>
   )
