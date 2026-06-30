@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requireRole } from '@/app/lib/features/auth/auth.middleware'
 
 const ADMIN_ROLES = ['Super Admin', 'Admin', 'Manager'] as const
@@ -10,7 +10,7 @@ const ADMIN_ROLES = ['Super Admin', 'Admin', 'Manager'] as const
 export async function GET(request: NextRequest) {
   const auth = await requireRole(request, [...ADMIN_ROLES])
   if (auth instanceof NextResponse) return auth
-  const supabase = getSupabaseAdminClient()
+  const supabase = getSupabaseForRequest(request)
   const { data, error } = await supabase
     .from('attendance_punches')
     .select('*')

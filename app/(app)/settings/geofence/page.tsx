@@ -5,6 +5,14 @@ import { PageBreadcrumbs } from '@/app/components/zoho-ui/PageBreadcrumbs'
 import { useAuth } from '@/app/lib/contexts/auth-context'
 import { apiGet, apiPost, apiPatch, apiDelete } from '@/app/lib/utils/api-client'
 import { MapPin, Plus, Trash2, Save, X, RefreshCw } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const ZoneMap = dynamic(() => import('./ZoneMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-72 w-full items-center justify-center rounded-lg border border-border bg-muted text-sm text-muted-foreground">Loading map…</div>
+  ),
+})
 
 interface Zone {
   id: string
@@ -202,6 +210,20 @@ function ZonesTab() {
         </div>
       </div>
 
+      <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-semibold text-foreground">Map</h3>
+          <span className="text-xs text-muted-foreground">Click the map or drag the marker to set the center</span>
+        </div>
+        <ZoneMap
+          lat={lat}
+          lng={lng}
+          radius={radius}
+          otherZones={zones.filter((z) => z.id !== sel?.id).map((z) => ({ id: z.id, name: z.name, center_lat: z.center_lat, center_lng: z.center_lng, radius_meters: z.radius_meters }))}
+          onChange={(la, ln) => { setLat(la); setLng(ln) }}
+        />
+      </div>
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold text-foreground">Zones</h3>
@@ -239,6 +261,7 @@ function ZonesTab() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   )

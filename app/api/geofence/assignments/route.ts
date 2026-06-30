@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requireRole } from '@/app/lib/features/auth/auth.middleware'
 
 const ADMIN_ROLES = ['Super Admin', 'Admin', 'Manager'] as const
@@ -10,7 +10,7 @@ const ADMIN_ROLES = ['Super Admin', 'Admin', 'Manager'] as const
 export async function GET(request: NextRequest) {
   const auth = await requireRole(request, [...ADMIN_ROLES])
   if (auth instanceof NextResponse) return auth
-  const supabase = getSupabaseAdminClient()
+  const supabase = getSupabaseForRequest(request)
 
   const [{ data: assignments, error: aErr }, { data: profiles, error: pErr }] = await Promise.all([
     supabase.from('user_geofence_assignments').select('*').order('assigned_at', { ascending: false }),
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   if (!user_id || !zone_id) {
     return NextResponse.json({ success: false, error: 'user_id and zone_id are required' }, { status: 400 })
   }
-  const supabase = getSupabaseAdminClient()
+  const supabase = getSupabaseForRequest(request)
   const { data, error } = await supabase
     .from('user_geofence_assignments')
     .insert({ user_id, zone_id, assigned_by: (auth as any).id })
@@ -44,7 +44,7 @@ export async function DELETE(request: NextRequest) {
   if (auth instanceof NextResponse) return auth
   const id = new URL(request.url).searchParams.get('id')
   if (!id) return NextResponse.json({ success: false, error: 'id is required' }, { status: 400 })
-  const supabase = getSupabaseAdminClient()
+  const supabase = getSupabaseForRequest(request)
   const { error } = await supabase.from('user_geofence_assignments').delete().eq('id', id)
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

@@ -185,3 +185,25 @@ export function validateSupabaseConfig(): void {
   }
 
 }
+
+
+/**
+ * Returns a Supabase client appropriate for an API route acting on behalf of a
+ * signed-in user. With a service-role key it returns the elevated admin client.
+ * Without one (e.g. local dev), it returns an anon client that forwards the
+ * caller's Bearer token, so RLS policies scoped to the `authenticated` role
+ * still apply (otherwise anon-role queries return 0 rows under RLS).
+ */
+export function getSupabaseForRequest(request: { headers: { get(name: string): string | null } }): SupabaseClient {
+  if (supabaseServiceKey) {
+    return getSupabaseAdminClient()
+  }
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase is not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).')
+  }
+  const authHeader = request.headers.get('authorization') || request.headers.get('Authorization') || ''
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: authHeader ? { headers: { Authorization: authHeader } } : undefined,
+  })
+}
