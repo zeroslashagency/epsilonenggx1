@@ -22,7 +22,6 @@ interface User {
   designation?: string
   phone?: string
   last_login?: string
-  standalone_attendance?: 'YES' | 'NO'
 }
 
 const SYSTEM_FUNCTIONS = [
@@ -32,7 +31,6 @@ const SYSTEM_FUNCTIONS = [
   { id: 'chart', label: 'Chart', description: 'Explore production charts and machine KPIs.' },
   { id: 'analytics', label: 'Analytics', description: 'Run analytics dashboards and export performance reports.' },
   { id: 'attendance', label: 'Attendance', description: 'View attendance data and reports within the main system.' },
-  { id: 'standalone_attendance', label: 'Standalone Attendance', description: 'Access the dedicated attendance website with same credentials.' },
   { id: 'production', label: 'Production', description: 'Access production workflow screens including orders, machines, personnel, and tasks.' },
   { id: 'monitoring', label: 'Monitoring', description: 'Access monitoring dashboards including alerts, reports, quality control, and maintenance.' },
   { id: 'manage_users', label: 'Manage Users & Security', description: 'Create users, assign roles, view audit logs, and impersonate accounts.' }
@@ -150,22 +148,13 @@ function UsersPageZoho() {
       console.log('📥 [USER-SELECT] API Response:', result)
       
       if (result.success) {
-        // Use permissions from API response (already includes standalone_attendance if enabled)
+        // Use permissions from API response
         setPermissions(result.permissions || [])
         setEditedRole(result.role || user.role)
         setMobileAccess(result.mobile_access === true)
-        
-        console.log('✅ [USER-SELECT] Permissions loaded:', {
-          permissions: result.permissions,
-          standalone_attendance: result.standalone_attendance,
-          hasStandaloneInPermissions: result.permissions?.includes('standalone_attendance')
-        })
       } else {
         // Fallback to default permissions if API fails
         const defaultPermissions = ['dashboard']
-        if (user.standalone_attendance === 'YES') {
-          defaultPermissions.push('standalone_attendance')
-        }
         setPermissions(defaultPermissions)
         setEditedRole(user.role)
       }
@@ -173,9 +162,6 @@ function UsersPageZoho() {
       console.error('❌ [USER-SELECT] Error fetching permissions:', error)
       // Fallback to default permissions
       const defaultPermissions = ['dashboard']
-      if (user.standalone_attendance === 'YES') {
-        defaultPermissions.push('standalone_attendance')
-      }
       setPermissions(defaultPermissions)
       setEditedRole(user.role)
     }
@@ -194,11 +180,7 @@ function UsersPageZoho() {
     setEditedDesignation(user.designation || '')
     setEditedRole(user.role || 'Operator')
     
-    // Set permissions based on standalone_attendance
     const userPermissions = ['dashboard']
-    if (user.standalone_attendance === 'YES') {
-      userPermissions.push('standalone_attendance')
-    }
     setPermissions(userPermissions)
     setIsEditing(false)
   }
@@ -212,7 +194,6 @@ function UsersPageZoho() {
     if (!selectedUser) return
 
     console.log('💾 [SAVE] Starting save with permissions:', permissions)
-    console.log('💾 [SAVE] Standalone attendance enabled:', permissions.includes('standalone_attendance'))
 
     try {
       console.log('💾 Saving changes...', { 
@@ -240,16 +221,12 @@ function UsersPageZoho() {
         throw new Error(contactResult.error || 'Failed to save contact information')
       }
 
-      // Check if standalone_attendance permission is enabled
-      const hasStandaloneAttendance = permissions.includes('standalone_attendance')
-
       const roleToSave = editedRole?.trim() || selectedUser.role || 'Operator'
 
       const payload = {
         userId: selectedUser.id,
         role: roleToSave,
         permissions,
-        standalone_attendance: hasStandaloneAttendance ? 'YES' : 'NO',
         mobile_access: mobileAccess
       }
 
@@ -306,17 +283,11 @@ function UsersPageZoho() {
         } else {
           // Fallback to basic permissions
           const defaultPermissions = ['dashboard']
-          if (selectedUser.standalone_attendance === 'YES') {
-            defaultPermissions.push('standalone_attendance')
-          }
           setPermissions(defaultPermissions)
         }
       } catch (error) {
         // Fallback to basic permissions
         const defaultPermissions = ['dashboard']
-        if (selectedUser.standalone_attendance === 'YES') {
-          defaultPermissions.push('standalone_attendance')
-        }
         setPermissions(defaultPermissions)
       }
     }
@@ -845,16 +816,6 @@ function UsersPageZoho() {
                             {selectedUser.designation || 'Not specified'}
                           </p>
                         </div>
-                        {selectedUser.standalone_attendance === 'YES' && (
-                          <div className="pt-2">
-                            <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded">
-                              <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                              </svg>
-                              <span className="text-xs font-medium text-purple-700 dark:text-purple-400">Standalone Access</span>
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                       <div className="border-t border-[#E3E6F0] dark:border-gray-700 my-3"></div>
@@ -1001,16 +962,8 @@ function UsersPageZoho() {
                       <EditableRoleSection
                         isEditing={isEditing}
                         selectedRole={isEditing ? editedRole : selectedUser.role}
-                        standaloneAttendance={permissions.includes('standalone_attendance')}
                         mobileAccess={mobileAccess}
                         onRoleChange={setEditedRole}
-                        onStandaloneToggle={() => {
-                          if (permissions.includes('standalone_attendance')) {
-                            setPermissions(permissions.filter(p => p !== 'standalone_attendance'))
-                          } else {
-                            setPermissions([...permissions, 'standalone_attendance'])
-                          }
-                        }}
                         onMobileToggle={() => setMobileAccess(v => !v)}
                         onEdit={() => setIsEditing(true)}
                         onCancel={handleCancelEdit}
@@ -1019,7 +972,6 @@ function UsersPageZoho() {
                       
                       <PermissionsDisplay
                         role={isEditing ? editedRole : selectedUser.role}
-                        standaloneAttendance={permissions.includes('standalone_attendance')}
                       />
                     </div>
                   )}

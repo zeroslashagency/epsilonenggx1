@@ -45,16 +45,6 @@ function normalizeRoleInput(role: unknown): { roleId?: string; roleName?: string
   }
 }
 
-function normalizeStandaloneAttendance(value: unknown): 'YES' | 'NO' {
-  if (value === true) return 'YES'
-  if (value === false) return 'NO'
-  if (typeof value === 'string') {
-    const normalized = value.trim().toUpperCase()
-    if (normalized === 'YES' || normalized === 'TRUE') return 'YES'
-  }
-  return 'NO'
-}
-
 function normalizePermissions(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter(
@@ -85,10 +75,9 @@ export async function POST(request: NextRequest) {
     const validation = await validateRequestBody(request, updateUserPermissionsSchema)
     if (!validation.success) return validation.response
 
-    const { userId, role, permissions, standalone_attendance, mobile_access } = validation.data
+    const { userId, role, permissions, mobile_access } = validation.data
     const normalizedUserId = userId.trim()
     const normalizedRole = normalizeRoleInput(role)
-    const normalizedStandaloneAttendance = normalizeStandaloneAttendance(standalone_attendance)
     const normalizedMobileAccess = mobile_access === true
     const normalizedPermissions = normalizePermissions(permissions)
 
@@ -148,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     const { data: existingProfile, error: existingProfileError } = await supabase
       .from('profiles')
-      .select('role, standalone_attendance')
+      .select('role')
       .eq('id', normalizedUserId)
       .single()
 
@@ -218,13 +207,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 1: Update user profile with role and standalone_attendance flag
+    // Step 1: Update user profile with role and mobile access flag
     const { data: updateData, error: updateError } = await supabase
       .from('profiles')
       .update({
         role: targetRole.name,
         role_badge: targetRole.name,
-        standalone_attendance: normalizedStandaloneAttendance,
         mobile_access: normalizedMobileAccess,
         // Bump so the mobile app's realtime listener re-pulls permissions
         permissions_version: Date.now(),
@@ -292,7 +280,6 @@ export async function POST(request: NextRequest) {
         new_role: targetRole.name,
         new_role_id: targetRole.id,
         permissions: normalizedPermissions,
-        standalone_attendance: normalizedStandaloneAttendance,
         updated_by: user.email,
         updated_at: new Date().toISOString(),
       },

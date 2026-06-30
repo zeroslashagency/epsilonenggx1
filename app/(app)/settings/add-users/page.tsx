@@ -45,7 +45,6 @@ function AddUsersPage() {
     roleId: '',
     department: '',
     designation: '',
-    standaloneAttendance: false,
     forcePasswordReset: false,
     avatarUrl: ''
   })
@@ -59,7 +58,6 @@ function AddUsersPage() {
     confirmPassword: '',
     roleId: '',
     department: '',
-    standaloneAttendance: false,
     avatarUrl: '',
     forcePasswordReset: false
   })
@@ -227,7 +225,6 @@ function AddUsersPage() {
       confirmPassword: '',
       roleId: defaultRole?.id || '',
       department: '',
-      standaloneAttendance: false,
       avatarUrl: '',
       forcePasswordReset: false
     })
@@ -299,7 +296,6 @@ function AddUsersPage() {
         role: roleName,
         department: employeeFormData.department || 'Default',
         designation: selectedEmployee.role,
-        standalone_attendance: employeeFormData.standaloneAttendance ? 'YES' : 'NO',
         send_email_invitation: sendEmailInvitation,
         avatar_url: employeeFormData.avatarUrl || null,
         force_password_reset: employeeFormData.forcePasswordReset
@@ -351,7 +347,6 @@ function AddUsersPage() {
           confirmPassword: '',
           roleId: defaultRole?.id || '',
           department: '',
-          standaloneAttendance: false,
           avatarUrl: '',
           forcePasswordReset: false
         })
@@ -409,7 +404,6 @@ function AddUsersPage() {
         role: roleName,
         department: formData.department || 'Default',
         designation: formData.designation || 'Staff',
-        standalone_attendance: formData.standaloneAttendance ? 'YES' : 'NO',
         send_email_invitation: manualSendEmail,
         avatar_url: formData.avatarUrl || null,
         force_password_reset: formData.forcePasswordReset
@@ -680,9 +674,6 @@ function AddUsersPage() {
                               <div className="w-2 h-2 bg-[#00A651] rounded-full"></div>
                               <span className="text-[10px] font-semibold text-[#00A651]">ACTIVE</span>
                             </div>
-                            {formData.standaloneAttendance && (
-                              <div className="text-[10px] font-semibold text-[#2C7BE5]">STANDALONE</div>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -865,19 +856,6 @@ function AddUsersPage() {
                   </div>
 
                   <div className="mt-4 space-y-3">
-                    <label className="flex items-start gap-3 p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={formData.standaloneAttendance}
-                        onChange={(e) => setFormData({ ...formData, standaloneAttendance: e.target.checked })}
-                        className="mt-1 w-4 h-4 text-[#2C7BE5] border-gray-300 rounded focus:ring-[#2C7BE5]"
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-[#12263F] dark:text-white">Enable Standalone Attendance Site</p>
-                        <p className="text-xs text-[#95AAC9] mt-1">Allow user to access dedicated attendance website</p>
-                      </div>
-                    </label>
-
                     <label className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors">
                       <input
                         type="checkbox"
@@ -1126,7 +1104,7 @@ function AddUsersPage() {
               onClick={() => {
                 setShowEmployeeForm(false)
                 setSelectedEmployee(null)
-                setEmployeeFormData({ email: '', password: '', confirmPassword: '', roleId: '', department: '', standaloneAttendance: false, avatarUrl: '', forcePasswordReset: false })
+                setEmployeeFormData({ email: '', password: '', confirmPassword: '', roleId: '', department: '', avatarUrl: '', forcePasswordReset: false })
               }}
               className="text-sm text-[#2C7BE5] hover:underline flex items-center gap-1"
             >
@@ -1302,9 +1280,6 @@ function AddUsersPage() {
                                 <div className="w-2 h-2 bg-[#00A651] rounded-full"></div>
                                 <span className="text-[10px] font-semibold text-[#00A651]">ACTIVE</span>
                               </div>
-                              {employeeFormData.standaloneAttendance && (
-                                <div className="text-[10px] font-semibold text-[#2C7BE5]">STANDALONE</div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -1494,19 +1469,6 @@ function AddUsersPage() {
                     </div>
 
                     <div className="mt-4 space-y-3">
-                      <label className="flex items-start gap-3 p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={employeeFormData.standaloneAttendance}
-                          onChange={(e) => setEmployeeFormData({ ...employeeFormData, standaloneAttendance: e.target.checked })}
-                          className="mt-1 w-4 h-4 text-[#2C7BE5] border-gray-300 rounded focus:ring-[#2C7BE5]"
-                        />
-                        <div>
-                          <p className="text-sm font-medium text-[#12263F] dark:text-white">Enable Standalone Attendance Site</p>
-                          <p className="text-xs text-[#95AAC9] mt-1">Allow user to access dedicated attendance website</p>
-                        </div>
-                      </label>
-
                       <label className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors">
                         <input
                           type="checkbox"
@@ -1627,7 +1589,7 @@ function AddUsersPage() {
                       onClick={() => {
                         setShowEmployeeForm(false)
                         setSelectedEmployee(null)
-                        setEmployeeFormData({ email: '', password: '', confirmPassword: '', roleId: '', department: '', standaloneAttendance: false, avatarUrl: '', forcePasswordReset: false })
+                        setEmployeeFormData({ email: '', password: '', confirmPassword: '', roleId: '', department: '', avatarUrl: '', forcePasswordReset: false })
                         setSendEmailInvitation(false)
                       }}
                       className="px-4 py-2 bg-white dark:bg-gray-800 text-[#12263F] dark:text-white border border-[#E3E6F0] dark:border-gray-700 rounded text-sm font-medium hover:bg-[#F8F9FC] dark:hover:bg-gray-700 transition-colors"

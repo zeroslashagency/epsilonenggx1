@@ -30,7 +30,6 @@ const SYSTEM_FUNCTIONS = [
   { id: 'chart', label: 'Chart', description: 'Explore production charts and machine KPIs.' },
   { id: 'analytics', label: 'Analytics', description: 'Run analytics dashboards and export performance reports.' },
   { id: 'attendance', label: 'Attendance', description: 'View attendance data and reports within the main system.' },
-  { id: 'standalone_attendance', label: 'Standalone Attendance', description: 'Access the dedicated attendance website with same credentials.' },
   { id: 'production', label: 'Production (Coming Soon)', description: 'Early toggle for upcoming production workflow screens.' },
   { id: 'monitoring', label: 'Monitoring (Coming Soon)', description: 'Early toggle for upcoming monitoring dashboards.' },
   { id: 'manage_users', label: 'Manage Users & Security', description: 'Create users, assign roles, view audit logs, and impersonate accounts.' },
@@ -144,11 +143,6 @@ export default function UserDetailPage() {
             userPermissions.push('chart', 'analytics', 'attendance')
           }
 
-          // Add standalone attendance if enabled
-          if (foundUser.standalone_attendance === 'YES') {
-            userPermissions.push('standalone_attendance')
-          }
-
           setPermissions(userPermissions)
         }
       }
@@ -174,15 +168,12 @@ export default function UserDetailPage() {
 
     try {
 
-      // Determine standalone_attendance based on permissions
-      const standalone_attendance = permissions.includes('standalone_attendance') ? 'YES' : 'NO'
       const roleToSave = selectedRole?.trim() || user.role || 'Operator'
 
       const data = await apiPost('/api/admin/update-user-permissions', {
         userId: user.id,
         role: roleToSave,
         permissions,
-        standalone_attendance
       })
 
       if (data.success) {
@@ -493,9 +484,7 @@ export default function UserDetailPage() {
               <EditableRoleSection
                 isEditing={isEditing}
                 selectedRole={selectedRole}
-                standaloneAttendance={permissions.includes('standalone_attendance')}
                 onRoleChange={setSelectedRole}
-                onStandaloneToggle={() => togglePermission('standalone_attendance')}
                 onEdit={() => setIsEditing(true)}
                 onCancel={() => {
                   setIsEditing(false)
@@ -506,7 +495,6 @@ export default function UserDetailPage() {
 
               <PermissionsDisplay
                 role={selectedRole || user?.role || 'Operator'}
-                standaloneAttendance={permissions.includes('standalone_attendance')}
               />
             </div>
           )}

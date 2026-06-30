@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Get user's profile info first
     const { data: userProfile } = await supabase
       .from('profiles')
-      .select('standalone_attendance, mobile_access, role')
+      .select('mobile_access, role')
       .eq('id', userId)
       .single()
 
@@ -86,23 +86,14 @@ export async function GET(request: NextRequest) {
       'view_machine_analyzer': 'chart',
       'view_reports': 'analytics',
       'attendance_read': 'attendance',
-      'attendance_mark': 'standalone_attendance',
       'manage_users': 'manage_users'
     }
 
     const allPermissionCodes = Array.from(new Set([...rolePermissionCodes, ...customPermissionCodes]))
     const frontendPermissions = allPermissionCodes.map(code => dbToFrontendMap[code] || code)
 
-    // ALWAYS add standalone_attendance if enabled in profile (works for all users)
-    if (userProfile.standalone_attendance === 'YES') {
-      if (!frontendPermissions.includes('standalone_attendance')) {
-        frontendPermissions.push('standalone_attendance')
-      }
-    }
-
     // Mobile Access: per-user master switch. When enabled, inject the marker
-    // the Flutter app uses to unlock (mobile.rbac.enabled). This is the clean
-    // replacement for the old "standalone" naming.
+    // the Flutter app uses to unlock (mobile.rbac.enabled).
     if (userProfile.mobile_access === true) {
       if (!frontendPermissions.includes('mobile.rbac.enabled')) {
         frontendPermissions.push('mobile.rbac.enabled')
@@ -116,7 +107,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       permissions: frontendPermissions,
-      standalone_attendance: userProfile?.standalone_attendance || 'NO',
       mobile_access: userProfile?.mobile_access === true,
       role: userProfile?.role || 'Operator'
     })

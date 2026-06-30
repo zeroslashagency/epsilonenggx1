@@ -5,10 +5,8 @@ import { apiGet } from '@/app/lib/utils/api-client'
 interface EditableRoleSectionProps {
   isEditing: boolean
   selectedRole: string
-  standaloneAttendance: boolean
   mobileAccess?: boolean
   onRoleChange: (role: string) => void
-  onStandaloneToggle: () => void
   onMobileToggle?: () => void
   onEdit: () => void
   onCancel: () => void
@@ -18,10 +16,8 @@ interface EditableRoleSectionProps {
 export function EditableRoleSection({
   isEditing,
   selectedRole,
-  standaloneAttendance,
   mobileAccess = false,
   onRoleChange,
-  onStandaloneToggle,
   onMobileToggle,
   onEdit,
   onCancel,
@@ -53,14 +49,14 @@ export function EditableRoleSection({
             🔧 Editable Settings
           </h3>
           <p className="text-xs text-[#95AAC9] mt-1">
-            Change user role and standalone attendance access
+            Change user role and mobile app access
           </p>
         </div>
         {!isEditing ? (
           <button
             onClick={onEdit}
             className="px-4 py-2 text-sm text-[#2C7BE5] border border-[#2C7BE5] rounded hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"
-            title="Edit user role and standalone attendance"
+            title="Edit user role and mobile app access"
           >
             Edit Role
           </button>

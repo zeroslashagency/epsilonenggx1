@@ -87,7 +87,6 @@ export async function GET(request: NextRequest) {
           phone: profile?.phone || null,
           created_at: authUser.created_at,
           updated_at: authUser.updated_at || profile?.updated_at,
-          standalone_attendance: profile?.standalone_attendance || 'NO'
         }
       })
 

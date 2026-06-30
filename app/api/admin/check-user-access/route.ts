@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Get user's profile info
     const { data: userProfile } = await supabase
       .from('profiles')
-      .select('standalone_attendance, role, full_name')
+      .select('role, full_name')
       .eq('id', userId)
       .single()
 
@@ -46,11 +46,7 @@ export async function GET(request: NextRequest) {
       accessMethod: 'none'
     }
 
-    // Special case: standalone_attendance permission
-    if (requiredPermission === 'standalone_attendance') {
-      hasAccess = userProfile.standalone_attendance === 'YES'
-      accessDetails.accessMethod = 'profile_flag'
-    } else {
+    {
       const { data: userRoles } = await supabase
         .from('user_roles')
         .select('role_id')

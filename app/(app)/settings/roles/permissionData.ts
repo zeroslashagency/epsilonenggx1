@@ -131,13 +131,6 @@ export const initialPermissionModules: Record<string, PermissionModule> = {
         edit: false,
         delete: false,
       },
-      'Standalone Attendance': {
-        full: false,
-        view: false,
-        create: false,
-        edit: false,
-        delete: false,
-      },
     },
     specialPermissions: [
       'Allow users to mark attendance for others',
