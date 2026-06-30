@@ -24,53 +24,31 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
 
   // Employee stats
   const employeeStats = {
-    attendanceRate: 95,
-    punctualityRate: 88,
-    avgCheckInTime: '08:45',
-    totalDays: 20
+    attendanceRate: 0,
+    punctualityRate: 0,
+    avgCheckInTime: '--:--',
+    totalDays: 0
   }
 
   // Team averages
   const teamStats = {
-    attendanceRate: 92,
-    punctualityRate: 85,
-    avgCheckInTime: '08:55',
-    totalDays: 18
+    attendanceRate: 0,
+    punctualityRate: 0,
+    avgCheckInTime: '--:--',
+    totalDays: 0
   }
 
   // Department comparison
-  const departmentComparison = [
-    { department: 'Engineering', attendance: 94, punctuality: 90, employees: 25 },
-    { department: 'Sales', attendance: 89, punctuality: 82, employees: 18 },
-    { department: 'Marketing', attendance: 91, punctuality: 87, employees: 12 },
-    { department: 'HR', attendance: 96, punctuality: 93, employees: 8 },
-    { department: 'Finance', attendance: 93, punctuality: 88, employees: 10 }
-  ]
+  const departmentComparison: Array<{ department: string; attendance: number; punctuality: number; employees: number }> = []
 
   // Weekly trend data
-  const weeklyTrend: TrendData[] = [
-    { period: 'Week 1', attendance: 100, punctuality: 90 },
-    { period: 'Week 2', attendance: 95, punctuality: 85 },
-    { period: 'Week 3', attendance: 90, punctuality: 88 },
-    { period: 'Week 4', attendance: 95, punctuality: 92 }
-  ]
+  const weeklyTrend: TrendData[] = []
 
   // Monthly trend data
-  const monthlyTrend: TrendData[] = [
-    { period: 'Aug', attendance: 92, punctuality: 85 },
-    { period: 'Sep', attendance: 94, punctuality: 87 },
-    { period: 'Oct', attendance: 96, punctuality: 90 },
-    { period: 'Nov', attendance: 95, punctuality: 88 }
-  ]
+  const monthlyTrend: TrendData[] = []
 
   // Check-in time heatmap (hour of day)
-  const checkInHeatmap: HeatmapData[] = [
-    { hour: 7, count: 2 },
-    { hour: 8, count: 12 },
-    { hour: 9, count: 5 },
-    { hour: 10, count: 1 },
-    { hour: 11, count: 0 }
-  ]
+  const checkInHeatmap: HeatmapData[] = []
 
   const getComparisonColor = (employee: number, team: number) => {
     const diff = employee - team

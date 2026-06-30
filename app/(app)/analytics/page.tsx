@@ -499,25 +499,8 @@ function AnalyticsPageContent() {
                   </div>
                   <ZohoButton variant="ghost" size="sm" icon={<BarChart3 className="w-4 h-4" />} />
                 </div>
-                <div className="space-y-3">
-                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day, index) => {
-                    const value = [1850, 1920, 1780, 2100, 1950][index]
-                    const percentage = (value / 2100) * 100
-                    return (
-                      <div key={day}>
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="text-[#95AAC9]">{day}</span>
-                          <span className="font-semibold text-[#12263F] dark:text-white">{value} units</span>
-                        </div>
-                        <div className="w-full bg-[#E3E6F0] dark:bg-gray-700 rounded-full h-2">
-                          <div 
-                            className="bg-gradient-to-r from-[#2C7BE5] to-[#1E5BB8] h-2 rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
+                <div className="py-8 text-center text-sm text-[#95AAC9]">
+                  No production timeline data available.
                 </div>
               </ZohoCard>
 
@@ -530,22 +513,8 @@ function AnalyticsPageContent() {
                   </div>
                   <ZohoButton variant="ghost" size="sm" icon={<Package className="w-4 h-4" />} />
                 </div>
-                <div className="space-y-3">
-                  {[
-                    { name: 'Part PN-001', qty: 2450, color: '#2C7BE5' },
-                    { name: 'Part PN-002', qty: 1890, color: '#28A745' },
-                    { name: 'Part PN-003', qty: 1650, color: '#FD7E14' },
-                    { name: 'Part PN-004', qty: 1420, color: '#6F42C1' },
-                    { name: 'Part PN-005', qty: 1180, color: '#DC3545' },
-                  ].map((product) => (
-                    <div key={product.name} className="flex items-center justify-between p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: product.color }}></div>
-                        <span className="text-sm font-medium text-[#12263F] dark:text-white">{product.name}</span>
-                      </div>
-                      <span className="text-sm font-semibold text-[#2C7BE5]">{product.qty}</span>
-                    </div>
-                  ))}
+                <div className="py-8 text-center text-sm text-[#95AAC9]">
+                  No product data available.
                 </div>
               </ZohoCard>
             </div>
@@ -559,11 +528,7 @@ function AnalyticsPageContent() {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { shift: 'Morning Shift', time: '6:00 AM - 2:00 PM', production: 4200, efficiency: 92, color: '#2C7BE5' },
-                  { shift: 'Afternoon Shift', time: '2:00 PM - 10:00 PM', production: 4850, efficiency: 95, color: '#28A745' },
-                  { shift: 'Night Shift', time: '10:00 PM - 6:00 AM', production: 3400, efficiency: 78, color: '#FD7E14' },
-                ].map((shift) => (
+                {([] as Array<{ shift: string; time: string; production: number; efficiency: number; color: string }>).map((shift) => (
                   <div key={shift.shift} className="p-4 border border-[#E3E6F0] dark:border-gray-700 rounded-lg">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: shift.color }}></div>
@@ -600,13 +565,7 @@ function AnalyticsPageContent() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {[
-                    { machine: 'VMC 1', efficiency: 95, status: 'Excellent' },
-                    { machine: 'VMC 2', efficiency: 87, status: 'Good' },
-                    { machine: 'VMC 3', efficiency: 79, status: 'Good' },
-                    { machine: 'VMC 4', efficiency: 71, status: 'Average' },
-                    { machine: 'VMC 5', efficiency: 63, status: 'Average' },
-                  ].map((item) => (
+                  {([] as Array<{ machine: string; efficiency: number; status: string }>).map((item) => (
                     <div key={item.machine} className="flex items-center justify-between p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center gap-3">
                         <Cpu className="w-4 h-4 text-[#2C7BE5]" />
@@ -641,13 +600,7 @@ function AnalyticsPageContent() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {[
-                    { name: 'John Doe', tasks: 24, efficiency: 96, rating: 5 },
-                    { name: 'Jane Smith', tasks: 22, efficiency: 94, rating: 5 },
-                    { name: 'Mike Johnson', tasks: 20, efficiency: 91, rating: 4 },
-                    { name: 'Sarah Williams', tasks: 19, efficiency: 88, rating: 4 },
-                    { name: 'Tom Brown', tasks: 18, efficiency: 85, rating: 4 },
-                  ].map((operator) => (
+                  {([] as Array<{ name: string; tasks: number; efficiency: number; rating: number }>).map((operator) => (
                     <div key={operator.name} className="flex items-center justify-between p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-gradient-to-br from-[#2C7BE5] to-[#1E5BB8] rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -749,13 +702,7 @@ function AnalyticsPageContent() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {[
-                    { product: 'Part PN-001', score: 98.5, status: 'Excellent' },
-                    { product: 'Part PN-002', score: 96.2, status: 'Excellent' },
-                    { product: 'Part PN-003', score: 93.8, status: 'Good' },
-                    { product: 'Part PN-004', score: 91.5, status: 'Good' },
-                    { product: 'Part PN-005', score: 88.3, status: 'Average' },
-                  ].map((item) => (
+                  {([] as Array<{ product: string; score: number; status: string }>).map((item) => (
                     <div key={item.product} className="flex items-center justify-between p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg">
                       <div>
                         <span className="text-sm font-medium text-[#12263F] dark:text-white block">{item.product}</span>
@@ -835,13 +782,7 @@ function AnalyticsPageContent() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {[
-                    { machine: 'VMC 1', status: 'Running', uptime: '8h 45m', utilization: 95, color: '#28A745' },
-                    { machine: 'VMC 2', status: 'Running', uptime: '8h 30m', utilization: 87, color: '#28A745' },
-                    { machine: 'VMC 3', status: 'Running', uptime: '8h 15m', utilization: 79, color: '#28A745' },
-                    { machine: 'VMC 4', status: 'Idle', uptime: '0h 0m', utilization: 0, color: '#FD7E14' },
-                    { machine: 'VMC 5', status: 'Running', uptime: '7h 20m', utilization: 63, color: '#28A745' },
-                  ].map((machine) => (
+                  {([] as Array<{ machine: string; status: string; uptime: string; utilization: number; color: string }>).map((machine) => (
                     <div key={machine.machine} className="flex items-center justify-between p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: machine.color }}></div>
@@ -865,13 +806,7 @@ function AnalyticsPageContent() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {[
-                    { machine: 'VMC 9', task: 'Scheduled Maintenance', dueIn: '2 days', priority: 'High' },
-                    { machine: 'VMC 7', task: 'Oil Change', dueIn: '5 days', priority: 'Medium' },
-                    { machine: 'VMC 10', task: 'Calibration', dueIn: '7 days', priority: 'Medium' },
-                    { machine: 'VMC 3', task: 'Belt Replacement', dueIn: '10 days', priority: 'Low' },
-                    { machine: 'VMC 1', task: 'General Inspection', dueIn: '14 days', priority: 'Low' },
-                  ].map((item) => (
+                  {([] as Array<{ machine: string; task: string; dueIn: string; priority: string }>).map((item) => (
                     <div key={`${item.machine}-${item.task}`} className="flex items-center justify-between p-3 bg-[#F8F9FC] dark:bg-gray-800 rounded-lg">
                       <div>
                         <span className="text-sm font-medium text-[#12263F] dark:text-white block">{item.machine}</span>

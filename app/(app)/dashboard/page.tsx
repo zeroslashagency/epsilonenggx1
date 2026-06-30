@@ -442,41 +442,6 @@ function DashboardPageContent() {
                       </div>
                     </div>
 
-                    {/* KPI Card 5: Overall Efficiency */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-yellow-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-                      <div className="flex items-start justify-between mb-2">
-                        <Zap className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
-                        <div className="flex items-center gap-1 text-xs text-green-600">
-                          <ArrowUp className="w-3 h-3" />
-                          <span>+5%</span>
-                        </div>
-                      </div>
-                      <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                        87%
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Overall Efficiency</div>
-                      <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full w-[87%] bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
-                      </div>
-                    </div>
-
-                    {/* KPI Card 6: Units Produced */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-indigo-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-                      <div className="flex items-start justify-between mb-2">
-                        <Target className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-                        <div className="flex items-center gap-1 text-xs text-green-600">
-                          <ArrowUp className="w-3 h-3" />
-                          <span>+12%</span>
-                        </div>
-                      </div>
-                      <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                        1,247
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Units Today</div>
-                      <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full w-[78%] bg-gradient-to-r from-indigo-500 to-indigo-600"></div>
-                      </div>
-                    </div>
                   </>
                 )}
               </div>
@@ -666,7 +631,7 @@ function DashboardPageContent() {
             </div>
 
             {/* ROW C: Tactical Widgets - 3 Columns */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {/* Recent Activity / Live Feed */}
               {canViewActivity && (
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
@@ -696,73 +661,6 @@ function DashboardPageContent() {
                   </div>
                 </div>
               )}
-
-              {/* Top Operators */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
-                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                  <Award className="w-5 h-5 text-yellow-600" />
-                  Top Operators
-                </h3>
-                <div className="space-y-4">
-                  {[
-                    { name: 'John Smith', efficiency: 95, units: 156 },
-                    { name: 'Sarah Johnson', efficiency: 92, units: 148 },
-                    { name: 'Mike Davis', efficiency: 89, units: 142 },
-                    { name: 'Emily Brown', efficiency: 87, units: 138 }
-                  ].map((operator, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-gray-400">#{idx + 1}</span>
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">{operator.name}</span>
-                        </div>
-                        <span className="text-sm font-bold text-green-600">{operator.efficiency}%</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-green-500 to-green-600" style={{ width: `${operator.efficiency}%` }}></div>
-                        </div>
-                        <span className="text-xs text-gray-500">{operator.units} units</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Downtime Breakdown */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
-                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                  <PieChart className="w-5 h-5 text-red-600" />
-                  Downtime Breakdown
-                </h3>
-                <div className="space-y-3">
-                  {[
-                    { reason: 'Machine Maintenance', minutes: 85, color: 'bg-red-500' },
-                    { reason: 'Material Shortage', minutes: 42, color: 'bg-orange-500' },
-                    { reason: 'Setup Time', minutes: 28, color: 'bg-yellow-500' },
-                    { reason: 'Quality Issues', minutes: 15, color: 'bg-teal-500' }
-                  ].map((item, idx) => (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded ${item.color}`}></div>
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{item.reason}</span>
-                        </div>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white">{item.minutes}m</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden ml-5">
-                        <div className={`h-full ${item.color}`} style={{ width: `${(item.minutes / 170) * 100}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Total Downtime</span>
-                      <span className="text-lg font-bold text-red-600">170 min</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* ROW D: Production Tables (Machine Status Table) */}

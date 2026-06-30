@@ -52,13 +52,13 @@ function ChartPageContent() {
   const auth = useAuth()
   const router = useRouter()
   const [metrics, setMetrics] = useState<ProductionMetrics>({
-    productionOutput: 1250,
-    efficiencyRate: 87.5,
-    qualityScore: 94.2,
-    downtimeHours: 2.3,
-    activeOrders: 15,
-    completedOrders: 42,
-    machineUtilization: 87.5
+    productionOutput: 0,
+    efficiencyRate: 0,
+    qualityScore: 0,
+    downtimeHours: 0,
+    activeOrders: 0,
+    completedOrders: 0,
+    machineUtilization: 0
   })
   const [loading, setLoading] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState('today')
@@ -93,29 +93,9 @@ function ChartPageContent() {
       if (data.success) {
         setMetrics(data.data)
         setLastUpdate(new Date())
-      } else {
-        // Fallback to mock data if API fails
-        setMetrics({
-          productionOutput: 1250,
-          efficiencyRate: 87.5,
-          qualityScore: 94.2,
-          downtimeHours: 2.3,
-          activeOrders: 15,
-          completedOrders: 42,
-          machineUtilization: 87.5
-        })
       }
     } catch (error) {
-      // Use mock data on error
-      setMetrics({
-        productionOutput: 1250,
-        efficiencyRate: 87.5,
-        qualityScore: 94.2,
-        downtimeHours: 2.3,
-        activeOrders: 15,
-        completedOrders: 42,
-        machineUtilization: 87.5
-      })
+      // Leave metrics at their last known / zero state on error
     } finally {
       setLoading(false)
     }
@@ -125,25 +105,25 @@ function ChartPageContent() {
     {
       label: 'Production Output',
       value: metrics.productionOutput,
-      change: 12.5,
+      change: 0,
       color: '#2C7BE5'
     },
     {
       label: 'Efficiency Rate',
       value: metrics.efficiencyRate,
-      change: 5.2,
+      change: 0,
       color: '#28A745'
     },
     {
       label: 'Quality Score',
       value: metrics.qualityScore,
-      change: -1.8,
+      change: 0,
       color: '#FD7E14'
     },
     {
       label: 'Downtime Hours',
       value: metrics.downtimeHours,
-      change: -15.3,
+      change: 0,
       color: '#DC3545'
     }
   ]

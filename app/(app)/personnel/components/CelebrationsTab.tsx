@@ -27,43 +27,9 @@ export default function CelebrationsTab({ employeeCode, employeeName }: Celebrat
 
   const calculateCelebrations = () => {
     setLoading(true)
-    
-    // Mock data - In production, fetch from employee profile
-    const today = new Date()
-    const currentYear = today.getFullYear()
-    
-    // Example: Birthday on December 15
-    const birthday = new Date(currentYear, 11, 15) // Month is 0-indexed
-    if (birthday < today) {
-      birthday.setFullYear(currentYear + 1)
-    }
-    
-    // Example: Work anniversary on March 10, 2022 (joined)
-    const joinDate = new Date(2022, 2, 10)
-    const anniversary = new Date(currentYear, 2, 10)
-    if (anniversary < today) {
-      anniversary.setFullYear(currentYear + 1)
-    }
-    
-    const yearsCompleted = currentYear - joinDate.getFullYear()
-    
-    const birthdayDaysUntil = Math.ceil((birthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    const anniversaryDaysUntil = Math.ceil((anniversary.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    
-    setCelebrations([
-      {
-        type: 'birthday',
-        date: birthday.toISOString(),
-        daysUntil: birthdayDaysUntil
-      },
-      {
-        type: 'work_anniversary',
-        date: anniversary.toISOString(),
-        yearsCompleted: yearsCompleted,
-        daysUntil: anniversaryDaysUntil
-      }
-    ])
-    
+    // Real birthday / work-anniversary dates are not yet available on the
+    // employee profile. Show no fabricated celebrations until that data exists.
+    setCelebrations([])
     setLoading(false)
   }
 
