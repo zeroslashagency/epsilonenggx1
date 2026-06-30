@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseAdminClient, getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { userListLimiter } from '@/app/lib/rate-limiter'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
@@ -52,46 +52,49 @@ export async function GET(request: NextRequest) {
     const requestedLimit = parsePositiveInt(request.nextUrl.searchParams.get('limit'), DEFAULT_LIMIT)
     const limit = Math.min(requestedLimit, MAX_LIMIT)
 
-    // Get all users from auth.users (the real authenticated users)
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
-
-    if (authError) throw authError
-
-    // Get all profiles
-    const { data: profiles, error: profilesError } = await supabase
+    // Always read profiles (RLS-readable). Use the request-scoped client so this
+    // works even without a service-role key (forwards the caller's token).
+    const rscoped = getSupabaseForRequest(request)
+    const { data: profiles, error: profilesError } = await rscoped
       .from('profiles')
       .select('*')
 
     if (profilesError) throw profilesError
 
-    // Create a map of profiles by user ID for quick lookup
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
+    // Try the Auth Admin API for email/created_at enrichment. This requires the
+    // service-role key; if unavailable, fall back to the profiles table alone so
+    // the Users page still lists real users.
+    let authUserMap = new Map<string, any>()
+    try {
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
+      if (!authError && authUsers?.users) {
+        authUserMap = new Map(authUsers.users.map(u => [u.id, u]))
+      }
+    } catch {
+      // No service-role key — profile-only mode.
+    }
 
-    // Combine auth users with their profiles
-    const users = authUsers.users
-      .filter(authUser => !authUser.email?.startsWith('deleted_'))
-      // Only include app users that still have a profile row.
-      // This prevents ghost auth users from appearing if profile cleanup already happened.
-      .filter(authUser => profileMap.has(authUser.id))
-      .map(authUser => {
-        const profile = profileMap.get(authUser.id)!
+    const users = (profiles || [])
+      .filter((profile: any) => !profile.email?.startsWith('deleted_'))
+      .map((profile: any) => {
+        const authUser = authUserMap.get(profile.id)
         return {
-          id: authUser.id,
-          email: authUser.email || '',
-          full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.email || '',
+          id: profile.id,
+          email: profile.email || authUser?.email || '',
+          full_name: profile?.full_name || authUser?.user_metadata?.full_name || profile.email || '',
           role: profile?.role || 'Operator',
           role_badge: profile?.role_badge || 'Operator',
           employee_code: profile?.employee_code || null,
           department: profile?.department || null,
           designation: profile?.designation || null,
           phone: profile?.phone || null,
-          created_at: authUser.created_at,
-          updated_at: authUser.updated_at || profile?.updated_at,
+          created_at: authUser?.created_at || profile?.created_at,
+          updated_at: authUser?.updated_at || profile?.updated_at,
         }
       })
 
-    // Get roles and permissions for each user
-    const { data: userRoles, error: rolesError } = await supabase
+    // Get roles and permissions for each user (request-scoped for RLS)
+    const { data: userRoles, error: rolesError } = await rscoped
       .from('user_roles')
       .select(`
         user_id,
