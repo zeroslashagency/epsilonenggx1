@@ -85,10 +85,11 @@ export async function POST(request: NextRequest) {
     const validation = await validateRequestBody(request, updateUserPermissionsSchema)
     if (!validation.success) return validation.response
 
-    const { userId, role, permissions, standalone_attendance } = validation.data
+    const { userId, role, permissions, standalone_attendance, mobile_access } = validation.data
     const normalizedUserId = userId.trim()
     const normalizedRole = normalizeRoleInput(role)
     const normalizedStandaloneAttendance = normalizeStandaloneAttendance(standalone_attendance)
+    const normalizedMobileAccess = mobile_access === true
     const normalizedPermissions = normalizePermissions(permissions)
 
     if (!normalizedUserId) {
@@ -224,6 +225,9 @@ export async function POST(request: NextRequest) {
         role: targetRole.name,
         role_badge: targetRole.name,
         standalone_attendance: normalizedStandaloneAttendance,
+        mobile_access: normalizedMobileAccess,
+        // Bump so the mobile app's realtime listener re-pulls permissions
+        permissions_version: Date.now(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', normalizedUserId)

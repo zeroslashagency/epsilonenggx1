@@ -274,12 +274,25 @@ const standaloneAttendanceInputSchema = z.preprocess(
     .optional()
 )
 
+const mobileAccessInputSchema = z.preprocess(
+  value => {
+    if (typeof value === 'string') {
+      const v = value.trim().toUpperCase()
+      if (v === '') return undefined
+      return v === 'YES' || v === 'TRUE' || v === '1'
+    }
+    return value
+  },
+  z.boolean().optional()
+)
+
 export const updateUserPermissionsSchema = z
   .object({
     userId: z.string().trim().min(1, 'User ID is required'),
     permissions: z.union([z.array(z.any()), z.record(z.any())]).optional(),
     role: roleInputSchema,
     standalone_attendance: standaloneAttendanceInputSchema,
+    mobile_access: mobileAccessInputSchema,
   })
   .passthrough()
 

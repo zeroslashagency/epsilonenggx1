@@ -6,8 +6,10 @@ interface EditableRoleSectionProps {
   isEditing: boolean
   selectedRole: string
   standaloneAttendance: boolean
+  mobileAccess?: boolean
   onRoleChange: (role: string) => void
   onStandaloneToggle: () => void
+  onMobileToggle?: () => void
   onEdit: () => void
   onCancel: () => void
   onSave: () => void
@@ -17,8 +19,10 @@ export function EditableRoleSection({
   isEditing,
   selectedRole,
   standaloneAttendance,
+  mobileAccess = false,
   onRoleChange,
   onStandaloneToggle,
+  onMobileToggle,
   onEdit,
   onCancel,
   onSave
@@ -108,16 +112,16 @@ export function EditableRoleSection({
           </p>
         </div>
         
-        {/* Standalone Attendance Toggle */}
+        {/* Mobile App Access Toggle */}
         <div className="pt-4 border-t border-blue-200 dark:border-blue-800">
           <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">
-            Additional Access
+            Mobile App Access
           </label>
           <div className="flex items-start gap-3">
             <input
               type="checkbox"
-              checked={standaloneAttendance}
-              onChange={onStandaloneToggle}
+              checked={mobileAccess}
+              onChange={onMobileToggle}
               disabled={!isEditing}
               className={`mt-1 w-4 h-4 text-[#2C7BE5] border-gray-300 rounded focus:ring-[#2C7BE5] ${
                 !isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
@@ -125,10 +129,10 @@ export function EditableRoleSection({
             />
             <div>
               <p className="text-sm font-medium text-[#12263F] dark:text-white">
-                Enable Standalone Attendance Site
+                Enable Mobile App Access
               </p>
               <p className="text-xs text-[#95AAC9] mt-1">
-                Allow user to access the dedicated attendance website with same credentials
+                Allow this employee to log in to the Epsilon mobile app (attendance, GPS punch, FIR, device monitoring). Their role&apos;s mobile permissions control which features appear.
               </p>
             </div>
           </div>

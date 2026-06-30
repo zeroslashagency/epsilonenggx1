@@ -54,6 +54,7 @@ function UsersPageZoho() {
   const [loadingActivity, setLoadingActivity] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editedRole, setEditedRole] = useState('')
+  const [mobileAccess, setMobileAccess] = useState(false)
   const [showDrawer, setShowDrawer] = useState(false)
   const [editedPhone, setEditedPhone] = useState('')
   const [editedEmployeeCode, setEditedEmployeeCode] = useState('')
@@ -152,6 +153,7 @@ function UsersPageZoho() {
         // Use permissions from API response (already includes standalone_attendance if enabled)
         setPermissions(result.permissions || [])
         setEditedRole(result.role || user.role)
+        setMobileAccess(result.mobile_access === true)
         
         console.log('✅ [USER-SELECT] Permissions loaded:', {
           permissions: result.permissions,
@@ -247,7 +249,8 @@ function UsersPageZoho() {
         userId: selectedUser.id,
         role: roleToSave,
         permissions,
-        standalone_attendance: hasStandaloneAttendance ? 'YES' : 'NO'
+        standalone_attendance: hasStandaloneAttendance ? 'YES' : 'NO',
+        mobile_access: mobileAccess
       }
 
       console.log('📤 [SAVE] Sending to API:', payload)
@@ -999,6 +1002,7 @@ function UsersPageZoho() {
                         isEditing={isEditing}
                         selectedRole={isEditing ? editedRole : selectedUser.role}
                         standaloneAttendance={permissions.includes('standalone_attendance')}
+                        mobileAccess={mobileAccess}
                         onRoleChange={setEditedRole}
                         onStandaloneToggle={() => {
                           if (permissions.includes('standalone_attendance')) {
@@ -1007,6 +1011,7 @@ function UsersPageZoho() {
                             setPermissions([...permissions, 'standalone_attendance'])
                           }
                         }}
+                        onMobileToggle={() => setMobileAccess(v => !v)}
                         onEdit={() => setIsEditing(true)}
                         onCancel={handleCancelEdit}
                         onSave={handleSaveChanges}
