@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Play, Pause, Search, RefreshCw, Smartphone, MapPin, Clock, Download, Volume2, X, ExternalLink } from 'lucide-react'
 import { apiGet } from '@/app/lib/utils/api-client'
@@ -30,7 +30,6 @@ function CallLogsPage() {
     const [searchQuery, setSearchQuery] = useState('')
 
     const [playingId, setPlayingId] = useState<string | null>(null)
-    const audioRef = useRef<HTMLAudioElement | null>(null)
 
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [selectedLog, setSelectedLog] = useState<CallLogWithAudio | null>(null)
@@ -78,19 +77,8 @@ function CallLogsPage() {
 
     const handlePlayPause = (log: CallLogWithAudio) => {
         if (!log.audio_url) return
-        if (playingId === log.id) {
-            audioRef.current?.pause()
-            setPlayingId(null)
-        } else {
-            if (audioRef.current) {
-                audioRef.current.pause()
-            }
-            const audio = new Audio(log.audio_url)
-            audio.onended = () => setPlayingId(null)
-            audio.play().catch(err => console.error("Audio play error:", err))
-            audioRef.current = audio
-            setPlayingId(log.id)
-        }
+        // Toggle the inline native <audio controls> player for this row.
+        setPlayingId(prev => (prev === log.id ? null : log.id))
     }
 
     const formatDuration = (seconds: number) => {
@@ -374,14 +362,18 @@ function CallLogsPage() {
                                                 </div>
                                             </div>
 
-                                            {playingId === log.id && (
+                                            {playingId === log.id && log.audio_url && (
                                                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
                                                     <div className="flex items-center gap-3">
                                                         <Volume2 className="h-4 w-4 text-slate-500 dark:text-slate-300" />
-                                                        <div className="h-1.5 flex-1 rounded-full bg-slate-200/80 dark:bg-white/10">
-                                                            <div className="h-full w-1/2 rounded-full bg-slate-900/80 animate-pulse dark:bg-white/70"></div>
-                                                        </div>
-                                                        <span className="text-xs text-slate-500 dark:text-slate-300">Playing • {formatDuration(log.duration_seconds)}</span>
+                                                        <audio
+                                                            src={log.audio_url}
+                                                            controls
+                                                            autoPlay
+                                                            onEnded={() => setPlayingId(null)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="h-9 w-full"
+                                                        />
                                                     </div>
                                                 </div>
                                             )}
