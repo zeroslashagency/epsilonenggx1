@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
-import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
+import { requireRole } from '@/app/lib/features/auth/auth.middleware'
 import fs from 'fs'
 import path from 'path'
 
@@ -12,8 +12,8 @@ import path from 'path'
  * ADMIN ONLY
  */
 export async function POST(request: NextRequest) {
-  // Restrict migration execution to high-privilege role managers
-  const authResult = await requirePermission(request, 'roles.manage')
+  // Restrict migration execution to Super Admin only (arbitrary SQL execution)
+  const authResult = await requireRole(request, ['Super Admin'])
   if (authResult instanceof NextResponse) return authResult
 
   try {

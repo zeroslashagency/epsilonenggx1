@@ -2,43 +2,50 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
+import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
 
 export async function POST(request: NextRequest) {
-  // ✅ PERMISSION CHECK: Require users.edit permission
+  // PERMISSION CHECK: Require users.edit permission
   const authResult = await requirePermission(request, 'users.edit')
   if (authResult instanceof NextResponse) return authResult
-  const user = authResult
 
   try {
     const { userId, userEmail, password } = await request.json()
 
     if (!userId || !password) {
-      return NextResponse.json({ 
-        error: 'User ID and password are required' 
-      }, { status: 400 })
+      return NextResponse.json(
+        { error: 'User ID and password are required' },
+        { status: 400 }
+      )
     }
 
-    if (password.length < 8) {
-      return NextResponse.json({ 
-        error: 'Password must be at least 8 characters long' 
-      }, { status: 400 })
+    if (typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      )
     }
 
-    
-    // Since we can't use Auth Admin API due to invalid service role key,
-    // we'll store the password intention and return success
-    // In a real implementation with valid service role key, this would update Supabase Auth
-    
+    // Update the password via Supabase Auth Admin API (requires service role key)
+    const supabase = getSupabaseAdminClient()
+    const { error } = await supabase.auth.admin.updateUserById(userId, { password })
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message || 'Failed to update password' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Password updated successfully for ${userEmail}`,
-      timestamp: new Date().toISOString()
+      message: `Password updated successfully${userEmail ? ` for ${userEmail}` : ''}`,
+      timestamp: new Date().toISOString(),
     })
-
   } catch (error: any) {
-    return NextResponse.json({
-      error: error?.message || 'Internal server error'
-    }, { status: 500 })
+    return NextResponse.json(
+      { error: error?.message || 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

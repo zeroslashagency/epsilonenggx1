@@ -57,18 +57,54 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  const pathname = request.nextUrl.pathname
+  const isAdminApi = pathname.startsWith('/api/admin')
+
   // Defined Protected Routes
-  const isProtectedRoute = 
-    request.nextUrl.pathname.startsWith('/tools') ||
-    request.nextUrl.pathname.startsWith('/settings') ||
-    request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/api/admin')
+  const isProtectedRoute =
+    pathname.startsWith('/tools') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/dashboard') ||
+    isAdminApi
 
   // Auth Logic
   if (isProtectedRoute && !user) {
+    // Admin API: reject with 401 JSON instead of redirecting
+    if (isAdminApi) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized', message: 'Authentication required.' },
+        { status: 401 }
+      )
+    }
     const redirectUrl = new URL('/auth', request.url)
-    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+    redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
+  }
+
+  // Admin API: require an admin-level role at the edge (defense in depth;
+  // per-route guards still enforce granular permissions)
+  if (isAdminApi && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, role_badge')
+      .eq('id', user.id)
+      .single()
+
+    const role = profile?.role
+    const badge = (profile?.role_badge || '').toString().toLowerCase().replace(/\s+/g, '_')
+    const isAdminLevel =
+      role === 'Super Admin' ||
+      role === 'super_admin' ||
+      role === 'Admin' ||
+      role === 'Manager' ||
+      badge === 'super_admin'
+
+    if (!isAdminLevel) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden', message: 'Admin access required.' },
+        { status: 403 }
+      )
+    }
   }
 
   // Redirect authenticated users away from Auth page
