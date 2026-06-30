@@ -258,7 +258,7 @@ function DashboardPageContent() {
         ) : (
           <>
             {/* Global Header Bar */}
-            <div className="bg-gradient-to-r from-blue-400 to-indigo-400 dark:from-blue-500 dark:to-indigo-700 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-lg">
+            <div className="bg-primary text-primary-foreground rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-sm">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                 <div className="flex items-center gap-3 sm:gap-6">
                   <div>
@@ -386,7 +386,7 @@ function DashboardPageContent() {
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Employees</div>
                       <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full w-full bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                        <div className="h-full w-full bg-primary"></div>
                       </div>
                     </div>
 
@@ -404,7 +404,7 @@ function DashboardPageContent() {
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Present Today</div>
                       <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-green-500 to-green-600" style={{ width: `${stats.attendancePercentage}%` }}></div>
+                        <div className="h-full bg-primary" style={{ width: `${stats.attendancePercentage}%` }}></div>
                       </div>
                     </div>
 
@@ -421,7 +421,7 @@ function DashboardPageContent() {
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Active Orders</div>
                       <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full w-0 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                        <div className="h-full w-0 bg-primary"></div>
                       </div>
                     </div>
 
@@ -438,7 +438,7 @@ function DashboardPageContent() {
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Machines Running</div>
                       <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-orange-500 to-orange-600" style={{ width: `${stats.utilizationRate}%` }}></div>
+                        <div className="h-full bg-primary" style={{ width: `${stats.utilizationRate}%` }}></div>
                       </div>
                     </div>
 
@@ -489,7 +489,7 @@ function DashboardPageContent() {
                       </div>
 
                       {/* Chart Placeholder */}
-                      <div className="h-60 sm:h-80 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+                      <div className="h-60 sm:h-80 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
                         <div className="text-center px-4">
                           <BarChart3 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3" />
                           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">Production Chart</p>
@@ -500,7 +500,7 @@ function DashboardPageContent() {
 
                     {/* Quick KPI Cards Below Chart */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="group bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-3 sm:p-5 border border-green-200 dark:border-green-700 shadow-sm hover:shadow-green-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                      <div className="group bg-card text-card-foreground rounded-xl p-3 sm:p-5 border border-border shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                         <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                           <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                             <Target className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
@@ -514,7 +514,7 @@ function DashboardPageContent() {
                         </div>
                       </div>
 
-                      <div className="group bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-5 border border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-blue-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                      <div className="group bg-card text-card-foreground rounded-xl p-5 border border-border shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                         <div className="flex items-center gap-2 mb-3">
                           <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                             <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -528,7 +528,7 @@ function DashboardPageContent() {
                         </div>
                       </div>
 
-                      <div className="group bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-5 border border-orange-200 dark:border-orange-700 shadow-sm hover:shadow-orange-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                      <div className="group bg-card text-card-foreground rounded-xl p-5 border border-border shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                         <div className="flex items-center gap-2 mb-3">
                           <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                             <Activity className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -542,7 +542,7 @@ function DashboardPageContent() {
                         </div>
                       </div>
 
-                      <div className="group bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-xl p-5 border border-pink-200 dark:border-pink-700 shadow-sm hover:shadow-pink-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                      <div className="group bg-card text-card-foreground rounded-xl p-5 border border-border shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                         <div className="flex items-center gap-2 mb-3">
                           <div className="p-2 bg-pink-100 dark:bg-pink-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                             <Wrench className="w-5 h-5 text-pink-600 dark:text-pink-400" />
@@ -606,7 +606,7 @@ function DashboardPageContent() {
                 )}
 
                 {/* Quick Actions */}
-                <div className="bg-gradient-to-br from-blue-500 to-cyan-500 dark:from-blue-700 dark:to-cyan-700 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
+                <div className="bg-primary text-primary-foreground rounded-xl p-5 shadow-sm hover:shadow-md transition-all duration-300">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2">
                     <Zap className="w-5 h-5" />
                     Quick Actions
