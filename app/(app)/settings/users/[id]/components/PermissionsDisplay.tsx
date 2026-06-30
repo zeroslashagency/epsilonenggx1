@@ -5,11 +5,10 @@ import { PermissionBadge } from './PermissionBadge'
 
 interface PermissionsDisplayProps {
   role: string
-  standaloneAttendance: boolean
 }
 
-export function PermissionsDisplay({ role, standaloneAttendance }: PermissionsDisplayProps) {
-  const groupedPermissions = getGroupedPermissions(role, standaloneAttendance)
+export function PermissionsDisplay({ role }: PermissionsDisplayProps) {
+  const groupedPermissions = getGroupedPermissions(role)
   
   return (
     <div className="bg-gray-50 dark:bg-gray-900/10 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
@@ -63,7 +62,7 @@ export function PermissionsDisplay({ role, standaloneAttendance }: PermissionsDi
       <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded">
         <p className="text-xs text-blue-800 dark:text-blue-400">
           💡 <strong>Note:</strong> Permissions are automatically determined by the user's role and cannot be changed individually. 
-          Only the role and standalone attendance access can be modified.
+          Only the role can be modified.
         </p>
       </div>
     </div>

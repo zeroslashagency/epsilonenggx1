@@ -11,7 +11,6 @@ export interface UserData {
   last_login?: string
   last_sign_in_at?: string
   email_confirmed_at?: string
-  standalone_attendance?: 'YES' | 'NO'
   status?: 'active' | 'pending' | 'inactive'
   user_metadata?: {
     full_name?: string
@@ -27,7 +26,6 @@ export interface UserPermissions {
   chart?: boolean
   analytics?: boolean
   attendance?: boolean
-  standalone_attendance?: boolean
   production?: boolean
   monitoring?: boolean
   manage_users?: boolean

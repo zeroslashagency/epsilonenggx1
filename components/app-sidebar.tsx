@@ -117,9 +117,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (isSuperAdmin || canUserAttendanceAttendance) {
       mainItems.push({ id: 'attendance', label: 'Attendance', href: '/attendance', icon: Clock })
     }
-    if (isSuperAdmin || hasPermission('main_attendance', 'Standalone Attendance', 'view')) {
-      mainItems.push({ id: 'standalone-attendance', label: 'Standalone Attendance', href: 'https://epsilon-attendance.vercel.app/', icon: UserCheck })
-    }
     if (mainItems.length > 0) {
       groups.push({ label: 'MAIN', items: mainItems })
     }

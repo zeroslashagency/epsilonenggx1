@@ -2,8 +2,12 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 export async function POST(request: NextRequest) {
+  const authResult = await requirePermission(request as any, 'users.edit')
+  if (authResult instanceof NextResponse) return authResult
+
   try {
     const supabase = getSupabaseClient()
     

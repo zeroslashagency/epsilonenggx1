@@ -6,8 +6,8 @@ import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 // SmartOffice API Configuration
 const SMART_OFFICE_CONFIG = {
-  baseUrl: 'http://localhost:84/api/v2/WebAPI',
-  apiKey: '344612092518'
+  baseUrl: process.env.SMARTOFFICE_API_URL || 'http://localhost:84/api/v2/WebAPI',
+  apiKey: process.env.SMARTOFFICE_API_KEY || ''
 }
 
 export async function GET(request: NextRequest) {

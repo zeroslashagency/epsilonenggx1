@@ -77,3 +77,9 @@ mobile/
 
 # Test coverage reports
 coverage/
+
+# Heap snapshots / profiling
+*.heapsnapshot
+
+# Generated run artifacts
+/reports/
