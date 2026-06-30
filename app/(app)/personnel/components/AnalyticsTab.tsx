@@ -27,7 +27,7 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
     attendanceRate: 0,
     punctualityRate: 0,
     avgCheckInTime: '--:--',
-    totalDays: 0
+    totalDays: 0,
   }
 
   // Team averages
@@ -35,11 +35,16 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
     attendanceRate: 0,
     punctualityRate: 0,
     avgCheckInTime: '--:--',
-    totalDays: 0
+    totalDays: 0,
   }
 
   // Department comparison
-  const departmentComparison: Array<{ department: string; attendance: number; punctuality: number; employees: number }> = []
+  const departmentComparison: Array<{
+    department: string
+    attendance: number
+    punctuality: number
+    employees: number
+  }> = []
 
   // Weekly trend data
   const weeklyTrend: TrendData[] = []
@@ -71,7 +76,9 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
         <BarChart3 className="w-8 h-8 text-purple-600" />
         <div>
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics & Trends</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Comparative analytics and performance insights</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Comparative analytics and performance insights
+          </p>
         </div>
       </div>
 
@@ -86,25 +93,40 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
           {/* Attendance Rate */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Attendance Rate</span>
-              <span className={`text-sm font-bold ${getComparisonColor(employeeStats.attendanceRate, teamStats.attendanceRate)}`}>
-                {getComparisonIcon(employeeStats.attendanceRate, teamStats.attendanceRate)} {Math.abs(employeeStats.attendanceRate - teamStats.attendanceRate)}%
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Attendance Rate
+              </span>
+              <span
+                className={`text-sm font-bold ${getComparisonColor(employeeStats.attendanceRate, teamStats.attendanceRate)}`}
+              >
+                {getComparisonIcon(employeeStats.attendanceRate, teamStats.attendanceRate)}{' '}
+                {Math.abs(employeeStats.attendanceRate - teamStats.attendanceRate)}%
               </span>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">You</span>
-                <span className="text-lg font-bold text-blue-600">{employeeStats.attendanceRate}%</span>
+                <span className="text-lg font-bold text-blue-600">
+                  {employeeStats.attendanceRate}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${employeeStats.attendanceRate}%` }}></div>
+                <div
+                  className="bg-blue-600 h-3 rounded-full"
+                  style={{ width: `${employeeStats.attendanceRate}%` }}
+                ></div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Team Average</span>
-                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">{teamStats.attendanceRate}%</span>
+                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                  {teamStats.attendanceRate}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-gray-400 h-2 rounded-full" style={{ width: `${teamStats.attendanceRate}%` }}></div>
+                <div
+                  className="bg-gray-400 h-2 rounded-full"
+                  style={{ width: `${teamStats.attendanceRate}%` }}
+                ></div>
               </div>
             </div>
           </div>
@@ -112,25 +134,40 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
           {/* Punctuality Rate */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Punctuality Rate</span>
-              <span className={`text-sm font-bold ${getComparisonColor(employeeStats.punctualityRate, teamStats.punctualityRate)}`}>
-                {getComparisonIcon(employeeStats.punctualityRate, teamStats.punctualityRate)} {Math.abs(employeeStats.punctualityRate - teamStats.punctualityRate)}%
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Punctuality Rate
+              </span>
+              <span
+                className={`text-sm font-bold ${getComparisonColor(employeeStats.punctualityRate, teamStats.punctualityRate)}`}
+              >
+                {getComparisonIcon(employeeStats.punctualityRate, teamStats.punctualityRate)}{' '}
+                {Math.abs(employeeStats.punctualityRate - teamStats.punctualityRate)}%
               </span>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">You</span>
-                <span className="text-lg font-bold text-green-600">{employeeStats.punctualityRate}%</span>
+                <span className="text-lg font-bold text-green-600">
+                  {employeeStats.punctualityRate}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                <div className="bg-green-600 h-3 rounded-full" style={{ width: `${employeeStats.punctualityRate}%` }}></div>
+                <div
+                  className="bg-green-600 h-3 rounded-full"
+                  style={{ width: `${employeeStats.punctualityRate}%` }}
+                ></div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Team Average</span>
-                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">{teamStats.punctualityRate}%</span>
+                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                  {teamStats.punctualityRate}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-gray-400 h-2 rounded-full" style={{ width: `${teamStats.punctualityRate}%` }}></div>
+                <div
+                  className="bg-gray-400 h-2 rounded-full"
+                  style={{ width: `${teamStats.punctualityRate}%` }}
+                ></div>
               </div>
             </div>
           </div>
@@ -138,7 +175,8 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
 
         <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <p className="text-sm text-blue-900 dark:text-blue-300">
-            <strong>Great job!</strong> You're performing above team average in both attendance and punctuality. Keep up the excellent work! 🎉
+            <strong>Great job!</strong> You're performing above team average in both attendance and
+            punctuality. Keep up the excellent work! 🎉
           </p>
         </div>
       </div>
@@ -155,7 +193,9 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
             <div key={idx} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <div className="font-semibold text-gray-900 dark:text-white">{dept.department}</div>
+                  <div className="font-semibold text-gray-900 dark:text-white">
+                    {dept.department}
+                  </div>
                   <div className="text-xs text-gray-500">{dept.employees} employees</div>
                 </div>
                 <div className="flex gap-4">
@@ -171,10 +211,16 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${dept.attendance}%` }}></div>
+                  <div
+                    className="bg-blue-600 h-2 rounded-full"
+                    style={{ width: `${dept.attendance}%` }}
+                  ></div>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: `${dept.punctuality}%` }}></div>
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: `${dept.punctuality}%` }}
+                  ></div>
                 </div>
               </div>
             </div>
@@ -195,7 +241,9 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
             {weeklyTrend.map((week, idx) => (
               <div key={idx}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{week.period}</span>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {week.period}
+                  </span>
                   <div className="flex gap-3 text-xs">
                     <span className="text-blue-600 font-semibold">{week.attendance}%</span>
                     <span className="text-green-600 font-semibold">{week.punctuality}%</span>
@@ -203,10 +251,16 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${week.attendance}%` }}></div>
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      style={{ width: `${week.attendance}%` }}
+                    ></div>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div className="bg-green-600 h-2 rounded-full transition-all" style={{ width: `${week.punctuality}%` }}></div>
+                    <div
+                      className="bg-green-600 h-2 rounded-full transition-all"
+                      style={{ width: `${week.punctuality}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -236,7 +290,9 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
             {monthlyTrend.map((month, idx) => (
               <div key={idx}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{month.period}</span>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {month.period}
+                  </span>
                   <div className="flex gap-3 text-xs">
                     <span className="text-blue-600 font-semibold">{month.attendance}%</span>
                     <span className="text-green-600 font-semibold">{month.punctuality}%</span>
@@ -244,10 +300,16 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${month.attendance}%` }}></div>
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      style={{ width: `${month.attendance}%` }}
+                    ></div>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div className="bg-green-600 h-2 rounded-full transition-all" style={{ width: `${month.punctuality}%` }}></div>
+                    <div
+                      className="bg-green-600 h-2 rounded-full transition-all"
+                      style={{ width: `${month.punctuality}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -256,7 +318,8 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
 
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              <strong className="text-green-600">Trending Up:</strong> Your attendance has improved by 4% over the last 4 months!
+              <strong className="text-green-600">Trending Up:</strong> Your attendance has improved
+              by 4% over the last 4 months!
             </div>
           </div>
         </div>
@@ -291,7 +354,7 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
                   </div>
                   <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-8 relative overflow-hidden">
                     {data.count > 0 && (
-                      <div 
+                      <div
                         className={`${getColor()} h-8 rounded-full transition-all flex items-center justify-end pr-3`}
                         style={{ width: `${intensity}%` }}
                       >
@@ -308,9 +371,11 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
             <div className="flex items-start gap-3">
               <div className="text-2xl">🎯</div>
               <div>
-                <div className="font-semibold text-gray-900 dark:text-white mb-1">Consistency Analysis</div>
+                <div className="font-semibold text-gray-900 dark:text-white mb-1">
+                  Consistency Analysis
+                </div>
                 <div className="text-sm text-gray-700 dark:text-gray-300">
-                  You typically check in between <strong>8:00-9:00 AM</strong> (12 out of 20 days). 
+                  You typically check in between <strong>8:00-9:00 AM</strong> (12 out of 20 days).
                   This shows good consistency! Try to maintain this pattern for optimal punctuality.
                 </div>
               </div>
@@ -325,15 +390,21 @@ export default function AnalyticsTab({ employeeCode, employeeName }: AnalyticsTa
         <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
           <div className="flex items-start gap-2">
             <span className="text-green-600 font-bold">✓</span>
-            <span>Your attendance rate (95%) is <strong>3% above</strong> team average</span>
+            <span>
+              Your attendance rate (95%) is <strong>3% above</strong> team average
+            </span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-green-600 font-bold">✓</span>
-            <span>Punctuality improved by <strong>7%</strong> from Week 2 to Week 4</span>
+            <span>
+              Punctuality improved by <strong>7%</strong> from Week 2 to Week 4
+            </span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-blue-600 font-bold">→</span>
-            <span>Most consistent check-in time: <strong>8:00-9:00 AM</strong></span>
+            <span>
+              Most consistent check-in time: <strong>8:00-9:00 AM</strong>
+            </span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-600 font-bold">!</span>

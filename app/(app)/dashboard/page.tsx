@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -33,7 +33,7 @@ import {
   TrendingDown,
   PieChart,
   FileText,
-  Plus
+  Plus,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/app/lib/utils/api-client'
@@ -41,17 +41,18 @@ import { useAuth } from '@/app/lib/contexts/auth-context'
 import { hasPermission } from '@/app/lib/utils/permission-checker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Shield } from 'lucide-react'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { MachineStatusHub } from "@/components/dashboard/machine-status-hub"
-import { DeviceLogViewer } from "@/components/dashboard/device-log-viewer"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Shield } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { MachineStatusHub } from '@/components/dashboard/machine-status-hub'
+import { DeviceLogViewer } from '@/components/dashboard/device-log-viewer'
 
 // ✅ Helper to map machine data for the table
 function linkMachinesTableData(machines: any[]) {
@@ -62,7 +63,7 @@ function linkMachinesTableData(machines: any[]) {
     status: m.status || 'idle',
     order: m.current_order?.order_number || '—',
     operator: '—',
-    utilization: m.efficiency || 0
+    utilization: m.efficiency || 0,
   }))
 }
 
@@ -109,7 +110,7 @@ function DashboardPageContent() {
     isLoading: queryLoading,
     isError,
     error: queryError,
-    refetch
+    refetch,
   } = useQuery({
     queryKey: ['dashboard-summary'],
     queryFn: async () => {
@@ -126,7 +127,7 @@ function DashboardPageContent() {
   const {
     data: machinesData,
     isLoading: machinesLoading,
-    refetch: refetchMachines
+    refetch: refetchMachines,
   } = useQuery({
     queryKey: ['machines-list'],
     queryFn: async () => {
@@ -143,7 +144,7 @@ function DashboardPageContent() {
   const {
     data: alertsData,
     isLoading: alertsLoading,
-    refetch: refetchAlerts
+    refetch: refetchAlerts,
   } = useQuery({
     queryKey: ['system-alerts'],
     queryFn: async () => {
@@ -160,8 +161,12 @@ function DashboardPageContent() {
   const stats = useMemo<DashboardStats>(() => {
     // Calculate machines running from real data
     const machines = machinesData?.data || machinesData || []
-    const runningCount = Array.isArray(machines) ? machines.filter((m: any) => m.status === 'running').length : 0
-    const activeOrdersCount = Array.isArray(machines) ? machines.filter((m: any) => m.current_order).length : 0
+    const runningCount = Array.isArray(machines)
+      ? machines.filter((m: any) => m.status === 'running').length
+      : 0
+    const activeOrdersCount = Array.isArray(machines)
+      ? machines.filter((m: any) => m.current_order).length
+      : 0
     const totalMacs = Array.isArray(machines) ? machines.length : 7
     const utilization = totalMacs > 0 ? Math.round((runningCount / totalMacs) * 100) : 0
 
@@ -172,7 +177,7 @@ function DashboardPageContent() {
       activeOrders: activeOrdersCount,
       machinesRunning: runningCount,
       totalMachines: totalMacs,
-      utilizationRate: utilization
+      utilizationRate: utilization,
     }
   }, [dashboardData, machinesData])
 
@@ -183,31 +188,40 @@ function DashboardPageContent() {
   const lastUpdate = dashboardData?.lastUpdated ? new Date(dashboardData.lastUpdated) : new Date()
 
   // Dashboard sub-item permission checks
-  const canViewOverview = auth.userRole === 'Super Admin' ||
+  const canViewOverview =
+    auth.userRole === 'Super Admin' ||
     hasPermission(auth.userPermissions, 'main_dashboard', 'Overview Widget', 'view')
 
-  const canViewMetrics = auth.userRole === 'Super Admin' ||
+  const canViewMetrics =
+    auth.userRole === 'Super Admin' ||
     hasPermission(auth.userPermissions, 'main_dashboard', 'Production Metrics', 'view')
 
-  const canViewActivity = auth.userRole === 'Super Admin' ||
+  const canViewActivity =
+    auth.userRole === 'Super Admin' ||
     hasPermission(auth.userPermissions, 'main_dashboard', 'Recent Activity', 'view')
 
-  const canViewMachines = auth.userRole === 'Super Admin' ||
+  const canViewMachines =
+    auth.userRole === 'Super Admin' ||
     hasPermission(auth.userPermissions, 'main_dashboard', 'Machine Status Table', 'view')
 
-  const canViewAlerts = auth.userRole === 'Super Admin' ||
+  const canViewAlerts =
+    auth.userRole === 'Super Admin' ||
     hasPermission(auth.userPermissions, 'main_dashboard', 'Alerts Panel', 'view')
 
-  const canExportOverview = auth.userRole === 'Super Admin' ||
+  const canExportOverview =
+    auth.userRole === 'Super Admin' ||
     hasPermission(auth.userPermissions, 'main_dashboard', 'Overview Widget', 'export')
 
-  const canExportMetrics = auth.userRole === 'Super Admin' ||
+  const canExportMetrics =
+    auth.userRole === 'Super Admin' ||
     hasPermission(auth.userPermissions, 'main_dashboard', 'Production Metrics', 'export')
 
-  const canExportMachines = auth.userRole === 'Super Admin' ||
+  const canExportMachines =
+    auth.userRole === 'Super Admin' ||
     hasPermission(auth.userPermissions, 'main_dashboard', 'Machine Status Table', 'export')
 
-  const hasAnyDashboardPermission = canViewOverview || canViewMetrics || canViewActivity || canViewMachines || canViewAlerts
+  const hasAnyDashboardPermission =
+    canViewOverview || canViewMetrics || canViewActivity || canViewMachines || canViewAlerts
 
   // Map refresh button to refetch
   const fetchDashboardData = () => {
@@ -215,7 +229,6 @@ function DashboardPageContent() {
     refetchMachines()
     refetchAlerts()
   }
-
 
   // Show loading while checking auth (single check, not duplicate)
   if (auth.isLoading) {
@@ -250,8 +263,8 @@ function DashboardPageContent() {
                 No Dashboard Permissions
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
-                You don't have permission to view any dashboard components.
-                Contact your administrator to request access.
+                You don't have permission to view any dashboard components. Contact your
+                administrator to request access.
               </p>
             </div>
           </div>
@@ -266,7 +279,9 @@ function DashboardPageContent() {
                       <Activity className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
                       Production Dashboard
                     </h1>
-                    <p className="text-blue-100 text-xs sm:text-sm mt-1">Real-time manufacturing intelligence</p>
+                    <p className="text-blue-100 text-xs sm:text-sm mt-1">
+                      Real-time manufacturing intelligence
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -283,11 +298,17 @@ function DashboardPageContent() {
                   <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-white/10 rounded-lg border border-white/20">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <span className="text-xs text-white font-medium">Live</span>
-                    <span className="text-xs text-blue-100 hidden sm:inline">{lastUpdate.toLocaleTimeString()}</span>
+                    <span className="text-xs text-blue-100 hidden sm:inline">
+                      {lastUpdate.toLocaleTimeString()}
+                    </span>
                   </div>
 
                   {/* Notifications - Using Alerts Data */}
-                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 relative hidden sm:flex">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/10 relative hidden sm:flex"
+                  >
                     <Bell className="w-5 h-5" />
                     {alertsData?.length > 0 && (
                       <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
@@ -304,7 +325,9 @@ function DashboardPageContent() {
                     disabled={loading}
                     className="text-white hover:bg-white/10 p-2"
                   >
-                    <RefreshCw className={`h-4 w-4 sm:h-5 sm:w-5 ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCw
+                      className={`h-4 w-4 sm:h-5 sm:w-5 ${loading ? 'animate-spin' : ''}`}
+                    />
                   </Button>
                 </div>
               </div>
@@ -348,7 +371,11 @@ function DashboardPageContent() {
                   </Select>
                 </div>
                 {canExportOverview && (
-                  <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 text-xs sm:text-sm w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 sm:gap-2 text-xs sm:text-sm w-full sm:w-auto"
+                  >
                     <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Export
                   </Button>
@@ -356,14 +383,16 @@ function DashboardPageContent() {
               </div>
             </div>
 
-
             {/* ROW A: KPI Strip - 6 Cards (Overview Widget) */}
             {canViewOverview && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-fade-in">
                 {loading ? (
                   <>
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-4 animate-pulse border border-gray-200 dark:border-gray-700">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                      <div
+                        key={i}
+                        className="bg-white dark:bg-gray-800 rounded-lg p-4 animate-pulse border border-gray-200 dark:border-gray-700"
+                      >
                         <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
                         <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
                         <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -384,7 +413,9 @@ function DashboardPageContent() {
                       <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
                         {stats.totalEmployees}
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Employees</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                        Total Employees
+                      </div>
                       <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div className="h-full w-full bg-primary"></div>
                       </div>
@@ -402,9 +433,14 @@ function DashboardPageContent() {
                       <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
                         {stats.presentToday}
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Present Today</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                        Present Today
+                      </div>
                       <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: `${stats.attendancePercentage}%` }}></div>
+                        <div
+                          className="h-full bg-primary"
+                          style={{ width: `${stats.attendancePercentage}%` }}
+                        ></div>
                       </div>
                     </div>
 
@@ -419,7 +455,9 @@ function DashboardPageContent() {
                       <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
                         {stats.activeOrders}
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Active Orders</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                        Active Orders
+                      </div>
                       <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div className="h-full w-0 bg-primary"></div>
                       </div>
@@ -436,12 +474,16 @@ function DashboardPageContent() {
                       <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
                         {stats.machinesRunning}/{stats.totalMachines}
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Machines Running</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                        Machines Running
+                      </div>
                       <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: `${stats.utilizationRate}%` }}></div>
+                        <div
+                          className="h-full bg-primary"
+                          style={{ width: `${stats.utilizationRate}%` }}
+                        ></div>
                       </div>
                     </div>
-
                   </>
                 )}
               </div>
@@ -452,7 +494,10 @@ function DashboardPageContent() {
               <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-5 h-5 text-blue-500" />
                 <h2 className="text-xl font-bold tracking-tight">Live Production Pulse</h2>
-                <Badge variant="outline" className="ml-2 animate-pulse bg-emerald-50 text-emerald-700 border-emerald-200">
+                <Badge
+                  variant="outline"
+                  className="ml-2 animate-pulse bg-emerald-50 text-emerald-700 border-emerald-200"
+                >
                   Live Tracking
                 </Badge>
               </div>
@@ -473,7 +518,9 @@ function DashboardPageContent() {
                             <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                             Production Timeline
                           </h2>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Real-time production metrics</p>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Real-time production metrics
+                          </p>
                         </div>
                         <div className="inline-flex items-center bg-gray-100 dark:bg-gray-700 rounded-full p-1 w-full sm:w-auto">
                           <button className="flex-1 sm:flex-none px-3 sm:px-6 py-1.5 sm:py-2 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium text-xs sm:text-sm shadow-sm transition-all">
@@ -492,8 +539,12 @@ function DashboardPageContent() {
                       <div className="h-60 sm:h-80 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
                         <div className="text-center px-4">
                           <BarChart3 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3" />
-                          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">Production Chart</p>
-                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">Interactive visualization coming soon</p>
+                          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">
+                            Production Chart
+                          </p>
+                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
+                            Interactive visualization coming soon
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -505,12 +556,21 @@ function DashboardPageContent() {
                           <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                             <Target className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
                           </div>
-                          <span className="text-[10px] sm:text-xs font-semibold text-green-700 dark:text-green-400">TARGET</span>
+                          <span className="text-[10px] sm:text-xs font-semibold text-green-700 dark:text-green-400">
+                            TARGET
+                          </span>
                         </div>
-                        <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">1,500</div>
-                        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">83% achieved</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">
+                          1,500
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
+                          83% achieved
+                        </div>
                         <div className="mt-2 sm:mt-3 h-1 sm:h-1.5 bg-green-200 dark:bg-green-900/40 rounded-full overflow-hidden">
-                          <div className="h-full bg-green-600 dark:bg-green-500 rounded-full animate-pulse" style={{ width: '83%' }}></div>
+                          <div
+                            className="h-full bg-green-600 dark:bg-green-500 rounded-full animate-pulse"
+                            style={{ width: '83%' }}
+                          ></div>
                         </div>
                       </div>
 
@@ -519,12 +579,19 @@ function DashboardPageContent() {
                           <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                             <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                           </div>
-                          <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">QUALITY</span>
+                          <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+                            QUALITY
+                          </span>
                         </div>
-                        <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">98.5%</div>
+                        <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">
+                          98.5%
+                        </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">Pass rate</div>
                         <div className="mt-3 h-1.5 bg-blue-200 dark:bg-blue-900/40 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full animate-pulse" style={{ width: '98.5%' }}></div>
+                          <div
+                            className="h-full bg-blue-600 dark:bg-blue-500 rounded-full animate-pulse"
+                            style={{ width: '98.5%' }}
+                          ></div>
                         </div>
                       </div>
 
@@ -533,12 +600,19 @@ function DashboardPageContent() {
                           <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                             <Activity className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                           </div>
-                          <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">UTILIZATION</span>
+                          <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">
+                            UTILIZATION
+                          </span>
                         </div>
-                        <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">76%</div>
+                        <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">
+                          76%
+                        </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">Active time</div>
                         <div className="mt-3 h-1.5 bg-orange-200 dark:bg-orange-900/40 rounded-full overflow-hidden">
-                          <div className="h-full bg-orange-600 dark:bg-orange-500 rounded-full animate-pulse" style={{ width: '76%' }}></div>
+                          <div
+                            className="h-full bg-orange-600 dark:bg-orange-500 rounded-full animate-pulse"
+                            style={{ width: '76%' }}
+                          ></div>
                         </div>
                       </div>
 
@@ -547,9 +621,13 @@ function DashboardPageContent() {
                           <div className="p-2 bg-pink-100 dark:bg-pink-900/40 rounded-lg group-hover:scale-110 transition-transform duration-300">
                             <Wrench className="w-5 h-5 text-pink-600 dark:text-pink-400" />
                           </div>
-                          <span className="text-xs font-semibold text-pink-700 dark:text-pink-400">MAINTENANCE</span>
+                          <span className="text-xs font-semibold text-pink-700 dark:text-pink-400">
+                            MAINTENANCE
+                          </span>
                         </div>
-                        <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">2</div>
+                        <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-105 transition-transform duration-300">
+                          2
+                        </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">Due soon</div>
                         <div className="mt-3 h-1.5 bg-pink-200 dark:bg-pink-900/40 rounded-full overflow-hidden">
                           <div className="h-full bg-pink-600 dark:bg-pink-500 rounded-full w-1/2"></div>
@@ -578,20 +656,36 @@ function DashboardPageContent() {
                       {alertsLoading ? (
                         <div className="space-y-2">
                           {[1, 2, 3].map(i => (
-                            <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                            <div
+                              key={i}
+                              className="h-12 bg-gray-100 dark:bg-gray-800 rounded animate-pulse"
+                            />
                           ))}
                         </div>
                       ) : alertsData?.length > 0 ? (
                         alertsData.slice(0, 5).map((alert: any) => (
-                          <div key={alert.id} className={`flex items-start gap-3 p-3 rounded-lg border ${alert.severity === 'critical' || alert.severity === 'error'
-                            ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
-                            : 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800'
-                            }`}>
-                            <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${alert.severity === 'critical' || alert.severity === 'error' ? 'text-red-600' : 'text-yellow-600'
-                              }`} />
+                          <div
+                            key={alert.id}
+                            className={`flex items-start gap-3 p-3 rounded-lg border ${
+                              alert.severity === 'critical' || alert.severity === 'error'
+                                ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+                                : 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800'
+                            }`}
+                          >
+                            <AlertTriangle
+                              className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                                alert.severity === 'critical' || alert.severity === 'error'
+                                  ? 'text-red-600'
+                                  : 'text-yellow-600'
+                              }`}
+                            />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{alert.title}</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{alert.message}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {alert.title}
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                {alert.message}
+                              </p>
                             </div>
                           </div>
                         ))
@@ -626,7 +720,6 @@ function DashboardPageContent() {
                     </Button>
                   </div>
                 </div>
-
               </div>
             </div>
 
@@ -643,16 +736,27 @@ function DashboardPageContent() {
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   </div>
                   <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {recentActivity.length > 0 ? recentActivity.map((activity: RecentActivity) => (
-                      <div key={activity.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${activity.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{activity.employee_name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{activity.action}</p>
+                    {recentActivity.length > 0 ? (
+                      recentActivity.map((activity: RecentActivity) => (
+                        <div
+                          key={activity.id}
+                          className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
+                        >
+                          <div
+                            className={`w-2 h-2 rounded-full flex-shrink-0 ${activity.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}
+                          ></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {activity.employee_name}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {activity.action}
+                            </p>
+                          </div>
+                          <span className="text-xs text-gray-400">{activity.time}</span>
                         </div>
-                        <span className="text-xs text-gray-400">{activity.time}</span>
-                      </div>
-                    )) : (
+                      ))
+                    ) : (
                       <div className="text-center py-8 text-gray-500">
                         <Clock className="w-10 h-10 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No activity yet</p>
@@ -689,56 +793,91 @@ function DashboardPageContent() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Machine</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Current Order</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Operator</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Utilization</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Machine
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Status
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Current Order
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Operator
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Utilization
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Array.isArray(machinesData?.data || machinesData) ? (linkMachinesTableData(machinesData?.data || machinesData).map((row: any, idx: number) => (
-                        <tr key={idx} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                          <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white font-mono">{row.machine}</td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${row.status === 'running' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              row.status === 'down' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                              }`}>
-                              {row.status === 'running' && <PlayCircle className="w-3 h-3" />}
-                              {row.status === 'down' && <XCircle className="w-3 h-3" />}
-                              {row.status === 'idle' && <PauseCircle className="w-3 h-3" />}
-                              {row.status.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
-                            {row.order !== '—' ? (
-                              <Badge variant="outline" className="font-mono text-[10px]">{row.order}</Badge>
-                            ) : '—'}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{row.operator}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 w-16 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div className={`h-full ${row.utilization > 80 ? 'bg-green-500' : row.utilization > 50 ? 'bg-yellow-500' : 'bg-gray-400'}`} style={{ width: `${row.utilization}%` }}></div>
-                              </div>
-                              <span className="text-xs font-medium">{row.utilization}%</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                              onClick={() => handleViewLogs(row.machineId)}
+                      {Array.isArray(machinesData?.data || machinesData) ? (
+                        linkMachinesTableData(machinesData?.data || machinesData).map(
+                          (row: any, idx: number) => (
+                            <tr
+                              key={idx}
+                              className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30"
                             >
-                              <Activity className="w-3.5 h-3.5 mr-1" />
-                              Live Logs
-                            </Button>
-                          </td>
-                        </tr>
-                      ))) : (
+                              <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white font-mono">
+                                {row.machine}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                                    row.status === 'running'
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                      : row.status === 'down'
+                                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                  }`}
+                                >
+                                  {row.status === 'running' && <PlayCircle className="w-3 h-3" />}
+                                  {row.status === 'down' && <XCircle className="w-3 h-3" />}
+                                  {row.status === 'idle' && <PauseCircle className="w-3 h-3" />}
+                                  {row.status.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
+                                {row.order !== '—' ? (
+                                  <Badge variant="outline" className="font-mono text-[10px]">
+                                    {row.order}
+                                  </Badge>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
+                                {row.operator}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 w-16 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full ${row.utilization > 80 ? 'bg-green-500' : row.utilization > 50 ? 'bg-yellow-500' : 'bg-gray-400'}`}
+                                      style={{ width: `${row.utilization}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-xs font-medium">{row.utilization}%</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  onClick={() => handleViewLogs(row.machineId)}
+                                >
+                                  <Activity className="w-3.5 h-3.5 mr-1" />
+                                  Live Logs
+                                </Button>
+                              </td>
+                            </tr>
+                          )
+                        )
+                      ) : (
                         <tr>
                           <td colSpan={6} className="py-12 text-center text-gray-500">
                             <Activity className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -774,4 +913,3 @@ export default function DashboardPage() {
     </ProtectedPage>
   )
 }
-
