@@ -76,10 +76,18 @@ export async function apiClient(url: string, options: RequestInit = {}) {
     headers
   })
   
-  // Handle 401 Unauthorized - redirect to auth
+  // Handle 401 Unauthorized
   if (!response.ok && response.status === 401) {
     if (typeof window !== 'undefined') {
-      window.location.href = '/auth'
+      // Only bounce to login when there's genuinely no session and we're not
+      // already on /auth. A 401 with a valid session means the request/permission
+      // failed, not that the user is logged out — redirecting here causes an
+      // /auth <-> /dashboard refresh loop, so surface the error instead.
+      const hasSession = Boolean(session?.access_token)
+      const onAuthPage = window.location.pathname.startsWith('/auth')
+      if (!hasSession && !onAuthPage) {
+        window.location.href = '/auth'
+      }
     }
     throw new Error('Unauthorized - please login')
   }

@@ -111,27 +111,36 @@ export function getSupabaseBrowserClient(): SupabaseClient {
  * const { data } = await supabase.from('roles').select()
  */
 export function getSupabaseAdminClient(): SupabaseClient {
-  // Validate service role key (only needed server-side)
-  if (!supabaseServiceKey) {
-    throw new Error(
-      '❌ SUPABASE_SERVICE_ROLE_KEY is required for admin client. ' +
-      'This function should only be called server-side (API routes). ' +
-      'Please check your .env.local file.'
-    )
+  // Preferred path: service-role client with full DB access.
+  if (supabaseServiceKey) {
+    if (!globalThis.__supabaseAdminInstance) {
+      globalThis.__supabaseAdminInstance = createClient(supabaseUrl!, supabaseServiceKey!, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    }
+    return globalThis.__supabaseAdminInstance
   }
 
-  if (!globalThis.__supabaseAdminInstance) {
-    if (process.env.NODE_ENV === 'development') {
-    }
-    
-    globalThis.__supabaseAdminInstance = createClient(supabaseUrl!, supabaseServiceKey!, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
+  // Fallback: no service-role key configured (e.g. local dev). Instead of
+  // throwing — which surfaces as a 500/401 on every data route and triggers an
+  // auth redirect loop — return an anon-key client. Reads/writes become
+  // RLS-gated rather than elevated.
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      '❌ Supabase is not configured. NEXT_PUBLIC_SUPABASE_URL and ' +
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY are required. Check your .env.local file.'
+    )
   }
-  return globalThis.__supabaseAdminInstance
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      '⚠️ SUPABASE_SERVICE_ROLE_KEY not set — admin client falling back to ' +
+      'the anon key (RLS-gated). Set the service role key for full access.'
+    )
+  }
+  return getSupabaseClient()
 }
 
 /**
