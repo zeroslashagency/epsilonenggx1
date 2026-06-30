@@ -281,10 +281,7 @@ export const AttendancePermissions = {
     isSuperAdmin(userRole) || hasPermission(permissions, 'main_attendance', 'Attendance', 'edit'),
   
   canExportExcel: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || hasPermission(permissions, 'main_attendance', 'Attendance', 'edit'),
-  
-  canAccessStandalone: (permissions: Record<string, PermissionModule> | null | undefined, userRole?: string | null) =>
-    isSuperAdmin(userRole) || hasAnyAccess(permissions, 'main_attendance', 'Standalone Attendance')
+    isSuperAdmin(userRole) || hasPermission(permissions, 'main_attendance', 'Attendance', 'edit')
 }
 
 /**

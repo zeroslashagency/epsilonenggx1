@@ -5,9 +5,7 @@ import { apiGet } from '@/app/lib/utils/api-client'
 interface EditableRoleSectionProps {
   isEditing: boolean
   selectedRole: string
-  standaloneAttendance: boolean
   onRoleChange: (role: string) => void
-  onStandaloneToggle: () => void
   onEdit: () => void
   onCancel: () => void
   onSave: () => void
@@ -16,9 +14,7 @@ interface EditableRoleSectionProps {
 export function EditableRoleSection({
   isEditing,
   selectedRole,
-  standaloneAttendance,
   onRoleChange,
-  onStandaloneToggle,
   onEdit,
   onCancel,
   onSave
@@ -49,14 +45,14 @@ export function EditableRoleSection({
             🔧 Editable Settings
           </h3>
           <p className="text-xs text-[#95AAC9] mt-1">
-            Change user role and standalone attendance access
+            Change user role
           </p>
         </div>
         {!isEditing ? (
           <button
             onClick={onEdit}
             className="px-4 py-2 text-sm text-[#2C7BE5] border border-[#2C7BE5] rounded hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"
-            title="Edit user role and standalone attendance"
+            title="Edit user role"
           >
             Edit Role
           </button>
@@ -106,32 +102,6 @@ export function EditableRoleSection({
               : '💡 Click "Edit Role" to modify user role'
             }
           </p>
-        </div>
-        
-        {/* Standalone Attendance Toggle */}
-        <div className="pt-4 border-t border-blue-200 dark:border-blue-800">
-          <label className="block text-sm font-medium text-[#12263F] dark:text-white mb-2">
-            Additional Access
-          </label>
-          <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={standaloneAttendance}
-              onChange={onStandaloneToggle}
-              disabled={!isEditing}
-              className={`mt-1 w-4 h-4 text-[#2C7BE5] border-gray-300 rounded focus:ring-[#2C7BE5] ${
-                !isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-              }`}
-            />
-            <div>
-              <p className="text-sm font-medium text-[#12263F] dark:text-white">
-                Enable Standalone Attendance Site
-              </p>
-              <p className="text-xs text-[#95AAC9] mt-1">
-                Allow user to access the dedicated attendance website with same credentials
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

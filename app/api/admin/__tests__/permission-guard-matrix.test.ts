@@ -16,21 +16,27 @@ jest.mock('next/server', () => {
 })
 
 import { NextResponse } from 'next/server'
-import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
+import { requirePermission, requireRole } from '@/app/lib/features/auth/auth.middleware'
 import { GET as getUsers, PATCH as patchUsers } from '../users/route'
 import { GET as getRoles, POST as postRoles } from '../roles/route'
 import { POST as runMigration } from '../run-migration/route'
 
 jest.mock('@/app/lib/features/auth/auth.middleware', () => ({
   requirePermission: jest.fn(),
+  requireRole: jest.fn(),
 }))
 
 const mockedRequirePermission = requirePermission as jest.Mock
+const mockedRequireRole = requireRole as jest.Mock
 
 describe('admin route permission guard matrix', () => {
   beforeEach(() => {
     mockedRequirePermission.mockReset()
     mockedRequirePermission.mockResolvedValue(
+      NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
+    )
+    mockedRequireRole.mockReset()
+    mockedRequireRole.mockResolvedValue(
       NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
     )
   })
@@ -65,12 +71,12 @@ describe('admin route permission guard matrix', () => {
     expect(mockedRequirePermission).toHaveBeenCalledWith(expect.any(Object), 'roles.manage')
   })
 
-  it('run-migration POST requires roles.manage', async () => {
+  it('run-migration POST requires Super Admin role', async () => {
     await runMigration(
       new Request('http://localhost/api/admin/run-migration', {
         method: 'POST',
       }) as any
     )
-    expect(mockedRequirePermission).toHaveBeenCalledWith(expect.any(Object), 'roles.manage')
+    expect(mockedRequireRole).toHaveBeenCalledWith(expect.any(Object), ['Super Admin'])
   })
 })

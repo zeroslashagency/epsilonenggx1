@@ -37,8 +37,6 @@ export function getPermissionLevel(permissionId: string, role: string): Permissi
         return 'view'
       case 'attendance':
         return 'edit'
-      case 'standalone_attendance':
-        return 'access'
       case 'production':
       case 'monitoring':
         return 'none'
@@ -58,8 +56,6 @@ export function getPermissionLevel(permissionId: string, role: string): Permissi
         return 'edit'
       case 'schedule_generator_dashboard':
         return 'view'
-      case 'standalone_attendance':
-        return 'access'
       case 'analytics':
       case 'production':
       case 'monitoring':
@@ -78,8 +74,6 @@ export function getPermissionLevel(permissionId: string, role: string): Permissi
       case 'analytics':
       case 'attendance':
         return 'view'
-      case 'standalone_attendance':
-        return 'access'
       case 'schedule_generator':
       case 'schedule_generator_dashboard':
       case 'production':
@@ -101,7 +95,6 @@ export function getPermissionLevel(permissionId: string, role: string): Permissi
       case 'schedule_generator':
       case 'schedule_generator_dashboard':
       case 'attendance':
-      case 'standalone_attendance':
       case 'production':
       case 'monitoring':
       case 'manage_users':
@@ -116,8 +109,6 @@ export function getPermissionLevel(permissionId: string, role: string): Permissi
     switch (permissionId) {
       case 'attendance':
         return 'edit'
-      case 'standalone_attendance':
-        return 'access'
       case 'dashboard':
       case 'schedule_generator':
       case 'schedule_generator_dashboard':
@@ -139,21 +130,15 @@ export function getPermissionLevel(permissionId: string, role: string): Permissi
 /**
  * Check if user has access to a permission
  */
-export function hasPermissionAccess(permissionId: string, role: string, standaloneAttendance: boolean = false): boolean {
+export function hasPermissionAccess(permissionId: string, role: string): boolean {
   const level = getPermissionLevel(permissionId, role)
-  
-  // Special case: standalone_attendance requires explicit flag
-  if (permissionId === 'standalone_attendance') {
-    return standaloneAttendance && level !== 'none'
-  }
-  
   return level !== 'none'
 }
 
 /**
  * Get all permissions with their levels for a role
  */
-export function getAllPermissionsForRole(role: string, standaloneAttendance: boolean = false): PermissionInfo[] {
+export function getAllPermissionsForRole(role: string): PermissionInfo[] {
   const permissions = [
     { id: 'dashboard', label: 'Dashboard', description: 'Access the primary manufacturing overview dashboard.' },
     { id: 'schedule_generator', label: 'Schedule Generator', description: 'Open the smart schedule builder and adjust production timelines.' },
@@ -161,7 +146,6 @@ export function getAllPermissionsForRole(role: string, standaloneAttendance: boo
     { id: 'chart', label: 'Chart', description: 'Explore production charts and machine KPIs.' },
     { id: 'analytics', label: 'Analytics', description: 'Run analytics dashboards and export performance reports.' },
     { id: 'attendance', label: 'Attendance', description: 'View attendance data and reports within the main system.' },
-    { id: 'standalone_attendance', label: 'Standalone Attendance', description: 'Access the dedicated attendance website with same credentials.' },
     { id: 'production', label: 'Production', description: 'Access production workflow screens including orders, machines, personnel, and tasks.' },
     { id: 'monitoring', label: 'Monitoring', description: 'Access monitoring dashboards including alerts, reports, quality control, and maintenance.' },
     { id: 'manage_users', label: 'Manage Users & Security', description: 'Create users, assign roles, view audit logs, and impersonate accounts.' }
@@ -169,14 +153,10 @@ export function getAllPermissionsForRole(role: string, standaloneAttendance: boo
   
   return permissions.map(perm => {
     const level = getPermissionLevel(perm.id, role)
-    const hasAccess = perm.id === 'standalone_attendance' 
-      ? standaloneAttendance && level !== 'none'
-      : level !== 'none'
-    
     return {
       ...perm,
       level,
-      hasAccess
+      hasAccess: level !== 'none'
     }
   })
 }
@@ -184,8 +164,8 @@ export function getAllPermissionsForRole(role: string, standaloneAttendance: boo
 /**
  * Group permissions by category
  */
-export function getGroupedPermissions(role: string, standaloneAttendance: boolean = false) {
-  const allPermissions = getAllPermissionsForRole(role, standaloneAttendance)
+export function getGroupedPermissions(role: string) {
+  const allPermissions = getAllPermissionsForRole(role)
   
   return {
     'Dashboard & Analytics': allPermissions.filter(p => 
@@ -195,7 +175,7 @@ export function getGroupedPermissions(role: string, standaloneAttendance: boolea
       ['schedule_generator', 'schedule_generator_dashboard', 'chart'].includes(p.id)
     ),
     'Attendance': allPermissions.filter(p => 
-      ['attendance', 'standalone_attendance'].includes(p.id)
+      ['attendance'].includes(p.id)
     ),
     'Production & Monitoring': allPermissions.filter(p => 
       ['production', 'monitoring'].includes(p.id)

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Get user's profile info first
     const { data: userProfile } = await supabase
       .from('profiles')
-      .select('standalone_attendance, role')
+      .select('role')
       .eq('id', userId)
       .single()
 
@@ -86,19 +86,11 @@ export async function GET(request: NextRequest) {
       'view_machine_analyzer': 'chart',
       'view_reports': 'analytics',
       'attendance_read': 'attendance',
-      'attendance_mark': 'standalone_attendance',
       'manage_users': 'manage_users'
     }
 
     const allPermissionCodes = Array.from(new Set([...rolePermissionCodes, ...customPermissionCodes]))
     const frontendPermissions = allPermissionCodes.map(code => dbToFrontendMap[code] || code)
-
-    // ALWAYS add standalone_attendance if enabled in profile (works for all users)
-    if (userProfile.standalone_attendance === 'YES') {
-      if (!frontendPermissions.includes('standalone_attendance')) {
-        frontendPermissions.push('standalone_attendance')
-      }
-    }
 
     if (frontendPermissions.length === 0 && !frontendPermissions.includes('dashboard')) {
       frontendPermissions.push('dashboard')
@@ -107,7 +99,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       permissions: frontendPermissions,
-      standalone_attendance: userProfile?.standalone_attendance || 'NO',
       role: userProfile?.role || 'Operator'
     })
 

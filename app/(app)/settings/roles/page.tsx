@@ -30,7 +30,6 @@ const PERMISSION_LABELS: Record<string, string> = {
   'chart': 'Chart',
   'analytics': 'Analytics',
   'attendance': 'Attendance',
-  'standalone_attendance': 'Standalone Attendance',
   'production': 'Production',
   'monitoring': 'Monitoring',
   'manage_users': 'Manage Users & Security'
@@ -43,7 +42,6 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   'chart': 'Explore production charts and machine KPIs.',
   'analytics': 'Run analytics dashboards and export performance reports.',
   'attendance': 'View attendance data and reports within the main system.',
-  'standalone_attendance': 'Access the dedicated attendance website with same credentials.',
   'production': 'Early toggle for upcoming production workflow screens.',
   'monitoring': 'Early toggle for upcoming monitoring dashboards.',
   'manage_users': 'Create users, assign roles, view audit logs, and impersonate accounts.'

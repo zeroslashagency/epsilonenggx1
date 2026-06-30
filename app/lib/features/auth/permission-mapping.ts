@@ -560,7 +560,6 @@ export function buildPermissionCodes(permissionModules: PermissionModules): stri
   if (mainAttendance) {
     const merged = mergePermissions([
       mainAttendance.items['Attendance'],
-      mainAttendance.items['Standalone Attendance'],
     ])
 
     if (merged.full) codes.add('attendance.view_all')

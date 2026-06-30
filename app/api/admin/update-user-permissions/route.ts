@@ -45,16 +45,6 @@ function normalizeRoleInput(role: unknown): { roleId?: string; roleName?: string
   }
 }
 
-function normalizeStandaloneAttendance(value: unknown): 'YES' | 'NO' {
-  if (value === true) return 'YES'
-  if (value === false) return 'NO'
-  if (typeof value === 'string') {
-    const normalized = value.trim().toUpperCase()
-    if (normalized === 'YES' || normalized === 'TRUE') return 'YES'
-  }
-  return 'NO'
-}
-
 function normalizePermissions(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter(
@@ -85,10 +75,9 @@ export async function POST(request: NextRequest) {
     const validation = await validateRequestBody(request, updateUserPermissionsSchema)
     if (!validation.success) return validation.response
 
-    const { userId, role, permissions, standalone_attendance } = validation.data
+    const { userId, role, permissions } = validation.data
     const normalizedUserId = userId.trim()
     const normalizedRole = normalizeRoleInput(role)
-    const normalizedStandaloneAttendance = normalizeStandaloneAttendance(standalone_attendance)
     const normalizedPermissions = normalizePermissions(permissions)
 
     if (!normalizedUserId) {
@@ -147,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     const { data: existingProfile, error: existingProfileError } = await supabase
       .from('profiles')
-      .select('role, standalone_attendance')
+      .select('role')
       .eq('id', normalizedUserId)
       .single()
 
@@ -217,13 +206,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 1: Update user profile with role and standalone_attendance flag
+    // Step 1: Update user profile with role
     const { data: updateData, error: updateError } = await supabase
       .from('profiles')
       .update({
         role: targetRole.name,
         role_badge: targetRole.name,
-        standalone_attendance: normalizedStandaloneAttendance,
         updated_at: new Date().toISOString(),
       })
       .eq('id', normalizedUserId)
@@ -288,7 +276,6 @@ export async function POST(request: NextRequest) {
         new_role: targetRole.name,
         new_role_id: targetRole.id,
         permissions: normalizedPermissions,
-        standalone_attendance: normalizedStandaloneAttendance,
         updated_by: user.email,
         updated_at: new Date().toISOString(),
       },
