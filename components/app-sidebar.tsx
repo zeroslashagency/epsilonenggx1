@@ -81,9 +81,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       hasPermission('mobile_user_attendance', 'FIR: Category', 'view')
 
     // 1. MAIN Section
+    const canViewAttendance =
+      hasPermission('mobile_user_attendance', 'Attendance: Weekly Streak', 'view') ||
+      hasPermission('mobile_user_attendance', 'Attendance: Today Logs', 'view') ||
+      hasPermission('mobile_user_attendance', 'Attendance: Recent History', 'view')
+
     const mainItems: MenuItem[] = []
     if (isSuperAdmin || hasPermission('main_dashboard', 'Dashboard', 'view')) {
       mainItems.push({ id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard })
+    }
+    if (isSuperAdmin || canViewAttendance) {
+      mainItems.push({ id: 'attendance', label: 'Attendance', href: '/attendance', icon: Clock })
     }
     if (isSuperAdmin || hasPermissionCode('schedule.view')) {
       mainItems.push({ id: 'schedule-generator', label: 'Schedule Generator', href: '/scheduler', icon: Calendar })
