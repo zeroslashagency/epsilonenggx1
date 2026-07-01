@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,9 @@ export const dynamic = 'force-dynamic'
  * Maintenance endpoint to regenerate daily schedules from current assignments
  */
 export async function POST(request: NextRequest) {
+  const authResult = await requirePermission(request as any, 'schedule.edit')
+  if (authResult instanceof NextResponse) return authResult
+
   try {
     const supabase = getSupabaseAdminClient()
     const { searchParams } = new URL(request.url)

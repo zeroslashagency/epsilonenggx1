@@ -2,8 +2,12 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 export async function GET(request: NextRequest) {
+  const authResult = await requirePermission(request as any, 'schedule.view')
+  if (authResult instanceof NextResponse) return authResult
+
   try {
     const supabase = getSupabaseClient()
     const date = request.nextUrl.searchParams.get('date') || new Date().toISOString().split('T')[0]

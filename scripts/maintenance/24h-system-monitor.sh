@@ -16,8 +16,8 @@ echo "📊 Monitoring: Database, Sync Script, APIs"
 echo ""
 
 # Configuration
-SUPABASE_URL="https://sxnaopzgaddvziplrlbe.supabase.co"
-SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bmFvcHpnYWRkdnppcGxybGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MjUyODQsImV4cCI6MjA3MjIwMTI4NH0.o3UAaJtrNpVh_AsljSC1oZNkJPvQomedvtJlXTE3L6w"
+SUPABASE_URL="${SUPABASE_URL:?Set SUPABASE_URL env var}"
+SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:?Set SUPABASE_ANON_KEY env var}"
 API_BASE_URL="http://localhost:3001"
 CHECK_INTERVAL=300  # 5 minutes
 TOTAL_CHECKS=288    # 24 hours * 12 checks per hour

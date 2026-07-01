@@ -80,3 +80,6 @@ coverage/
 
 # Heap snapshots (never commit)
 *.heapsnapshot
+
+# Generated run artifacts
+/reports/

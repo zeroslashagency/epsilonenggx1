@@ -27,51 +27,17 @@ export default function CelebrationsTab({ employeeCode, employeeName }: Celebrat
 
   const calculateCelebrations = () => {
     setLoading(true)
-    
-    // Mock data - In production, fetch from employee profile
-    const today = new Date()
-    const currentYear = today.getFullYear()
-    
-    // Example: Birthday on December 15
-    const birthday = new Date(currentYear, 11, 15) // Month is 0-indexed
-    if (birthday < today) {
-      birthday.setFullYear(currentYear + 1)
-    }
-    
-    // Example: Work anniversary on March 10, 2022 (joined)
-    const joinDate = new Date(2022, 2, 10)
-    const anniversary = new Date(currentYear, 2, 10)
-    if (anniversary < today) {
-      anniversary.setFullYear(currentYear + 1)
-    }
-    
-    const yearsCompleted = currentYear - joinDate.getFullYear()
-    
-    const birthdayDaysUntil = Math.ceil((birthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    const anniversaryDaysUntil = Math.ceil((anniversary.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    
-    setCelebrations([
-      {
-        type: 'birthday',
-        date: birthday.toISOString(),
-        daysUntil: birthdayDaysUntil
-      },
-      {
-        type: 'work_anniversary',
-        date: anniversary.toISOString(),
-        yearsCompleted: yearsCompleted,
-        daysUntil: anniversaryDaysUntil
-      }
-    ])
-    
+    // Real birthday / work-anniversary dates are not yet available on the
+    // employee profile. Show no fabricated celebrations until that data exists.
+    setCelebrations([])
     setLoading(false)
   }
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', { 
-      month: 'long', 
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'long',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     })
   }
 
@@ -83,8 +49,8 @@ export default function CelebrationsTab({ employeeCode, employeeName }: Celebrat
         return `🎊 Happy Work Anniversary, ${employeeName}! 🎉`
       }
     } else if (celebration.daysUntil === 1) {
-      return celebration.type === 'birthday' 
-        ? 'Your birthday is tomorrow!' 
+      return celebration.type === 'birthday'
+        ? 'Your birthday is tomorrow!'
         : 'Your work anniversary is tomorrow!'
     } else if (celebration.daysUntil <= 7) {
       return `Coming up in ${celebration.daysUntil} days`
@@ -155,13 +121,12 @@ export default function CelebrationsTab({ employeeCode, employeeName }: Celebrat
               </div>
 
               <div className="space-y-3">
-                <div className="text-lg font-semibold">
-                  {formatDate(celebration.date)}
-                </div>
+                <div className="text-lg font-semibold">{formatDate(celebration.date)}</div>
 
                 {celebration.type === 'work_anniversary' && celebration.yearsCompleted && (
                   <div className="text-sm opacity-90">
-                    {celebration.yearsCompleted} {celebration.yearsCompleted === 1 ? 'year' : 'years'} with the company
+                    {celebration.yearsCompleted}{' '}
+                    {celebration.yearsCompleted === 1 ? 'year' : 'years'} with the company
                   </div>
                 )}
 
@@ -208,18 +173,19 @@ export default function CelebrationsTab({ employeeCode, employeeName }: Celebrat
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
               {celebrations.some(c => c.daysUntil === 0) ? (
                 <>
-                  🎉 <strong>Congratulations, {employeeName}!</strong> We're so grateful to have you on our team. 
-                  Your dedication and hard work make a real difference every day. Here's to celebrating you today! 🎂✨
+                  🎉 <strong>Congratulations, {employeeName}!</strong> We're so grateful to have you
+                  on our team. Your dedication and hard work make a real difference every day.
+                  Here's to celebrating you today! 🎂✨
                 </>
               ) : celebrations.some(c => c.daysUntil <= 7) ? (
                 <>
-                  🎈 <strong>Hey {employeeName}!</strong> Your special day is coming up soon! 
-                  We're looking forward to celebrating with you. Get ready for some surprises! 🎁
+                  🎈 <strong>Hey {employeeName}!</strong> Your special day is coming up soon! We're
+                  looking forward to celebrating with you. Get ready for some surprises! 🎁
                 </>
               ) : (
                 <>
-                  💫 <strong>Hi {employeeName}!</strong> We have some exciting celebrations coming up for you. 
-                  Mark your calendar and stay tuned for special surprises! 🌟
+                  💫 <strong>Hi {employeeName}!</strong> We have some exciting celebrations coming
+                  up for you. Mark your calendar and stay tuned for special surprises! 🌟
                 </>
               )}
             </p>
@@ -292,7 +258,9 @@ export default function CelebrationsTab({ employeeCode, employeeName }: Celebrat
           <div className="text-2xl font-bold text-purple-900 dark:text-purple-300">
             {celebrations.find(c => c.type === 'work_anniversary')?.yearsCompleted || 0}
           </div>
-          <div className="text-sm text-purple-700 dark:text-purple-400 mt-1">Years with Company</div>
+          <div className="text-sm text-purple-700 dark:text-purple-400 mt-1">
+            Years with Company
+          </div>
         </div>
 
         <div className="bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900/30 dark:to-pink-800/30 rounded-xl p-6 text-center">

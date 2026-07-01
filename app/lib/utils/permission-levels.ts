@@ -153,12 +153,10 @@ export function getAllPermissionsForRole(role: string): PermissionInfo[] {
   
   return permissions.map(perm => {
     const level = getPermissionLevel(perm.id, role)
-    const hasAccess = level !== 'none'
-    
     return {
       ...perm,
       level,
-      hasAccess
+      hasAccess: level !== 'none'
     }
   })
 }
