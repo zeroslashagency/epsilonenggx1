@@ -372,7 +372,12 @@ function PunchesTab() {
     if (res.success) setRows(res.data || [])
     setLoading(false)
   }, [])
-  useEffect(() => { load() }, [load])
+  // Initial load + live polling so new mobile punches appear without a manual reload.
+  useEffect(() => {
+    load()
+    const id = setInterval(load, 10000)
+    return () => clearInterval(id)
+  }, [load])
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">

@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, Mail, Shield, Search, ChevronLeft, ChevronRight, Plus, Edit, Trash2, Eye, EyeOff, RefreshCw, X, Check, Phone, Calendar, Activity, UserPlus, Zap, Settings, Save, Key } from 'lucide-react'
+import { User, Mail, Edit, Trash2, RefreshCw, X, Check, Settings, Save } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { apiGet, apiPost, apiPut, apiDelete } from '@/app/lib/utils/api-client'
+import { apiGet, apiPost } from '@/app/lib/utils/api-client'
 import { TableLoading, LoadingSpinner } from '@/components/ui/loading-spinner'
 import { EditableRoleSection } from './[id]/components/EditableRoleSection'
 import { PermissionsDisplay } from './[id]/components/PermissionsDisplay'
@@ -53,7 +53,6 @@ function UsersPageZoho() {
   const [isEditing, setIsEditing] = useState(false)
   const [editedRole, setEditedRole] = useState('')
   const [mobileAccess, setMobileAccess] = useState(false)
-  const [showDrawer, setShowDrawer] = useState(false)
   const [editedPhone, setEditedPhone] = useState('')
   const [editedEmployeeCode, setEditedEmployeeCode] = useState('')
   const [editedDepartment, setEditedDepartment] = useState('')
@@ -165,11 +164,6 @@ function UsersPageZoho() {
       setPermissions(defaultPermissions)
       setEditedRole(user.role)
     }
-  }
-
-  const handleCloseDrawer = () => {
-    setShowDrawer(false)
-    setIsEditing(false)
   }
 
   const handleSelectUser = (user: User) => {
@@ -373,6 +367,8 @@ function UsersPageZoho() {
         const authDeletionMode = result?.data?.authDeletionMode
         if (authDeletionMode === 'anonymized') {
           alert('⚠️ User removed from app records, but auth account was anonymized (not hard-deleted) because database references still exist.')
+        } else if (authDeletionMode === 'profile_only') {
+          alert('✅ User removed from the app. Auth login record was left intact (no service-role key configured).')
         } else {
           alert('✅ User deleted successfully!')
         }
@@ -380,21 +376,13 @@ function UsersPageZoho() {
         throw new Error(result.error || 'Failed to delete user')
       }
       
-      // Close drawer and refresh user list (will filter out deleted user)
-      setShowDrawer(false)
+      // Refresh user list (will filter out deleted user)
       setSelectedUser(null)
       await fetchUsers()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       alert(`❌ Failed to delete user:\n\n${errorMessage}\n\nCheck console for details.`)
     }
-  }
-
-  const handleSetPassword = () => {
-    if (!selectedUser) return
-    
-    // Switch to security tab to set password
-    setActiveTab('security')
   }
 
   const handleToggleStatus = async () => {

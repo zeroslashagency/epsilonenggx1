@@ -47,11 +47,11 @@ export default function FIRPage() {
     }, [user]);
 
     const isSuperAdmin = userRole === 'Super Admin' || userRole === 'super_admin';
-    const canViewDashboard = isSuperAdmin || hasPermission('web_user_attendance', 'FIR: Dashboard', 'view');
-    const canViewReports = isSuperAdmin || hasPermission('web_user_attendance', 'FIR: Reports', 'view');
-    const canViewHistory = isSuperAdmin || hasPermission('web_user_attendance', 'FIR: History', 'view');
-    const canViewCategory = isSuperAdmin || hasPermission('web_user_attendance', 'FIR: Category', 'view');
-    const canCreateReport = isSuperAdmin || hasPermission('web_user_attendance', 'FIR: Reports', 'create');
+    const canViewDashboard = isSuperAdmin || hasPermission('mobile_user_attendance', 'FIR: Dashboard', 'view');
+    const canViewReports = isSuperAdmin || hasPermission('mobile_user_attendance', 'FIR: Reports', 'view');
+    const canViewHistory = isSuperAdmin || hasPermission('mobile_user_attendance', 'FIR: History', 'view');
+    const canViewCategory = isSuperAdmin || hasPermission('mobile_user_attendance', 'FIR: Category', 'view');
+    const canCreateReport = isSuperAdmin || hasPermission('mobile_user_attendance', 'FIR: Reports', 'create');
 
     const getDefaultView = () => {
         if (canViewDashboard) return 'dashboard' as FIRView;
@@ -123,13 +123,13 @@ export default function FIRPage() {
 
     return (
         <ProtectedPage
-            module="web_user_attendance"
+            module="mobile_user_attendance"
             item="FIR: Dashboard"
             permission="view"
             anyOf={[
-                { module: 'web_user_attendance', item: 'FIR: Reports', permission: 'view' },
-                { module: 'web_user_attendance', item: 'FIR: History', permission: 'view' },
-                { module: 'web_user_attendance', item: 'FIR: Category', permission: 'view' }
+                { module: 'mobile_user_attendance', item: 'FIR: Reports', permission: 'view' },
+                { module: 'mobile_user_attendance', item: 'FIR: History', permission: 'view' },
+                { module: 'mobile_user_attendance', item: 'FIR: Category', permission: 'view' }
             ]}
         >
             <div className="flex flex-col h-[calc(100vh-8rem)] bg-slate-100 dark:bg-gray-900 overflow-hidden font-sans rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">

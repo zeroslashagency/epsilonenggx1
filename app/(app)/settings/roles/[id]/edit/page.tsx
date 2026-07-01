@@ -164,14 +164,14 @@ export default function EditRolePage() {
           console.log('🔄 Applying database permissions...')
           const normalizedPermissions = { ...role.permissions_json } as Record<string, any>
 
-          if (normalizedPermissions.user_attendance) {
-            if (!normalizedPermissions.web_user_attendance) {
-              normalizedPermissions.web_user_attendance = normalizedPermissions.user_attendance
-            }
-            if (!normalizedPermissions.mobile_user_attendance) {
-              normalizedPermissions.mobile_user_attendance = normalizedPermissions.user_attendance
-            }
+          // Legacy hydration: fold any stored user_attendance / web_user_attendance
+          // grants into the single mobile_user_attendance group (web group removed).
+          const legacyAttendance =
+            normalizedPermissions.web_user_attendance || normalizedPermissions.user_attendance
+          if (legacyAttendance && !normalizedPermissions.mobile_user_attendance) {
+            normalizedPermissions.mobile_user_attendance = legacyAttendance
           }
+          delete normalizedPermissions.web_user_attendance
 
           Object.keys(normalizedPermissions).forEach(moduleKey => {
             if (cleanPermissions[moduleKey]) {

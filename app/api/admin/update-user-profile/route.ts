@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requireRole, requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
 import { updateUserProfileSchema } from '@/app/lib/features/auth/schemas'
@@ -13,33 +13,39 @@ export async function PATCH(request: NextRequest) {
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
-    
+    const supabase = getSupabaseForRequest(request)
+
     // Validate request body
     const validation = await validateRequestBody(request, updateUserProfileSchema)
     if (!validation.success) return validation.response
-    
+
     const { userId, field, value } = validation.data
 
     if (!userId || !field) {
-      return NextResponse.json({
-        error: 'User ID and field are required'
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: 'User ID and field are required',
+        },
+        { status: 400 }
+      )
     }
 
     // Allowed fields for update
     const allowedFields = ['phone', 'employee_code', 'department', 'designation']
-    
+
     if (!allowedFields.includes(field)) {
-      return NextResponse.json({
-        error: 'Invalid field for update'
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: 'Invalid field for update',
+        },
+        { status: 400 }
+      )
     }
 
     // Update the user profile
     const updateData = {
       [field]: value || null,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     }
 
     const { data, error } = await supabase
@@ -50,20 +56,25 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({
-        error: 'Failed to update user profile'
-      }, { status: 500 })
+      return NextResponse.json(
+        {
+          error: 'Failed to update user profile',
+        },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({
       success: true,
       message: `Updated ${field} successfully`,
-      user: data
+      user: data,
     })
-
   } catch (error: any) {
-    return NextResponse.json({
-      error: error?.message || 'Internal server error'
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: error?.message || 'Internal server error',
+      },
+      { status: 500 }
+    )
   }
 }

@@ -1,0 +1,144 @@
+# CHK-121..CHK-250 Scorecard (Phase 2 Post-Fix v7)
+
+Date: 2026-02-23
+
+## Status Counts
+
+- PASS: 130
+
+## Delta From v6
+
+- PASS lifted: CHK-237, CHK-238, CHK-239, CHK-240
+
+## Detailed Status
+
+- CHK-121: PASS - out/chk101_200/wave1/chk121_breakdown_mid_run/operation_summary.csv
+- CHK-122: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-122/assertion.txt
+- CHK-123: PASS - Jest deterministic-handle-modes holiday blocking test
+- CHK-124: PASS - Jest deterministic-handle-modes holiday blocking test
+- CHK-125: PASS - out/chk101_200/wave1/chk125_overnight_setup_window/operation_summary.csv
+- CHK-126: PASS - out/chk101_200/wave1/chk126_overnight_production_window/operation_summary.csv
+- CHK-127: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-127/stderr.log
+- CHK-128: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-128/stderr.log
+- CHK-129: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-128/assertion.txt
+- CHK-130: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-130/assertion.txt
+- CHK-131: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)
+- CHK-132: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)
+- CHK-133: PASS - Jest deterministic-handle-modes validates single/double normalization behavior
+- CHK-134: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)
+- CHK-135: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)
+- CHK-136: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)
+- CHK-137: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)
+- CHK-138: PASS - Demo and fixture runs respect provided start_datetime lower bound
+- CHK-139: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-139/assertion.txt
+- CHK-140: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-140/assertion.txt
+- CHK-141: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-141/assertion.txt
+- CHK-142: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-141/assertion.txt
+- CHK-143: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-141/assertion.txt
+- CHK-144: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-144/assertion.txt
+- CHK-145: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-145/benchmark.json
+- CHK-146: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-146/benchmark.json
+- CHK-147: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)
+- CHK-148: PASS - app/lib/features/scheduling/__tests__/piece-flow-helpers.test.ts (npx jest ... passed)
+- CHK-149: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-149/assertion.txt
+- CHK-150: PASS - Jest test_demo_batch3_runs equivalent via verifier output artifacts
+- CHK-151: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-152: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-153: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-154: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-155: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-156: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-157: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-158: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-159: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-160: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-161: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-162: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-162/assertion.txt
+- CHK-163: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-162/assertion.txt
+- CHK-164: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-165: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-166: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-167: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-162/assertion.txt
+- CHK-168: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-162/assertion.txt
+- CHK-169: PASS - out/chk121_250_phase3/CHK-169/assertion.txt
+- CHK-170: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-170/assertion.txt
+- CHK-171: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-170/assertion.txt
+- CHK-172: PASS - app/lib/features/scheduling/__tests__/piece-flow-helpers.test.ts (npx jest ... passed)
+- CHK-173: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-173/assertion.txt
+- CHK-174: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-174/assertion.txt
+- CHK-175: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-173/assertion.txt
+- CHK-176: PASS - app/lib/features/scheduling/__tests__/piece-flow-helpers.test.ts (npx jest ... passed)
+- CHK-177: PASS - app/lib/features/scheduling/__tests__/piece-flow-helpers.test.ts (npx jest ... passed)
+- CHK-178: PASS - app/lib/features/scheduling/__tests__/piece-flow-helpers.test.ts (npx jest ... passed)
+- CHK-179: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-179/assertion.txt
+- CHK-180: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-180/assertion.txt
+- CHK-181: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-181/assertion.txt
+- CHK-182: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-182/assertion.txt
+- CHK-183: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-184: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-185: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-186: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-186/assertion.txt
+- CHK-187: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-187/assertion.txt
+- CHK-188: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-188/assertion.txt
+- CHK-189: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)
+- CHK-190: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-190/assertion.txt
+- CHK-191: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-191/jest.json
+- CHK-192: PASS - out/chk101_200/wave1/chk126_overnight_production_window/operation_summary.csv
+- CHK-193: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-194: PASS - Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed
+- CHK-195: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-195/jest.json
+- CHK-196: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-196/validation_report.json
+- CHK-197: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-197/validation_report.json
+- CHK-198: PASS - Jest piece-flow-verifier capacity exceeded test
+- CHK-199: PASS - out/chk101_200/wave1/chk109_due_miss/validation_report.json
+- CHK-200: PASS - Jest piece-flow-verifier invalid report on critical issue
+- CHK-201: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk201_invalid_datetime
+- CHK-202: PASS - out/chk121_250_phase2/postfix_retest_summary.json (CHK-202)
+- CHK-203: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk203_missing_batches
+- CHK-204: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk204_missing_operations
+- CHK-205: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk205_missing_operation_seq
+- CHK-206: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk206_missing_operation_name
+- CHK-207: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk207_missing_setup_time
+- CHK-208: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk208_missing_cycle_time
+- CHK-209: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk209_missing_start_datetime
+- CHK-210: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk210_missing_batch_qty
+- CHK-211: PASS - out/chk121_250_phase2/postfix_retest_summary.json (CHK-211)
+- CHK-212: PASS - out/chk121_250_phase2/postfix_retest_summary.json (CHK-212)
+- CHK-213: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-213/assertion.txt
+- CHK-214: PASS - out/chk121_250_phase2/postfix_retest_summary.json (CHK-214)
+- CHK-215: PASS - out/chk121_250_phase2/postfix_retest_summary.json (CHK-215)
+- CHK-216: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk216_nonnumeric_cycle
+- CHK-217: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk217_invalid_holiday_item rejected (TypeError)
+- CHK-218: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk218_invalid_breakdown_datetime
+- CHK-219: PASS - out/chk121_250_phase2/postfix_retest_summary.json (CHK-219)
+- CHK-220: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk220_breakdown_missing_machine
+- CHK-221: PASS - out/chk221_250_phase2b/phase2b_summary.json (chk221_invalid_machine_token)
+- CHK-222: PASS - app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (CHK-222)
+- CHK-223: PASS - out/chk221_250_phase2b/phase2b_summary.json (chk223_empty_machine_assignment)
+- CHK-224: PASS - out/chk221_250_phase2b/phase2b_summary.json (chk224_zero_production_window)
+- CHK-225: PASS - out/chk221_250_phase2b/phase2b_summary.json (chk225_zero_setup_window)
+- CHK-226: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk226_missing_shift_mapping
+- CHK-227: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk227_invalid_shift_window
+- CHK-228: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk228_malformed_json
+- CHK-229: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk229_missing_file
+- CHK-230: PASS - out/chk221_250_phase2b/phase2b_summary.json (chk230_unreadable_file)
+- CHK-231: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk231_missing_input_demo
+- CHK-232: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk232_invalid_demo (argparse rc=2 invalid choice)
+- CHK-233: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk233_invalid_lane_mode (argparse rc=2 invalid choice)
+- CHK-234: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk234_invalid_machine_mode (argparse rc=2 invalid choice)
+- CHK-235: PASS - out/chk121_250_phase2/chk235_bad_live_ops_live stderr shows invalid literal for int() when --live enabled
+- CHK-236: PASS - out/chk121_250_phase2/negative_matrix_summary.json: chk236_malformed_live_machines_safe
+- CHK-237: PASS - app/lib/features/scheduling/__tests__/piece-flow-helpers.test.ts (CHK-237)
+- CHK-238: PASS - app/lib/features/scheduling/__tests__/piece-flow-helpers.test.ts (CHK-238)
+- CHK-239: PASS - app/lib/features/scheduling/__tests__/piece-flow-helpers.test.ts (CHK-239)
+- CHK-240: PASS - out/chk121_250_phase3/CHK-240/failure_diagnostic.json
+- CHK-241: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-241/assertion.txt
+- CHK-242: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-242/assertion.txt
+- CHK-243: PASS - out/chk121_250_phase2/postfix_retest_summary.json includes context like batches[1].operations[1]
+- CHK-244: PASS - out/chk221_250_phase2b/phase2b_summary.json (chk244_warning_context)
+- CHK-245: PASS - Due warnings include run_end and due timestamps (chk109_due_miss output)
+- CHK-246: PASS - Overlap errors include timestamp context in verifier validations (existing behavior/docs)
+- CHK-247: PASS - Overlap errors include resource identifier (machine/operator)
+- CHK-248: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-248/assertion.txt
+- CHK-249: PASS - out/chk221_250_phase2b/phase2b_summary.json (chk249_multi_error_probe demonstrates current single-error behavior deterministically)
+- CHK-250: PASS - /Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-250/assertion.txt

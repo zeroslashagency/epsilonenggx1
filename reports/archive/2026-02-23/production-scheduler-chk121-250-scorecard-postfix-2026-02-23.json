@@ -1,0 +1,522 @@
+{
+  "121": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk121_breakdown_mid_run/operation_summary.csv"
+  },
+  "122": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No explicit breakdown-mid-setup assertion yet"
+  },
+  "123": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes holiday blocking test"
+  },
+  "124": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes holiday blocking test"
+  },
+  "125": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk125_overnight_setup_window/operation_summary.csv"
+  },
+  "126": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk126_overnight_production_window/operation_summary.csv"
+  },
+  "127": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated failing fixture/assertion run in Wave 2"
+  },
+  "128": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated failing fixture/assertion run in Wave 2"
+  },
+  "129": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated failing fixture/assertion run in Wave 2"
+  },
+  "130": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Machine column present in generated operation summaries but no dedicated assertion harness"
+  },
+  "131": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Setup person present in Jest schedule rows; no explicit null-guard check across all rows"
+  },
+  "132": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Production person present in Jest schedule rows; no explicit null-guard check across all rows"
+  },
+  "133": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes validates single/double normalization behavior"
+  },
+  "134": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "135": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "136": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "137": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "138": {
+    "status": "PASS",
+    "evidence": "Demo and fixture runs respect provided start_datetime lower bound"
+  },
+  "139": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "140": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Observed valid outputs; dedicated setup-end<=run-start assertion not codified globally"
+  },
+  "141": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "142": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "143": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "144": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "145": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "146": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "147": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "148": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "149": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Not included in current automated command matrix"
+  },
+  "150": {
+    "status": "PASS",
+    "evidence": "Jest test_demo_batch3_runs equivalent via verifier output artifacts"
+  },
+  "151": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "152": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "153": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "154": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "155": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "156": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "157": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "158": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "159": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "160": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "161": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "162": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "163": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "164": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "165": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "166": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "167": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "168": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "169": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "170": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "171": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "172": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "173": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "174": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "175": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "176": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "177": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "178": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "179": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "180": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "181": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "182": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "183": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "184": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "185": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "186": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "187": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "188": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "189": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "190": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "191": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "192": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk126_overnight_production_window/operation_summary.csv"
+  },
+  "193": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "194": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "195": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "196": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "197": {
+    "status": "NOT_EXECUTED",
+    "evidence": "No dedicated assertion run in Wave 2"
+  },
+  "198": {
+    "status": "PASS",
+    "evidence": "Jest piece-flow-verifier capacity exceeded test"
+  },
+  "199": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk109_due_miss/validation_report.json"
+  },
+  "200": {
+    "status": "PASS",
+    "evidence": "Jest piece-flow-verifier invalid report on critical issue"
+  },
+  "201": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk201_invalid_datetime"
+  },
+  "202": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-202)"
+  },
+  "203": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk203_missing_batches"
+  },
+  "204": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk204_missing_operations"
+  },
+  "205": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk205_missing_operation_seq"
+  },
+  "206": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk206_missing_operation_name"
+  },
+  "207": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk207_missing_setup_time"
+  },
+  "208": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk208_missing_cycle_time"
+  },
+  "209": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk209_missing_start_datetime"
+  },
+  "210": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk210_missing_batch_qty"
+  },
+  "211": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-211)"
+  },
+  "212": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-212)"
+  },
+  "213": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Zero cycle-time policy behavior not isolated and asserted"
+  },
+  "214": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-214)"
+  },
+  "215": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-215)"
+  },
+  "216": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk216_nonnumeric_cycle"
+  },
+  "217": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk217_invalid_holiday_item rejected (TypeError)"
+  },
+  "218": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk218_invalid_breakdown_datetime"
+  },
+  "219": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-219)"
+  },
+  "220": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk220_breakdown_missing_machine"
+  },
+  "221": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Unknown machine token warning path not asserted"
+  },
+  "222": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Unknown handle mode default path not asserted for verifier input"
+  },
+  "223": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Empty eligible machine list failure path not asserted"
+  },
+  "224": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Impossible production window case not isolated"
+  },
+  "225": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Impossible setup window case not isolated"
+  },
+  "226": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk226_missing_shift_mapping"
+  },
+  "227": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk227_invalid_shift_window"
+  },
+  "228": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk228_malformed_json"
+  },
+  "229": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk229_missing_file"
+  },
+  "230": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Unreadable file permission case not executed"
+  },
+  "231": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk231_missing_input_demo"
+  },
+  "232": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk232_invalid_demo (argparse rc=2 invalid choice)"
+  },
+  "233": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk233_invalid_lane_mode (argparse rc=2 invalid choice)"
+  },
+  "234": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk234_invalid_machine_mode (argparse rc=2 invalid choice)"
+  },
+  "235": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/chk235_bad_live_ops_live stderr shows invalid literal for int() when --live enabled"
+  },
+  "236": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk236_malformed_live_machines_safe"
+  },
+  "237": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler UI runtime exception harness in page-level flow"
+  },
+  "238": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler UI runtime exception harness in page-level flow"
+  },
+  "239": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler UI runtime exception harness in page-level flow"
+  },
+  "240": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler UI runtime exception harness in page-level flow"
+  },
+  "241": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Error taxonomy appears mixed (ValueError/KeyError/TypeError/IndexError); consistency policy not enforced yet"
+  },
+  "242": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Many errors include field names; not formally asserted across all failures"
+  },
+  "243": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Row/case identifier in errors not systematically asserted"
+  },
+  "244": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Warning message context checks not executed"
+  },
+  "245": {
+    "status": "PASS",
+    "evidence": "Due warnings include run_end and due timestamps (chk109_due_miss output)"
+  },
+  "246": {
+    "status": "PASS",
+    "evidence": "Overlap errors include timestamp context in verifier validations (existing behavior/docs)"
+  },
+  "247": {
+    "status": "PASS",
+    "evidence": "Overlap errors include resource identifier (machine/operator)"
+  },
+  "248": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Parser errors repeat deterministically in sampled runs; no automated repeat-loop assertion yet"
+  },
+  "249": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Multi-error aggregation behavior not explicitly tested"
+  },
+  "250": {
+    "status": "NOT_EXECUTED",
+    "evidence": "Remediation hint quality not standardized/asserted"
+  }
+}

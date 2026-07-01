@@ -77,3 +77,6 @@ mobile/
 
 # Test coverage reports
 coverage/
+
+# Heap snapshots (never commit)
+*.heapsnapshot

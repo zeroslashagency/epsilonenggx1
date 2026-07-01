@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requireRole, requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 export async function GET(request: NextRequest) {
@@ -15,12 +15,15 @@ export async function GET(request: NextRequest) {
     const requiredPermission = searchParams.get('permission')
 
     if (!userId || !requiredPermission) {
-      return NextResponse.json({ 
-        error: 'User ID and permission are required' 
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: 'User ID and permission are required',
+        },
+        { status: 400 }
+      )
     }
 
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
 
     // Get user's profile info
     const { data: userProfile } = await supabase
@@ -30,10 +33,13 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (!userProfile) {
-      return NextResponse.json({ 
-        error: 'User not found',
-        hasAccess: false
-      }, { status: 404 })
+      return NextResponse.json(
+        {
+          error: 'User not found',
+          hasAccess: false,
+        },
+        { status: 404 }
+      )
     }
 
     // Check if user has the required permission
@@ -43,7 +49,7 @@ export async function GET(request: NextRequest) {
       role: userProfile.role,
       requiredPermission,
       hasAccess: false,
-      accessMethod: 'none'
+      accessMethod: 'none',
     }
 
     {
@@ -54,12 +60,12 @@ export async function GET(request: NextRequest) {
 
       // Map frontend permission to database permission
       const permissionMap: Record<string, string> = {
-        'dashboard': 'view_dashboard',
-        'analytics': 'view_reports',
-        'schedule_generator': 'view_schedule',
-        'chart': 'view_machine_analyzer',
-        'attendance': 'attendance_read',
-        'manage_users': 'manage_users'
+        dashboard: 'view_dashboard',
+        analytics: 'view_reports',
+        schedule_generator: 'view_schedule',
+        chart: 'view_machine_analyzer',
+        attendance: 'attendance_read',
+        manage_users: 'manage_users',
       }
 
       const dbPermissionCode = permissionMap[requiredPermission] || requiredPermission
@@ -69,16 +75,20 @@ export async function GET(request: NextRequest) {
       if (roleIds.length > 0) {
         const { data: rolePermissions } = await supabase
           .from('role_permissions')
-          .select(`
+          .select(
+            `
             permissions (
               code
             )
-          `)
+          `
+          )
           .in('role_id', roleIds)
 
         rolePermissionCodes = (rolePermissions || [])
           .map((row: any) => {
-            const permissionData = Array.isArray(row.permissions) ? row.permissions[0] : row.permissions
+            const permissionData = Array.isArray(row.permissions)
+              ? row.permissions[0]
+              : row.permissions
             return permissionData?.code
           })
           .filter((code: unknown): code is string => typeof code === 'string' && code.length > 0)
@@ -86,17 +96,21 @@ export async function GET(request: NextRequest) {
 
       const { data: userPermissionOverrides } = await supabase
         .from('user_permissions')
-        .select(`
+        .select(
+          `
           permissions (
             code
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
         .eq('effect', 'grant')
 
       const customPermissionCodes = (userPermissionOverrides || [])
         .map((row: any) => {
-          const permissionData = Array.isArray(row.permissions) ? row.permissions[0] : row.permissions
+          const permissionData = Array.isArray(row.permissions)
+            ? row.permissions[0]
+            : row.permissions
           return permissionData?.code
         })
         .filter((code: unknown): code is string => typeof code === 'string' && code.length > 0)
@@ -113,13 +127,15 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      ...accessDetails
+      ...accessDetails,
     })
-
   } catch (error: any) {
-    return NextResponse.json({
-      error: error?.message || 'Internal server error',
-      hasAccess: false
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: error?.message || 'Internal server error',
+        hasAccess: false,
+      },
+      { status: 500 }
+    )
   }
 }

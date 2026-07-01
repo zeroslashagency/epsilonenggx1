@@ -2713,7 +2713,7 @@ function ScheduleDashboardContent() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => window.location.href = '/attendance'}
+                  onClick={() => window.location.href = '/personnel'}
                   className="border-purple-300 text-purple-600 hover:bg-purple-50"
                 >
                   <Users className="w-4 h-4 mr-2" />

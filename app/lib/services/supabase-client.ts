@@ -1,7 +1,7 @@
 /**
  * Supabase Client Service
  * Provides secure, centralized access to Supabase database
- * 
+ *
  * @module supabase-client
  * @security CRITICAL - Never hardcode API keys
  */
@@ -35,7 +35,7 @@ declare global {
  * Get server-side Supabase instance (anon key)
  * For use in API routes and server components
  * Does NOT persist sessions
- * 
+ *
  * @returns {SupabaseClient} Singleton Supabase client instance
  */
 export function getSupabaseClient(): SupabaseClient {
@@ -43,19 +43,17 @@ export function getSupabaseClient(): SupabaseClient {
   if (clientInstance) {
     return clientInstance
   }
-  
+
   // Validate at runtime when client is actually needed
   if (!supabaseUrl) {
-    throw new Error(
-      '❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.'
-    )
+    throw new Error('❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.')
   }
   if (!supabaseAnonKey) {
     throw new Error(
       '❌ NEXT_PUBLIC_SUPABASE_ANON_KEY is required. Please check your .env.local file.'
     )
   }
-  
+
   // Create and cache instance (server-side config)
   clientInstance = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -63,17 +61,15 @@ export function getSupabaseClient(): SupabaseClient {
       autoRefreshToken: false,
     },
   })
-  
+
   return clientInstance
 }
-
-
 
 /**
  * Get browser-side Supabase instance (anon key)
  * For use in client components and auth context
  * PERSISTS sessions to localStorage
- * 
+ *
  * @returns {SupabaseClient} Singleton browser Supabase client
  */
 export function getSupabaseBrowserClient(): SupabaseClient {
@@ -81,29 +77,27 @@ export function getSupabaseBrowserClient(): SupabaseClient {
   if (browserClientInstance) {
     return browserClientInstance
   }
-  
+
   // Validate at runtime
   if (!supabaseUrl) {
-    throw new Error(
-      '❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.'
-    )
+    throw new Error('❌ NEXT_PUBLIC_SUPABASE_URL is required. Please check your .env.local file.')
   }
   if (!supabaseAnonKey) {
     throw new Error(
       '❌ NEXT_PUBLIC_SUPABASE_ANON_KEY is required. Please check your .env.local file.'
     )
   }
-  
+
   // Create and cache instance (browser-side config)
   browserClientInstance = createBrowserClient(supabaseUrl, supabaseAnonKey)
-  
+
   return browserClientInstance
 }
 
 /**
  * Get server-side Supabase instance (service role key)
  * ONLY use in API routes - has full database access
- * 
+ *
  * @returns {SupabaseClient} Singleton admin Supabase client
  * @security CRITICAL - Only use server-side
  * @example
@@ -111,6 +105,10 @@ export function getSupabaseBrowserClient(): SupabaseClient {
  * const supabase = getSupabaseAdminClient()
  * const { data } = await supabase.from('roles').select()
  */
+export function hasServiceRoleKey(): boolean {
+  return Boolean(supabaseServiceKey)
+}
+
 export function getSupabaseAdminClient(): SupabaseClient {
   // Preferred path: service-role client with full DB access.
   if (supabaseServiceKey) {
@@ -132,7 +130,7 @@ export function getSupabaseAdminClient(): SupabaseClient {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
       '❌ Supabase is not configured. NEXT_PUBLIC_SUPABASE_URL and ' +
-      'NEXT_PUBLIC_SUPABASE_ANON_KEY are required. Check your .env.local file.'
+        'NEXT_PUBLIC_SUPABASE_ANON_KEY are required. Check your .env.local file.'
     )
   }
   if (process.env.NODE_ENV !== 'production' && !globalThis.__supabaseAdminFallbackWarned) {
@@ -153,25 +151,24 @@ export const supabase = new Proxy({} as SupabaseClient, {
   get(target, prop) {
     if (!_supabaseInstance) {
       // Use browser client if in browser context, otherwise server client
-      _supabaseInstance = typeof window !== 'undefined' 
-        ? getSupabaseBrowserClient() 
-        : getSupabaseClient()
+      _supabaseInstance =
+        typeof window !== 'undefined' ? getSupabaseBrowserClient() : getSupabaseClient()
     }
     return (_supabaseInstance as any)[prop]
-  }
+  },
 })
 
 /**
  * Validate Supabase configuration
  * Call this at application startup to ensure all required env vars are present
- * 
+ *
  * @throws {Error} If any required environment variable is missing
  */
 export function validateSupabaseConfig(): void {
   const required = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY'
+    'SUPABASE_SERVICE_ROLE_KEY',
   ]
 
   const missing = required.filter(key => !process.env[key])
@@ -179,13 +176,11 @@ export function validateSupabaseConfig(): void {
   if (missing.length > 0) {
     throw new Error(
       `❌ Missing required Supabase environment variables:\n` +
-      missing.map(key => `  - ${key}`).join('\n') +
-      `\n\nPlease check your .env.local file.`
+        missing.map(key => `  - ${key}`).join('\n') +
+        `\n\nPlease check your .env.local file.`
     )
   }
-
 }
-
 
 /**
  * Returns a Supabase client appropriate for an API route acting on behalf of a
@@ -194,14 +189,19 @@ export function validateSupabaseConfig(): void {
  * caller's Bearer token, so RLS policies scoped to the `authenticated` role
  * still apply (otherwise anon-role queries return 0 rows under RLS).
  */
-export function getSupabaseForRequest(request: { headers: { get(name: string): string | null } }): SupabaseClient {
+export function getSupabaseForRequest(request: {
+  headers: { get(name: string): string | null }
+}): SupabaseClient {
   if (supabaseServiceKey) {
     return getSupabaseAdminClient()
   }
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase is not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).')
+    throw new Error(
+      'Supabase is not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).'
+    )
   }
-  const authHeader = request.headers.get('authorization') || request.headers.get('Authorization') || ''
+  const authHeader =
+    request.headers.get('authorization') || request.headers.get('Authorization') || ''
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: { autoRefreshToken: false, persistSession: false },
     global: authHeader ? { headers: { Authorization: authHeader } } : undefined,

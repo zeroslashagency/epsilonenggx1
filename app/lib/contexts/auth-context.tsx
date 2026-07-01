@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const resolvedModuleKey =
       !userPermissions?.[moduleKey] &&
-      (moduleKey === 'web_user_attendance' || moduleKey === 'mobile_user_attendance') &&
+      moduleKey === 'mobile_user_attendance' &&
       userPermissions?.user_attendance
         ? 'user_attendance'
         : moduleKey

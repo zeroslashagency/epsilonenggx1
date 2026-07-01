@@ -178,7 +178,6 @@ const MOBILE_USER_ATTENDANCE_MAP: Record<string, UserAttendanceConfig> = {
 
 const USER_ATTENDANCE_MAP_BY_MODULE: Record<string, Record<string, UserAttendanceConfig>> = {
   user_attendance: WEB_USER_ATTENDANCE_MAP,
-  web_user_attendance: WEB_USER_ATTENDANCE_MAP,
   mobile_user_attendance: MOBILE_USER_ATTENDANCE_MAP,
   tools_health: { 'Device Monitor': WEB_USER_ATTENDANCE_MAP['Device Monitoring'] },
 }
@@ -429,7 +428,6 @@ const addUserAttendanceCodes = (
 
     if (
       moduleKey === 'mobile_user_attendance' ||
-      moduleKey === 'web_user_attendance' ||
       moduleKey === 'tools_health'
     )
       return
@@ -480,7 +478,6 @@ const addUserAttendanceCodes = (
   Object.entries(baseState).forEach(([prefix, state]) => {
     if (
       moduleKey === 'mobile_user_attendance' ||
-      moduleKey === 'web_user_attendance' ||
       moduleKey === 'tools_health'
     )
       return
@@ -495,7 +492,6 @@ const addUserAttendanceCodes = (
 export function buildPermissionCodes(permissionModules: PermissionModules): string[] {
   const codes = new Set<string>()
 
-  addUserAttendanceCodes(permissionModules.web_user_attendance, 'web_user_attendance', codes)
   addUserAttendanceCodes(permissionModules.mobile_user_attendance, 'mobile_user_attendance', codes)
   addUserAttendanceCodes(permissionModules.user_attendance, 'user_attendance', codes)
   addUserAttendanceCodes(permissionModules.tools_health, 'tools_health', codes)

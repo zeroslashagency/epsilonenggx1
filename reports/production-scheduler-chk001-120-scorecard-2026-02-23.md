@@ -1,0 +1,136 @@
+# CHK-001..CHK-120 Scorecard (Wave 1)
+
+Date: 2026-02-23
+
+## Status Counts
+
+- BLOCKED_UI_COUPLED: 50
+- NOT_EXECUTED: 33
+- PARTIAL_NEEDS_ASSERTION: 5
+- PASS: 32
+
+## PASS Checks
+
+- CHK-051: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-052: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-055: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-056: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-069: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-070: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-071: Jest: personnel-v2.test.ts validates parsed profile count/summary behavior
+- CHK-081: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-082: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-083: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-084: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-095: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-096: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-097: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-098: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-099: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-100: Jest: personnel-v2.test.ts and/or import-input.integration.test.ts
+- CHK-101: out/chk001_120_extra/chk101_fixed_machine/operation_summary.csv
+- CHK-102: out/chk101_200/wave1/chk102_machine_fallback_eligible/operation_summary.csv
+- CHK-103: Jest deterministic-handle-modes + fixture case02
+- CHK-104: Jest deterministic-handle-modes test holiday blocking
+- CHK-106: out/chk101_200/wave1/chk106_run_pause_window/operation_summary.csv
+- CHK-107: out/chk001_120_extra/chk107_setup_pause/operation_summary.csv
+- CHK-108: out/chk101_200/wave1/chk106_run_pause_window/operation_summary.csv
+- CHK-109: out/chk101_200/wave1/chk109_due_miss/validation_report.json
+- CHK-110: out/chk101_200/wave1/chk110_due_hit/validation_report.json
+- CHK-115: Jest deterministic-handle-modes setup non-overlap test
+- CHK-116: Jest deterministic-handle-modes setup-run overlap prevention
+- CHK-117: Jest deterministic-handle-modes single overlap blocked
+- CHK-118: Jest deterministic-handle-modes double overlap allowed
+- CHK-119: Jest deterministic-handle-modes triple-double capped
+- CHK-120: Jest deterministic-handle-modes mixed single+double blocked
+
+## Non-PASS Checks
+
+- CHK-001: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-002: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-003: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-004: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-005: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-006: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-007: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-008: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-009: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-010: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-011: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-012: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-013: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-014: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-015: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-016: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-017: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-018: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-019: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-020: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-021: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-022: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-023: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-024: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-025: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-026: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-027: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-028: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-029: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-030: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-031: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-032: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-033: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-034: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-035: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-036: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-037: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-038: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-039: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-040: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-041: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-042: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-043: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-044: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-045: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-046: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-047: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-048: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-049: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-050: BLOCKED_UI_COUPLED - Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation.
+- CHK-053: NOT_EXECUTED - 
+- CHK-054: NOT_EXECUTED - 
+- CHK-057: NOT_EXECUTED - 
+- CHK-058: NOT_EXECUTED - 
+- CHK-059: NOT_EXECUTED - 
+- CHK-060: NOT_EXECUTED - 
+- CHK-061: NOT_EXECUTED - 
+- CHK-062: NOT_EXECUTED - 
+- CHK-063: NOT_EXECUTED - 
+- CHK-064: NOT_EXECUTED - 
+- CHK-065: NOT_EXECUTED - 
+- CHK-066: NOT_EXECUTED - 
+- CHK-067: NOT_EXECUTED - 
+- CHK-068: NOT_EXECUTED - 
+- CHK-072: NOT_EXECUTED - 
+- CHK-073: NOT_EXECUTED - 
+- CHK-074: NOT_EXECUTED - 
+- CHK-075: NOT_EXECUTED - 
+- CHK-076: NOT_EXECUTED - 
+- CHK-077: NOT_EXECUTED - 
+- CHK-078: NOT_EXECUTED - 
+- CHK-079: NOT_EXECUTED - 
+- CHK-080: NOT_EXECUTED - 
+- CHK-085: NOT_EXECUTED - 
+- CHK-086: NOT_EXECUTED - 
+- CHK-087: NOT_EXECUTED - 
+- CHK-088: NOT_EXECUTED - 
+- CHK-089: NOT_EXECUTED - 
+- CHK-090: NOT_EXECUTED - 
+- CHK-091: NOT_EXECUTED - 
+- CHK-092: NOT_EXECUTED - 
+- CHK-093: NOT_EXECUTED - 
+- CHK-094: NOT_EXECUTED - 
+- CHK-105: PARTIAL_NEEDS_ASSERTION - Related runs are valid, but explicit assertion not yet encoded in test harness.
+- CHK-111: PARTIAL_NEEDS_ASSERTION - Related runs are valid, but explicit assertion not yet encoded in test harness.
+- CHK-112: PARTIAL_NEEDS_ASSERTION - Related runs are valid, but explicit assertion not yet encoded in test harness.
+- CHK-113: PARTIAL_NEEDS_ASSERTION - Related runs are valid, but explicit assertion not yet encoded in test harness.
+- CHK-114: PARTIAL_NEEDS_ASSERTION - Related runs are valid, but explicit assertion not yet encoded in test harness.

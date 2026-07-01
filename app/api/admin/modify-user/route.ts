@@ -1,103 +1,78 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
+/**
+ * Modify a user's role (Pure RBAC).
+ *
+ * Dual enforcement:
+ *  1. App layer — requirePermission('users.edit').
+ *  2. DB layer  — app_admin_assign_role_by_id() is SECURITY DEFINER and
+ *                 re-checks is_admin(auth.uid()); the public anon key cannot
+ *                 write user_roles directly (anon RLS write policy removed).
+ *
+ * The RPC atomically replaces role bindings, syncs profiles.role, and writes
+ * an audit_logs entry. No service_role key required.
+ *
+ * Custom per-user permissions are intentionally unsupported in Pure RBAC:
+ * permissions derive from the assigned role only.
+ */
 export async function PUT(request: NextRequest) {
-  // ✅ PERMISSION CHECK: Require users.edit permission
   const authResult = await requirePermission(request, 'users.edit')
   if (authResult instanceof NextResponse) return authResult
-  const user = authResult
 
   try {
-    const supabase = getSupabaseClient()
-    const { userId, roleId, customPermissions, removePermissions, actorId } = await request.json()
-    
+    const { userId, roleId } = await request.json()
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
-
-    // Update user role if provided
-    if (roleId) {
-      
-      // Delete existing role assignment
-      const { error: deleteError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-
-      if (deleteError) {
-      }
-
-      // Insert new role assignment
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role_id: roleId
-        })
-
-      if (roleError) {
-        return NextResponse.json({ error: `Failed to update user role: ${roleError.message}` }, { status: 500 })
-      }
-      
-      
-      // Get the new role name for audit log
-      const { data: newRoleData } = await supabase
-        .from('roles')
-        .select('name')
-        .eq('id', roleId)
-        .single()
-      
-      // Create audit log entry
-      const { error: auditError } = await supabase
-        .from('audit_logs')
-        .insert({
-          target_id: userId,
-          actor_id: actorId || user.id, // ✅ FIXED: Use authenticated user if actorId not provided
-          action: 'role_change',
-          meta_json: {
-            new_role: newRoleData?.name || 'unknown',
-            description: `Role changed to ${newRoleData?.name || 'unknown'} by ${user.email}`,
-            changed_by: user.email
-          },
-          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown' // ✅ FIXED: Get real IP
-        })
-      
-      if (auditError) {
-        // Don't fail the request, just log the error
-      }
+    if (!roleId) {
+      return NextResponse.json({ error: 'Role ID is required' }, { status: 400 })
     }
 
-    // Pure RBAC: Permissions are managed through role assignment only
-    // Custom permissions (customPermissions, removePermissions) are ignored
-    // Users get permissions based on their assigned role
-    
-    // Log if custom permissions were attempted (for migration awareness)
-    if (customPermissions !== undefined || (removePermissions && removePermissions.length > 0)) {
-      
-      // Create audit log for attempted custom permission change
-      const { error: auditError } = await supabase
-        .from('audit_logs')
-        .insert({
-          actor_id: userId,
-          action: 'attempted_custom_permission_change',
-          meta_json: {
-            note: 'Custom permissions not supported in Pure RBAC mode',
-            attempted_grants: customPermissions?.length || 0,
-            attempted_revokes: removePermissions?.length || 0
-          }
-        })
-      
-      if (auditError) {
+    const supabase = getSupabaseForRequest(request)
+    const { error } = await supabase.rpc('app_admin_assign_role_by_id', {
+      target: userId,
+      p_role_id: roleId,
+    })
+
+    if (error) {
+      const msg = (error.message || '').toLowerCase()
+      if (msg.includes('forbidden') || error.code === '42501') {
+        return NextResponse.json(
+          { success: false, error: 'You do not have permission to modify user roles.' },
+          { status: 403 }
+        )
       }
+      if (msg.includes('unauthenticated') || error.code === '28000') {
+        return NextResponse.json(
+          { success: false, error: 'Authentication required.' },
+          { status: 401 }
+        )
+      }
+      if (msg.includes('not_found')) {
+        return NextResponse.json(
+          { success: false, error: error.message.replace(/^NOT_FOUND:\s*/i, '') },
+          { status: 404 }
+        )
+      }
+      if (msg.includes('last super admin') || error.code === 'P0001') {
+        return NextResponse.json(
+          { success: false, error: error.message.replace(/^CONFLICT:\s*/i, '') },
+          { status: 409 }
+        )
+      }
+      return NextResponse.json(
+        { success: false, error: `Failed to update user role: ${error.message}` },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ success: true })
-
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

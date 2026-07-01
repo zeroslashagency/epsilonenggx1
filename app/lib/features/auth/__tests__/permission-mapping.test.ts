@@ -6,9 +6,9 @@ import {
 } from '@/app/lib/features/auth/permission-mapping'
 import { MAIN_DASHBOARD_CHILD_ITEMS } from '@/app/lib/features/auth/dashboard-permissions'
 
-const buildWebUserAttendanceFixture = (): PermissionModules => ({
-  web_user_attendance: {
-    name: 'Web User Attendance',
+const buildUserAttendanceFixture = (): PermissionModules => ({
+  user_attendance: {
+    name: 'User Attendance (legacy)',
     items: {
       Attendance: { full: false, view: false, isCollapsible: true },
       'Attendance: Overview': {
@@ -41,32 +41,32 @@ const buildWebUserAttendanceFixture = (): PermissionModules => ({
 
 describe('permission-mapping helpers', () => {
   test('recomputeParentFlagsFromChildren sets parent true when all children are true', () => {
-    const fixture = buildWebUserAttendanceFixture()
-    fixture.web_user_attendance.items['Attendance: Overview'].view = true
-    fixture.web_user_attendance.items['Attendance: Calendar'].view = true
-    fixture.web_user_attendance.items['Attendance: Timeline'].view = true
-    fixture.web_user_attendance.items['Attendance: History'].view = true
+    const fixture = buildUserAttendanceFixture()
+    fixture.user_attendance.items['Attendance: Overview'].view = true
+    fixture.user_attendance.items['Attendance: Calendar'].view = true
+    fixture.user_attendance.items['Attendance: Timeline'].view = true
+    fixture.user_attendance.items['Attendance: History'].view = true
 
     const recomputed = recomputeParentFlagsFromChildren(fixture)
 
-    expect(recomputed.web_user_attendance.items.Attendance.view).toBe(true)
+    expect(recomputed.user_attendance.items.Attendance.view).toBe(true)
   })
 
   test('recomputeParentFlagsFromChildren sets parent false when any child is false', () => {
-    const fixture = buildWebUserAttendanceFixture()
-    fixture.web_user_attendance.items['Attendance: Overview'].view = true
-    fixture.web_user_attendance.items['Attendance: Calendar'].view = false
-    fixture.web_user_attendance.items['Attendance: Timeline'].view = true
-    fixture.web_user_attendance.items['Attendance: History'].view = true
+    const fixture = buildUserAttendanceFixture()
+    fixture.user_attendance.items['Attendance: Overview'].view = true
+    fixture.user_attendance.items['Attendance: Calendar'].view = false
+    fixture.user_attendance.items['Attendance: Timeline'].view = true
+    fixture.user_attendance.items['Attendance: History'].view = true
 
     const recomputed = recomputeParentFlagsFromChildren(fixture)
 
-    expect(recomputed.web_user_attendance.items.Attendance.view).toBe(false)
+    expect(recomputed.user_attendance.items.Attendance.view).toBe(false)
   })
 
   test('recomputeParentFlagsFromChildren only computes actions that children expose', () => {
     const fixture: PermissionModules = {
-      web_user_attendance: {
+      user_attendance: {
         name: 'Web User Attendance',
         items: {
           FIR: { full: false, view: false, create: false, edit: false, isCollapsible: true },
@@ -90,23 +90,23 @@ describe('permission-mapping helpers', () => {
 
     const recomputed = recomputeParentFlagsFromChildren(fixture)
 
-    expect(recomputed.web_user_attendance.items.FIR.view).toBe(true)
-    expect(recomputed.web_user_attendance.items.FIR.create).toBe(false)
-    expect(recomputed.web_user_attendance.items.FIR.edit).toBe(false)
+    expect(recomputed.user_attendance.items.FIR.view).toBe(true)
+    expect(recomputed.user_attendance.items.FIR.create).toBe(false)
+    expect(recomputed.user_attendance.items.FIR.edit).toBe(false)
   })
 
   test('applyPermissionCodesToModules overlays effective child permissions', () => {
-    const fixture = buildWebUserAttendanceFixture()
+    const fixture = buildUserAttendanceFixture()
 
     const result = applyPermissionCodesToModules(fixture, ['attendance.history.view'])
 
-    expect(result.web_user_attendance.items['Attendance: History'].view).toBe(true)
-    expect(result.web_user_attendance.items['Attendance: Overview'].view).toBe(false)
+    expect(result.user_attendance.items['Attendance: History'].view).toBe(true)
+    expect(result.user_attendance.items['Attendance: Overview'].view).toBe(false)
   })
 
   test('buildPermissionCodes does not emit fir.dashboard.create/edit from web FIR parent', () => {
     const fixture: PermissionModules = {
-      web_user_attendance: {
+      user_attendance: {
         name: 'Web User Attendance',
         items: {
           FIR: {

@@ -1,0 +1,232 @@
+{
+  "run": {
+    "run_id": "alg-quality-20260226-subagent-01",
+    "date": "2026-02-26",
+    "branch": "<local-branch>",
+    "commit": "<local-commit>",
+    "input_file": "/Users/xoxo/Downloads/import_input (2).xlsx",
+    "advanced_output": "/Users/xoxo/Downloads/production_schedule_2026-02-25T19-18-46.xlsx",
+    "basic_output": "<missing: basic_new.xlsx>"
+  },
+  "kpi_policy": {
+    "person_util_label": "Run Util",
+    "person_util_formula": "run_only_busy_minutes / available_run_window_minutes",
+    "setup_included_in_person_util": false
+  },
+  "summary": {
+    "total_checks": 30,
+    "pass": 16,
+    "fail": 0,
+    "blocked": 14,
+    "decision": "NO-GO"
+  },
+  "metric_snapshots": {
+    "advanced": {
+      "on_time_pct": null,
+      "avg_queue_hours": null,
+      "makespan_hours": null,
+      "machine_util_pct": null,
+      "run_util_pct": null,
+      "setup_minutes_total": null,
+      "run_minutes_total": null
+    },
+    "basic": {
+      "on_time_pct": null,
+      "avg_queue_hours": null,
+      "makespan_hours": null,
+      "machine_util_pct": null,
+      "run_util_pct": null,
+      "setup_minutes_total": null,
+      "run_minutes_total": null
+    },
+    "delta_advanced_minus_basic": {
+      "on_time_pct_points": null,
+      "avg_queue_hours": null,
+      "makespan_hours": null,
+      "machine_util_pct_points": null,
+      "run_util_pct_points": null
+    }
+  },
+  "checks": [
+    {
+      "id": "ALG-01",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent core Jest gate execution passed."
+    },
+    {
+      "id": "ALG-02",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent core Jest gate execution passed."
+    },
+    {
+      "id": "ALG-03",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent core Jest gate execution passed."
+    },
+    {
+      "id": "ALG-04",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent core Jest gate execution passed."
+    },
+    {
+      "id": "ALG-05",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent core Jest gate execution passed."
+    },
+    {
+      "id": "ALG-06",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-07",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-08",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-09",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-10",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-11",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-12",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-13",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-14",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-15",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-16",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-17",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-18",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-19",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-20",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-21",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-22",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-23",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-24",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-25",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-26",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-27",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-28",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    },
+    {
+      "id": "ALG-29",
+      "status": "PASS",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Subagent validation produced passing evidence for this check."
+    },
+    {
+      "id": "ALG-30",
+      "status": "BLOCKED",
+      "evidence": "subagent-run-2026-02-26",
+      "notes": "Required fresh mode artifacts and/or baseline drift files are missing in this run."
+    }
+  ]
+}

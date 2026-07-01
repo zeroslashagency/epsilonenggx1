@@ -1,0 +1,229 @@
+{
+  "run": {
+    "run_id": "alg-quality-20260226-subagent-02",
+    "date": "2026-02-26",
+    "input_file": "/Users/xoxo/Downloads/import_input (2).xlsx",
+    "advanced_output": "/Users/xoxo/Desktop/epsilonschedulingmain 2/reports/artifacts/alg-quality/alg-quality-20260226-subagent-02/workbooks/advanced_new.xlsx",
+    "basic_output": "/Users/xoxo/Desktop/epsilonschedulingmain 2/reports/artifacts/alg-quality/alg-quality-20260226-subagent-02/workbooks/basic_new.xlsx"
+  },
+  "summary": {
+    "total_checks": 30,
+    "pass": 27,
+    "fail": 1,
+    "blocked": 2,
+    "decision": "NO-GO"
+  },
+  "metric_snapshots": {
+    "advanced": {
+      "on_time_pct": 100,
+      "avg_queue_hours": 0,
+      "makespan_hours": 288.8,
+      "machine_util_pct": 99.8,
+      "run_util_pct": 99.8,
+      "setup_minutes_total": 590,
+      "run_minutes_total": 22528,
+      "fairness_people_cv": 0.3798,
+      "fairness_machine_cv": 0.712
+    },
+    "basic": {
+      "on_time_pct": 100,
+      "avg_queue_hours": 0,
+      "makespan_hours": 366.3,
+      "machine_util_pct": 100,
+      "run_util_pct": 100,
+      "setup_minutes_total": 0,
+      "run_minutes_total": 23001,
+      "fairness_people_cv": 0.2792,
+      "fairness_machine_cv": 0.2792
+    },
+    "delta": {
+      "on_time_pct_points": 0,
+      "avg_queue_hours": 0,
+      "makespan_hours": -77.5,
+      "machine_util_pct_points": -0.2,
+      "run_util_pct_points": -0.2
+    }
+  },
+  "checks": [
+    {
+      "id": "ALG-01",
+      "status": "PASS",
+      "evidence": "Executed Jest command(s) successfully in this run.",
+      "notes": ""
+    },
+    {
+      "id": "ALG-02",
+      "status": "PASS",
+      "evidence": "Executed Jest command(s) successfully in this run.",
+      "notes": ""
+    },
+    {
+      "id": "ALG-03",
+      "status": "PASS",
+      "evidence": "Executed Jest command(s) successfully in this run.",
+      "notes": ""
+    },
+    {
+      "id": "ALG-04",
+      "status": "PASS",
+      "evidence": "Executed Jest command(s) successfully in this run.",
+      "notes": ""
+    },
+    {
+      "id": "ALG-05",
+      "status": "PASS",
+      "evidence": "Executed Jest command(s) successfully in this run.",
+      "notes": ""
+    },
+    {
+      "id": "ALG-06",
+      "status": "PASS",
+      "evidence": "{\"advanced\":{\"PN2001\":{\"sum\":777,\"order\":777},\"PN31001\":{\"sum\":999,\"order\":999}},\"basic\":{\"PN2001\":{\"sum\":777,\"order\":777},\"PN31001\":{\"sum\":999,\"order\":999}}}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-07",
+      "status": "PASS",
+      "evidence": "advancedDup=0, basicDup=0",
+      "notes": ""
+    },
+    {
+      "id": "ALG-08",
+      "status": "PASS",
+      "evidence": "advancedBatches=4, basicBatches=2",
+      "notes": ""
+    },
+    {
+      "id": "ALG-09",
+      "status": "PASS",
+      "evidence": "no violations",
+      "notes": ""
+    },
+    {
+      "id": "ALG-10",
+      "status": "PASS",
+      "evidence": "continuous",
+      "notes": ""
+    },
+    {
+      "id": "ALG-11",
+      "status": "PASS",
+      "evidence": "Advanced sheet list checked",
+      "notes": ""
+    },
+    {
+      "id": "ALG-12",
+      "status": "PASS",
+      "evidence": "Basic sheet list checked",
+      "notes": ""
+    },
+    {
+      "id": "ALG-13",
+      "status": "PASS",
+      "evidence": "advancedSetup=8, basicSetup=0",
+      "notes": ""
+    },
+    {
+      "id": "ALG-14",
+      "status": "PASS",
+      "evidence": "{\"settings-1\":2,\"settings-2\":2,\"settings-3\":2,\"settings-4\":2}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-15",
+      "status": "PASS",
+      "evidence": "[[\"settings-1\",160],[\"settings-2\",160],[\"settings-3\",190],[\"settings-4\",80]]",
+      "notes": ""
+    },
+    {
+      "id": "ALG-16",
+      "status": "PASS",
+      "evidence": "Run Util policy aligns with implementation and UI label.",
+      "notes": ""
+    },
+    {
+      "id": "ALG-17",
+      "status": "PASS",
+      "evidence": "{\"advanced\":99.8,\"basic\":100}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-18",
+      "status": "PASS",
+      "evidence": "{\"advanced\":99.8,\"basic\":100}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-19",
+      "status": "PASS",
+      "evidence": "{\"advanced\":0,\"basic\":0}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-20",
+      "status": "PASS",
+      "evidence": "{\"advanced\":288.8,\"basic\":366.3}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-21",
+      "status": "PASS",
+      "evidence": "advancedBad=0, basicBad=0",
+      "notes": ""
+    },
+    {
+      "id": "ALG-22",
+      "status": "FAIL",
+      "evidence": "rowsOver2min=8/12",
+      "notes": ""
+    },
+    {
+      "id": "ALG-23",
+      "status": "PASS",
+      "evidence": "{\"advanced\":{\"hasCol\":true,\"count\":8,\"ok\":true},\"basic\":{\"hasCol\":true,\"count\":4,\"ok\":true}}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-24",
+      "status": "PASS",
+      "evidence": "advancedMissing=0, basicMissing=0",
+      "notes": ""
+    },
+    {
+      "id": "ALG-25",
+      "status": "PASS",
+      "evidence": "{\"advancedCount\":14,\"basicCount\":14}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-26",
+      "status": "PASS",
+      "evidence": "{\"advanced_cv\":0.3798,\"basic_cv\":0.2792,\"warning\":0.6,\"hard_fail\":0.75}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-27",
+      "status": "PASS",
+      "evidence": "{\"advanced_cv\":0.712,\"basic_cv\":0.2792,\"warning\":0.65,\"hard_fail\":0.8}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-28",
+      "status": "BLOCKED",
+      "evidence": "No baseline workbook artifact available for drift comparison.",
+      "notes": ""
+    },
+    {
+      "id": "ALG-29",
+      "status": "PASS",
+      "evidence": "{\"on_time_pct_points\":0,\"avg_queue_hours\":0,\"makespan_hours\":-77.5,\"machine_util_pct_points\":-0.2,\"run_util_pct_points\":-0.2}",
+      "notes": ""
+    },
+    {
+      "id": "ALG-30",
+      "status": "BLOCKED",
+      "evidence": "Open FAIL/BLOCKED checks remain",
+      "notes": ""
+    }
+  ]
+}

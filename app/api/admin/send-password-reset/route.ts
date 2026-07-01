@@ -23,51 +23,55 @@ export async function POST(request: NextRequest) {
     const { userEmail } = await request.json()
 
     if (!userEmail) {
-      return NextResponse.json({
-        success: false,
-        error: 'User email is required'
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'User email is required',
+        },
+        { status: 400 }
+      )
     }
-
 
     const supabase = getSupabaseAdminClient()
 
-    // Send password reset email using Supabase Auth
+    // resetPasswordForEmail uses the public GoTrue endpoint (anon key OK).
     const { data, error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password`
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password`,
     })
 
     if (error) {
-      return NextResponse.json({
-        success: false,
-        error: error.message
-      }, { status: 500 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: 500 }
+      )
     }
 
     // Log the action
-    await supabase
-      .from('audit_logs')
-      .insert({
-        actor_id: user.id,
-        action: 'password_reset_sent',
-        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        meta_json: {
-          target_email: userEmail,
-          sent_by: user.email,
-          sent_at: new Date().toISOString()
-        }
-      })
-
+    await supabase.from('audit_logs').insert({
+      actor_id: user.id,
+      action: 'password_reset_sent',
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      meta_json: {
+        target_email: userEmail,
+        sent_by: user.email,
+        sent_at: new Date().toISOString(),
+      },
+    })
 
     return NextResponse.json({
       success: true,
-      message: `Password reset email sent to ${userEmail}. Please check your inbox.`
+      message: `Password reset email sent to ${userEmail}. Please check your inbox.`,
     })
-
   } catch (error: any) {
-    return NextResponse.json({
-      success: false,
-      error: error?.message || 'Failed to send password reset email'
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Failed to send password reset email',
+      },
+      { status: 500 }
+    )
   }
 }

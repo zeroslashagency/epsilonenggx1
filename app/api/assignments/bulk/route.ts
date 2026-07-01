@@ -105,8 +105,6 @@ export async function POST(request: NextRequest) {
 
     if (deleteError) {
       console.error(`[Unassign] Error deleting future assignments for ${employees}:`, deleteError)
-    } else {
-      console.log(`[Unassign] Deleted future assignments for ${employees} from ${startDate}`)
     }
 
     // Step 2: Close overlapping open/long assignments

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
 import { updateUserPermissionsSchema } from '@/app/lib/features/auth/schemas'
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
 
     // Validate request body
     const validation = await validateRequestBody(request, updateUserPermissionsSchema)

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 
 // Get role profiles with their default permissions
@@ -12,12 +12,13 @@ export async function GET(request: NextRequest) {
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
-    
+    const supabase = getSupabaseForRequest(request)
+
     // Get all roles with their permissions
     const { data: roles, error: rolesError } = await supabase
       .from('roles')
-      .select(`
+      .select(
+        `
         id,
         name,
         description,
@@ -29,37 +30,39 @@ export async function GET(request: NextRequest) {
             description
           )
         )
-      `)
+      `
+      )
       .order('name')
 
     if (rolesError) throw rolesError
 
     // Transform data into role profiles format
     const roleProfiles: Record<string, string[]> = {}
-    
+
     roles?.forEach((role: any) => {
       // Use default_permissions if available, otherwise fall back to role_permissions
       if (role.default_permissions && Array.isArray(role.default_permissions)) {
         roleProfiles[role.name] = role.default_permissions
       } else {
         // Extract permission codes from role_permissions
-        const permissionCodes = role.role_permissions
-          ?.map((rp: any) => rp.permissions?.code)
-          .filter(Boolean) || []
+        const permissionCodes =
+          role.role_permissions?.map((rp: any) => rp.permissions?.code).filter(Boolean) || []
         roleProfiles[role.name] = permissionCodes
       }
     })
 
     return NextResponse.json({
       success: true,
-      data: roleProfiles
+      data: roleProfiles,
     })
-
   } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch role profiles'
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch role profiles',
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -71,9 +74,9 @@ export async function PUT(request: NextRequest) {
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
     const body = await request.json()
-    
+
     // Handle single role update (from edit page)
     if (body.roleId) {
       const { roleId, name, description, is_manufacturing_role, permissions, updated_at } = body
@@ -86,55 +89,60 @@ export async function PUT(request: NextRequest) {
           description,
           is_manufacturing_role,
           permissions_json: permissions,
-          updated_at: updated_at || new Date().toISOString()
+          updated_at: updated_at || new Date().toISOString(),
         })
         .eq('id', roleId)
 
       if (updateError) throw updateError
 
       // Log audit trail
-      await supabase
-        .from('audit_logs')
-        .insert({
-          actor_id: user.id, // ✅ FIXED: Get from authenticated user
-          action: 'role_updated',
-          meta_json: {
-            role_id: roleId,
-            role_name: name,
-            updated_fields: {
-              name,
-              description,
-              is_manufacturing_role,
-              permissions
-            },
-            updated_by: user.email,
-            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-          }
-        })
+      await supabase.from('audit_logs').insert({
+        actor_id: user.id, // ✅ FIXED: Get from authenticated user
+        action: 'role_updated',
+        meta_json: {
+          role_id: roleId,
+          role_name: name,
+          updated_fields: {
+            name,
+            description,
+            is_manufacturing_role,
+            permissions,
+          },
+          updated_by: user.email,
+          ip:
+            request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        },
+      })
 
       return NextResponse.json({
         success: true,
-        message: `Role "${name}" updated successfully`
+        message: `Role "${name}" updated successfully`,
       })
     }
-    
+
     // Handle bulk role updates (legacy format)
     const { roles } = body
-    
+
     if (!Array.isArray(roles)) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid request format. Expected roles array or roleId.'
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid request format. Expected roles array or roleId.',
+        },
+        { status: 400 }
+      )
     }
 
     // Validate each role update
     for (const roleUpdate of roles) {
       if (!roleUpdate.roleKey || !Array.isArray(roleUpdate.permissions)) {
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid role update format. Each role must have roleKey and permissions array.'
-        }, { status: 400 })
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid role update format. Each role must have roleKey and permissions array.',
+          },
+          { status: 400 }
+        )
       }
     }
 
@@ -158,26 +166,25 @@ export async function PUT(request: NextRequest) {
         .from('roles')
         .update({
           default_permissions: permissions,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', existingRole.id)
 
       if (updateError) throw updateError
 
       // Log audit trail
-      await supabase
-        .from('audit_logs')
-        .insert({
-          actor_id: user.id, 
-          action: 'role_profile_updated',
-          meta_json: {
-            role_name: roleKey,
-            role_id: existingRole.id,
-            new_permissions: permissions,
-            updated_by: user.email,
-            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-          }
-        })
+      await supabase.from('audit_logs').insert({
+        actor_id: user.id,
+        action: 'role_profile_updated',
+        meta_json: {
+          role_name: roleKey,
+          role_id: existingRole.id,
+          new_permissions: permissions,
+          updated_by: user.email,
+          ip:
+            request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        },
+      })
 
       return { roleKey, success: true }
     })
@@ -187,14 +194,16 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: results,
-      message: `Successfully updated ${results.length} role profile(s)`
+      message: `Successfully updated ${results.length} role profile(s)`,
     })
-
   } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update role profiles'
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update role profiles',
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -206,16 +215,19 @@ export async function POST(request: NextRequest) {
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
     const body = await request.json()
-    
+
     const { name, description, permissions = [] } = body
 
     if (!name) {
-      return NextResponse.json({
-        success: false,
-        error: 'Role name is required'
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Role name is required',
+        },
+        { status: 400 }
+      )
     }
 
     // Check if role already exists
@@ -226,10 +238,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingRole) {
-      return NextResponse.json({
-        success: false,
-        error: 'Role with this name already exists'
-      }, { status: 409 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Role with this name already exists',
+        },
+        { status: 409 }
+      )
     }
 
     // Create the new role
@@ -238,7 +253,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name,
         description: description || `Custom role: ${name}`,
-        default_permissions: permissions
+        default_permissions: permissions,
       })
       .select()
       .single()
@@ -258,7 +273,7 @@ export async function POST(request: NextRequest) {
       // Create role_permissions entries
       const rolePermissionInserts = permissionData.map((permission: any) => ({
         role_id: newRole.id,
-        permission_id: permission.id
+        permission_id: permission.id,
       }))
 
       const { error: rpError } = await supabase
@@ -269,30 +284,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Log audit trail
-    await supabase
-      .from('audit_logs')
-      .insert({
-        actor_id: user.id, 
-        action: 'role_created',
-        meta_json: {
-          role_name: name,
-          role_id: newRole.id,
-          permissions,
-          created_by: user.email,
-          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-        }
-      })
+    await supabase.from('audit_logs').insert({
+      actor_id: user.id,
+      action: 'role_created',
+      meta_json: {
+        role_name: name,
+        role_id: newRole.id,
+        permissions,
+        created_by: user.email,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      },
+    })
 
     return NextResponse.json({
       success: true,
       data: newRole,
-      message: 'Role created successfully'
+      message: 'Role created successfully',
     })
-
   } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create role'
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create role',
+      },
+      { status: 500 }
+    )
   }
 }

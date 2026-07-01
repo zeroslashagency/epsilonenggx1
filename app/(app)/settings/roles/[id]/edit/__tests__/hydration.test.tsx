@@ -37,33 +37,43 @@ const buildCleanPermissions = () => {
   return cleanPermissions
 }
 
-describe('Edit role hydration', () => {
-  test('hydrates stale JSON with effective codes and keeps parent aggregate correct', () => {
+describe('Edit role hydration (mobile_user_attendance)', () => {
+  test('hydrates stale JSON with effective mobile codes onto subsection items', () => {
     const cleanPermissions = buildCleanPermissions()
 
-    // Simulate stale JSON where nothing is checked.
     const withEffectiveCodes = applyPermissionCodesToModules(cleanPermissions, [
-      'attendance.history.view',
-      'fir.history.view',
+      'mobile.attendance.recent_history.view',
+      'mobile.fir.history.view',
     ])
     const hydrated = recomputeParentFlagsFromChildren(withEffectiveCodes)
 
-    expect(hydrated.web_user_attendance.items['Attendance: History'].view).toBe(true)
-    expect(hydrated.web_user_attendance.items.Attendance.view).toBe(false)
-    expect(hydrated.web_user_attendance.items['FIR: History'].view).toBe(true)
-    expect(hydrated.web_user_attendance.items.FIR.view).toBe(false)
+    expect(hydrated.mobile_user_attendance.items['Attendance: Recent History'].view).toBe(true)
+    expect(hydrated.mobile_user_attendance.items['FIR: History'].view).toBe(true)
   })
 
-  test('parent row becomes true when all subsection view permissions are present', () => {
+  test('parent Attendance row aggregates true when all mobile subsections are viewable', () => {
     const cleanPermissions = buildCleanPermissions()
     const withEffectiveCodes = applyPermissionCodesToModules(cleanPermissions, [
-      'attendance.overview.view',
-      'attendance.calendar.view',
-      'attendance.timeline.view',
-      'attendance.history.view',
+      'mobile.attendance.weekly_streak.view',
+      'mobile.attendance.today_logs.view',
+      'mobile.attendance.recent_history.view',
     ])
     const hydrated = recomputeParentFlagsFromChildren(withEffectiveCodes)
 
-    expect(hydrated.web_user_attendance.items.Attendance.view).toBe(true)
+    expect(hydrated.mobile_user_attendance.items['Attendance: Weekly Streak'].view).toBe(true)
+    expect(hydrated.mobile_user_attendance.items['Attendance: Today Logs'].view).toBe(true)
+    expect(hydrated.mobile_user_attendance.items['Attendance: Recent History'].view).toBe(true)
+    expect(hydrated.mobile_user_attendance.items.Attendance.view).toBe(true)
+  })
+
+  test('parent Attendance row is false when a mobile subsection is missing', () => {
+    const cleanPermissions = buildCleanPermissions()
+    const withEffectiveCodes = applyPermissionCodesToModules(cleanPermissions, [
+      'mobile.attendance.weekly_streak.view',
+      'mobile.attendance.recent_history.view',
+    ])
+    const hydrated = recomputeParentFlagsFromChildren(withEffectiveCodes)
+
+    expect(hydrated.mobile_user_attendance.items.Attendance.view).toBe(false)
   })
 })

@@ -1,0 +1,624 @@
+# Production Scheduler Advanced + Piece PRD (500 Checks) by Feature
+
+Date: 2026-02-24
+Source: `reports/production-scheduler-advanced-piece-prd-500-checks-2026-02-24.md`
+
+## Distribution
+
+- Global Start DateTime: 15 checks
+- Global Setup Window: 15 checks
+- Shift Settings (Shift 1/2/3): 16 checks
+- Production Windows (Machine-Dependent): 9 checks
+- Holiday Calendar: 15 checks
+- Machine Breakdowns: 15 checks
+- Save/Load/Lock + API Validation: 165 checks
+- Import Canonicalization: 20 checks
+- Deterministic Scheduling Constraints: 20 checks
+- Piece Timeline Integrity: 20 checks
+- Conflict Taxonomy Parity (JS/Python): 20 checks
+- Error Handling & Recovery: 45 checks
+- Performance / Determinism / Stability: 35 checks
+- Reporting / Governance / Release Gates: 90 checks
+- Total: 500 checks
+
+## Ownership Matrix
+
+- Global Start DateTime: Planning / Frontend / Backend
+- Global Setup Window: Planning / Frontend / Backend
+- Shift Settings (Shift 1/2/3): Planning / Frontend / Scheduler Engine
+- Production Windows (Machine-Dependent): Planning / Frontend / Scheduler Engine
+- Holiday Calendar: Frontend / Backend / Scheduler Engine
+- Machine Breakdowns: Frontend / Backend / Scheduler Engine
+- Save/Load/Lock + API Validation: Frontend / Backend / QA Automation
+- Import Canonicalization: Backend / QA Automation
+- Deterministic Scheduling Constraints: Scheduler Engine / QA Automation
+- Piece Timeline Integrity: Scheduler Engine / QA Automation
+- Conflict Taxonomy Parity (JS/Python): Backend / QA Automation
+- Error Handling & Recovery: Backend / Scheduler Engine / QA Automation
+- Performance / Determinism / Stability: Scheduler Engine / SRE / QA Automation
+- Reporting / Governance / Release Gates: QA Automation / SRE / Product / Leadership
+
+## Global Start DateTime
+
+- Range: `CHK-001..CHK-015`
+- Owner: Planning / Frontend / Backend
+
+- [ ] CHK-001 Verify Global Start DateTime field is visible in Advanced Settings.
+- [ ] CHK-002 Verify Global Start DateTime accepts valid local date and time input.
+- [ ] CHK-003 Verify Global Start DateTime rejects invalid date formats with inline error.
+- [ ] CHK-004 Verify Global Start DateTime rejects invalid time formats with inline error.
+- [ ] CHK-005 Verify Global Start DateTime cannot be set earlier than system minimum date.
+- [ ] CHK-006 Verify Global Start DateTime cannot be set later than system maximum date.
+- [ ] CHK-007 Verify timezone label is displayed next to Global Start DateTime.
+- [ ] CHK-008 Verify Global Start DateTime persists after page refresh.
+- [ ] CHK-009 Verify Global Start DateTime is applied to newly generated schedules.
+- [ ] CHK-010 Verify changing Global Start DateTime triggers schedule recalculation prompt.
+- [ ] CHK-011 Verify cancelling recalculation keeps previous schedule state unchanged.
+- [ ] CHK-012 Verify confirming recalculation updates all planned start timestamps.
+- [ ] CHK-013 Verify Global Start DateTime edit is blocked when settings are locked.
+- [ ] CHK-014 Verify Global Start DateTime audit trail logs old and new values.
+- [ ] CHK-015 Verify API payload includes Global Start DateTime in ISO-8601 format.
+
+## Global Setup Window
+
+- Range: `CHK-016..CHK-030`
+- Owner: Planning / Frontend / Backend
+
+- [ ] CHK-016 Verify Global Setup Window controls are visible and enabled.
+- [ ] CHK-017 Verify setup window start cannot be after setup window end.
+- [ ] CHK-018 Verify setup window end cannot be before setup window start.
+- [ ] CHK-019 Verify setup window supports minute-level granularity.
+- [ ] CHK-020 Verify zero-duration setup window is rejected with clear validation.
+- [ ] CHK-021 Verify setup window overlaps with production window are handled per PRD rule.
+- [ ] CHK-022 Verify setup window outside all shift windows is flagged before save.
+- [ ] CHK-023 Verify setup window changes recalculate setup-dependent tasks.
+- [ ] CHK-024 Verify setup window can be cleared when optional mode is enabled.
+- [ ] CHK-025 Verify setup window cannot be cleared when required mode is enabled.
+- [ ] CHK-026 Verify setup window values persist after save and reload.
+- [ ] CHK-027 Verify setup window import mapping populates correct fields.
+- [ ] CHK-028 Verify setup window export includes configured boundaries.
+- [ ] CHK-029 Verify setup window edit is blocked when configuration lock is active.
+- [ ] CHK-030 Verify setup window change history includes actor and timestamp.
+
+## Shift Settings (Shift 1/2/3)
+
+- Range: `CHK-031..CHK-046`
+- Owner: Planning / Frontend / Scheduler Engine
+
+- [ ] CHK-031 Verify Shift 1 start and end inputs are visible.
+- [ ] CHK-032 Verify Shift 2 start and end inputs are visible.
+- [ ] CHK-033 Verify Shift 3 start and end inputs are visible.
+- [ ] CHK-034 Verify each shift rejects invalid time ranges.
+- [ ] CHK-035 Verify shifts support cross-midnight ranges where allowed.
+- [ ] CHK-036 Verify overlapping shifts are rejected or resolved per PRD policy.
+- [ ] CHK-037 Verify gaps between shifts are represented as non-production time.
+- [ ] CHK-038 Verify disabling Shift 2 updates capacity calculations immediately.
+- [ ] CHK-039 Verify disabling Shift 3 updates capacity calculations immediately.
+- [ ] CHK-040 Verify at least one shift must remain active before save.
+- [ ] CHK-041 Verify per-shift break durations are applied to net available runtime.
+- [ ] CHK-042 Verify per-shift overtime toggle affects capacity as expected.
+- [ ] CHK-043 Verify per-shift timezone handling is consistent with global timezone.
+- [ ] CHK-044 Verify per-shift edits persist across browser refresh.
+- [ ] CHK-045 Verify shift template load populates all three shifts correctly.
+- [ ] CHK-046 Verify shift template save captures current shift definitions.
+
+## Production Windows (Machine-Dependent)
+
+- Range: `CHK-047..CHK-055`
+- Owner: Planning / Frontend / Scheduler Engine
+
+- [ ] CHK-047 Verify production window controls are visible for each workday.
+- [ ] CHK-048 Verify production window start cannot exceed production window end.
+- [ ] CHK-049 Verify multiple production windows per day are ordered correctly.
+- [ ] CHK-050 Verify overlapping production windows on same day are blocked.
+- [ ] CHK-051 Verify production windows respect inactive shifts automatically.
+- [ ] CHK-052 Verify production windows update finite capacity calendar instantly.
+- [ ] CHK-053 Verify production windows can be copied from one day to another.
+- [ ] CHK-054 Verify production windows reset action restores defaults safely.
+- [ ] CHK-055 Verify production window validations run before scheduler execution.
+
+## Holiday Calendar
+
+- Range: `CHK-056..CHK-070`
+- Owner: Frontend / Backend / Scheduler Engine
+
+- [ ] CHK-056 Verify holiday calendar section is visible in Advanced Settings.
+- [ ] CHK-057 Verify adding a holiday date marks that day as non-production.
+- [ ] CHK-058 Verify deleting a holiday date restores production eligibility.
+- [ ] CHK-059 Verify duplicate holiday entries are prevented.
+- [ ] CHK-060 Verify recurring annual holidays are applied to future years correctly.
+- [ ] CHK-061 Verify one-off holidays apply only to specified year.
+- [ ] CHK-062 Verify holiday import supports expected file format and schema.
+- [ ] CHK-063 Verify holiday import rejects malformed rows with row-level errors.
+- [ ] CHK-064 Verify holiday export includes all active and future holiday records.
+- [ ] CHK-065 Verify holiday dates respect selected plant/site calendar context.
+- [ ] CHK-066 Verify holiday on weekend follows PRD collision behavior.
+- [ ] CHK-067 Verify holiday edits trigger schedule recomputation notice.
+- [ ] CHK-068 Verify holiday calendar changes persist after reload.
+- [ ] CHK-069 Verify holiday calendar changes are included in audit logs.
+- [ ] CHK-070 Verify locked settings prevent holiday add/edit/delete actions.
+
+## Machine Breakdowns
+
+- Range: `CHK-071..CHK-085`
+- Owner: Frontend / Backend / Scheduler Engine
+
+- [ ] CHK-071 Verify breakdown controls section is visible and editable when unlocked.
+- [ ] CHK-072 Verify planned breakdown start/end cannot create negative duration.
+- [ ] CHK-073 Verify planned breakdown overlapping windows are validated per rule.
+- [ ] CHK-074 Verify breakdown reason code is required when creating a breakdown.
+- [ ] CHK-075 Verify breakdown can be scoped to machine, line, or plant level.
+- [ ] CHK-076 Verify active breakdown reduces available capacity in real time.
+- [ ] CHK-077 Verify ending a breakdown restores capacity from end timestamp onward.
+- [ ] CHK-078 Verify breakdown priority rules resolve concurrent breakdown records.
+- [ ] CHK-079 Verify breakdown import maps equipment IDs accurately.
+- [ ] CHK-080 Verify breakdown import rejects unknown equipment IDs with clear errors.
+- [ ] CHK-081 Verify breakdown export includes duration, scope, and reason fields.
+- [ ] CHK-082 Verify editing breakdown history requires proper permission.
+- [ ] CHK-083 Verify breakdown controls honor Shift and production window boundaries.
+- [ ] CHK-084 Verify breakdown modifications trigger incremental rescheduling.
+- [ ] CHK-085 Verify locked state prevents breakdown create/update/delete operations.
+
+## Save/Load/Lock + API Validation
+
+- Range: `CHK-086..CHK-250`
+- Owner: Frontend / Backend / QA Automation
+
+- [ ] CHK-086 Verify Advanced Settings save persists all sections atomically.
+- [ ] CHK-087 Verify partial save failure surfaces section-specific error details.
+- [ ] CHK-088 Verify load action retrieves latest saved settings from backend.
+- [ ] CHK-089 Verify unsaved changes warning appears before navigation away.
+- [ ] CHK-090 Verify reset-to-last-saved restores all fields accurately.
+- [ ] CHK-091 Verify settings version increments after successful save.
+- [ ] CHK-092 Verify concurrent edits show conflict message on stale save attempt.
+- [ ] CHK-093 Verify lock action prevents edits for non-privileged users.
+- [ ] CHK-094 Verify unlock action restores edit capability for authorized users.
+- [ ] CHK-095 Verify lock status persists across sessions and browsers.
+- [ ] CHK-096 Verify lock owner and lock timestamp are displayed.
+- [ ] CHK-097 Verify forced unlock requires elevated permission and confirmation.
+- [ ] CHK-098 Verify lock state is enforced in API write endpoints.
+- [ ] CHK-099 Verify read-only mode still allows export and view actions.
+- [ ] CHK-100 Verify save/load/lock events are captured in audit timeline.
+- [ ] CHK-101 Verify piece-level pipeline consumes Global Start DateTime as baseline.
+- [ ] CHK-102 Verify piece-level setup steps obey Global Setup Window constraints.
+- [ ] CHK-103 Verify piece routing excludes inactive shift periods.
+- [ ] CHK-104 Verify piece routing excludes non-production windows.
+- [ ] CHK-105 Verify piece routing skips holiday calendar blocked days.
+- [ ] CHK-106 Verify piece routing pauses during active breakdown intervals.
+- [ ] CHK-107 Verify piece handoff timestamps remain monotonic across operations.
+- [ ] CHK-108 Verify piece queue order follows configured sequencing rule after recalculation.
+- [ ] CHK-109 Verify piece-level ETA changes are propagated to downstream operations.
+- [ ] CHK-110 Verify piece-level capacity checks fail gracefully on zero available runtime.
+- [ ] CHK-111 Verify piece split/merge logic preserves traceability IDs.
+- [ ] CHK-112 Verify piece rework path respects advanced time constraints.
+- [ ] CHK-113 Verify piece-level exceptions are logged with machine and shift context.
+- [ ] CHK-114 Verify piece-level schedule regeneration is deterministic for same inputs.
+- [ ] CHK-115 Verify piece-level results persist correctly after save and reload.
+- [ ] CHK-116 Verify locked Advanced Settings block piece-level reschedule with config edits.
+- [ ] CHK-117 Verify unlocking then editing settings updates piece-level plan on rerun.
+- [ ] CHK-118 Verify pipeline API returns piece-level timing aligned with UI timeline.
+- [ ] CHK-119 Verify pipeline handles daylight-saving transition without negative piece durations.
+- [ ] CHK-120 Verify pipeline handles cross-midnight shifts for piece operations.
+- [ ] CHK-121 Verify pipeline handles back-to-back holidays with no phantom capacity.
+- [ ] CHK-122 Verify pipeline handles overlapping breakdown and holiday with correct precedence.
+- [ ] CHK-123 Verify piece-level SLA breach flags trigger when planned completion exceeds target.
+- [ ] CHK-124 Verify piece-level QA report includes all Advanced Settings assumptions.
+- [ ] CHK-125 Verify end-to-end piece-level run passes with no validation or integrity errors.
+- [ ] CHK-126 Validate Advanced Settings loads with default values
+- [ ] CHK-127 Verify required Advanced Settings fields show errors when empty
+- [ ] CHK-128 Confirm numeric minimum constraints reject negative durations
+- [ ] CHK-129 Confirm numeric maximum constraints reject overflow values
+- [ ] CHK-130 Validate decimal precision handling for cycle time inputs
+- [ ] CHK-131 Verify integer-only fields block fractional entry
+- [ ] CHK-132 Confirm leading and trailing whitespace is trimmed on save
+- [ ] CHK-133 Validate duplicate setting keys are rejected by API
+- [ ] CHK-134 Verify unknown Advanced Settings keys are ignored safely
+- [ ] CHK-135 Confirm null payload fields return clear validation messages
+- [ ] CHK-136 Verify empty string payload fields are rejected correctly
+- [ ] CHK-137 Validate boolean fields reject non-boolean JSON values
+- [ ] CHK-138 Confirm enum fields reject unsupported option values
+- [ ] CHK-139 Verify API rejects malformed date format in settings
+- [ ] CHK-140 Confirm API rejects malformed time format in windows
+- [ ] CHK-141 Validate API returns field-level errors for bad payloads
+- [ ] CHK-142 Verify API validation error schema matches frontend parser
+- [ ] CHK-143 Confirm API handles missing optional fields with defaults
+- [ ] CHK-144 Validate API idempotency for repeated identical updates
+- [ ] CHK-145 Verify concurrent updates resolve with last-write behavior
+- [ ] CHK-146 Confirm stale version update returns conflict response
+- [ ] CHK-147 Validate unauthorized role cannot modify Advanced Settings
+- [ ] CHK-148 Verify read-only users can view but not edit fields
+- [ ] CHK-149 Confirm audit log captures before and after setting values
+- [ ] CHK-150 Validate save action persists after page refresh
+- [ ] CHK-151 Verify cancel action reverts unsaved local changes
+- [ ] CHK-152 Confirm dirty-state warning appears on navigation away
+- [ ] CHK-153 Validate save button disabled when form is invalid
+- [ ] CHK-154 Verify save button enabled only when changes exist
+- [ ] CHK-155 Confirm loading spinner blocks duplicate save clicks
+- [ ] CHK-156 Validate inline error clears after valid correction
+- [ ] CHK-157 Verify server error banner appears on 5xx response
+- [ ] CHK-158 Confirm network timeout shows retryable UI state
+- [ ] CHK-159 Validate optimistic UI rollback on failed save
+- [ ] CHK-160 Verify Advanced Settings panel state survives tab switches
+- [ ] CHK-161 Confirm keyboard navigation reaches every Advanced field
+- [ ] CHK-162 Validate enter key submits only within allowed context
+- [ ] CHK-163 Verify escape key closes modal without partial save
+- [ ] CHK-164 Confirm tooltip help text maps to correct fields
+- [ ] CHK-165 Validate machine selector updates dependent setting options
+- [ ] CHK-166 Verify machine-specific limits override global defaults correctly
+- [ ] CHK-167 Confirm missing machine profile falls back predictably
+- [ ] CHK-168 Validate inactive machine cannot be selected for windows
+- [ ] CHK-169 Verify deleting machine removes obsolete dependent windows
+- [ ] CHK-170 Confirm machine rename preserves existing window assignments
+- [ ] CHK-171 Validate machine capacity zero blocks schedule generation
+- [ ] CHK-172 Verify machine downtime window blocks piece assignment
+- [ ] CHK-173 Confirm overlapping machine windows trigger validation error
+- [ ] CHK-174 Validate adjacent machine windows merge or pass correctly
+- [ ] CHK-175 Verify cross-midnight machine window stores correct dates
+- [ ] CHK-176 Confirm machine window end before start is rejected
+- [ ] CHK-177 Validate machine window accepts 24-hour format consistently
+- [ ] CHK-178 Verify machine timezone override applies to window calculations
+- [ ] CHK-179 Confirm global timezone change recalculates all machine windows
+- [ ] CHK-180 Validate daylight-saving spring-forward gap handled safely
+- [ ] CHK-181 Verify daylight-saving fall-back duplicate hour handled correctly
+- [ ] CHK-182 Confirm overnight jobs spanning midnight retain continuity
+- [ ] CHK-183 Validate overnight cutoff boundary at exactly 00:00
+- [ ] CHK-184 Verify timezone conversion roundtrip preserves scheduled instant
+- [ ] CHK-185 Confirm browser timezone mismatch does not corrupt payload
+- [ ] CHK-186 Validate UTC storage and local display remain consistent
+- [ ] CHK-187 Verify scheduler rejects piece start outside allowed window
+- [ ] CHK-188 Confirm scheduler rejects piece end outside allowed window
+- [ ] CHK-189 Validate piece split across windows follows policy rules
+- [ ] CHK-190 Verify minimum piece size threshold enforced in pipeline
+- [ ] CHK-191 Confirm maximum piece size threshold enforced in pipeline
+- [ ] CHK-192 Validate piece-level priority ordering affects dispatch sequence
+- [ ] CHK-193 Verify equal priority pieces use deterministic tie-breaker
+- [ ] CHK-194 Confirm blocked piece status excludes item from scheduling
+- [ ] CHK-195 Validate partial completion piece resumes at correct step
+- [ ] CHK-196 Verify piece rework loop respects max retry limit
+- [ ] CHK-197 Confirm piece dependency cycle is detected and rejected
+- [ ] CHK-198 Validate missing upstream piece prevents downstream release
+- [ ] CHK-199 Verify piece-level due date violation raises warning state
+- [ ] CHK-200 Confirm piece-level hard deadline prevents late assignment
+- [ ] CHK-201 Validate setup time inclusion for first piece on machine
+- [ ] CHK-202 Verify setup time carryover between same-family pieces
+- [ ] CHK-203 Confirm changeover matrix applied per machine and material
+- [ ] CHK-204 Validate batch grouping does not break piece traceability
+- [ ] CHK-205 Verify piece cancellation propagates through pipeline stages
+- [ ] CHK-206 Confirm piece hold and release toggles update queue
+- [ ] CHK-207 Validate piece-level QA fail routes to quarantine stage
+- [ ] CHK-208 Verify piece-level QA pass advances to next operation
+- [ ] CHK-209 Confirm QA sampling rate applies to small lots
+- [ ] CHK-210 Validate QA sampling rate rounds correctly for odd counts
+- [ ] CHK-211 Verify mandatory QA checkpoint cannot be skipped by API
+- [ ] CHK-212 Confirm optional QA checkpoint toggle persists per product
+- [ ] CHK-213 Validate QA defect code required when fail outcome selected
+- [ ] CHK-214 Verify QA notes length limit enforced client and server
+- [ ] CHK-215 Confirm QA attachment upload failure preserves entered metadata
+- [ ] CHK-216 Validate QA status badge refreshes without full page reload
+- [ ] CHK-217 Verify pipeline stage transitions are monotonic and ordered
+- [ ] CHK-218 Confirm invalid stage transition returns 422 with reason
+- [ ] CHK-219 Validate duplicate stage completion event is idempotent
+- [ ] CHK-220 Verify out-of-order event ingestion reconciles final state
+- [ ] CHK-221 Confirm event timestamp in future is rejected
+- [ ] CHK-222 Validate event timestamp in past respects backfill policy
+- [ ] CHK-223 Verify pipeline recalculation after Advanced Settings change
+- [ ] CHK-224 Confirm recalculation does not duplicate existing piece records
+- [ ] CHK-225 Validate rollback restores prior schedule snapshot accurately
+- [ ] CHK-226 Verify schedule lock prevents edits during active run
+- [ ] CHK-227 Confirm lock release after run failure enables recovery
+- [ ] CHK-228 Validate pagination retains filter and sort state
+- [ ] CHK-229 Verify filtering by machine and timezone returns correct rows
+- [ ] CHK-230 Confirm sorting by start time handles overnight records
+- [ ] CHK-231 Validate bulk edit applies only to selected pieces
+- [ ] CHK-232 Verify bulk edit partial failure reports per-item errors
+- [ ] CHK-233 Confirm unsaved bulk edits prompt before page unload
+- [ ] CHK-234 Validate websocket update does not overwrite local draft
+- [ ] CHK-235 Verify conflict dialog offers reload and keep-edit paths
+- [ ] CHK-236 Confirm retry action resubmits last failed payload exactly
+- [ ] CHK-237 Validate form reset restores server-sourced current values
+- [ ] CHK-238 Verify cloned setting profile excludes environment-specific IDs
+- [ ] CHK-239 Confirm deleted profile cannot be referenced by scheduler
+- [ ] CHK-240 Validate profile activation switches scheduler inputs atomically
+- [ ] CHK-241 Verify API rate limiting returns retry-after metadata
+- [ ] CHK-242 Confirm client backoff respects retry-after before retrying
+- [ ] CHK-243 Validate large payload near limit returns graceful error
+- [ ] CHK-244 Verify unicode in free-text fields is stored safely
+- [ ] CHK-245 Confirm CSV import validates timezone and overnight columns
+- [ ] CHK-246 Validate CSV export preserves machine-window ordering
+- [ ] CHK-247 Verify permission change mid-session refreshes edit controls
+- [ ] CHK-248 Confirm telemetry emits save success and failure events
+- [ ] CHK-249 Validate production parity flags gate Advanced Settings visibility
+- [ ] CHK-250 Verify end-to-end schedule respects all configured constraints
+
+## Import Canonicalization
+
+- Range: `CHK-251..CHK-270`
+- Owner: Backend / QA Automation
+
+- [ ] CHK-251 Verify imported piece IDs are trimmed, case-normalized, and deduplicated.
+- [ ] CHK-252 Confirm Unicode whitespace is collapsed during piece import canonicalization.
+- [ ] CHK-253 Validate canonical date parsing rejects locale-ambiguous formats at import.
+- [ ] CHK-254 Ensure timezone offsets are normalized to scheduler canonical timezone on ingest.
+- [ ] CHK-255 Check SKU aliases resolve to canonical SKU codes before scheduling.
+- [ ] CHK-256 Confirm null-equivalent strings (`"null"`, `"N/A"`, empty) map to canonical null.
+- [ ] CHK-257 Verify numeric fields imported as strings are coerced with strict type validation.
+- [ ] CHK-258 Ensure piece quantity units are converted to canonical unit set at import.
+- [ ] CHK-259 Check duplicate source rows collapse to one canonical piece record with provenance.
+- [ ] CHK-260 Validate import rejects unknown required columns with explicit schema error.
+- [ ] CHK-261 Confirm optional columns default deterministically when omitted in source file.
+- [ ] CHK-262 Verify import canonicalization is idempotent across repeated runs on same file.
+- [ ] CHK-263 Ensure canonical sort key assignment is stable for equal-priority imported pieces.
+- [ ] CHK-264 Check mixed-case resource names map to single canonical resource identifier.
+- [ ] CHK-265 Validate leading zeros in piece codes are preserved after canonicalization.
+- [ ] CHK-266 Confirm decimal precision is normalized to configured scale before schedule compute.
+- [ ] CHK-267 Verify import flags and quarantines rows with non-printable control characters.
+- [ ] CHK-268 Ensure canonicalization logs include source row index and transformed field diffs.
+- [ ] CHK-269 Check cross-file imports merge by canonical natural key without data loss.
+- [ ] CHK-270 Validate canonical enum mapping rejects deprecated status values with guidance.
+
+## Deterministic Scheduling Constraints
+
+- Range: `CHK-271..CHK-290`
+- Owner: Scheduler Engine / QA Automation
+
+- [ ] CHK-271 Confirm schedule generation is deterministic with identical inputs and seed.
+- [ ] CHK-272 Verify tie-break ordering for equal-priority pieces is explicitly defined and stable.
+- [ ] CHK-273 Ensure deterministic constraint solver output is byte-identical across reruns.
+- [ ] CHK-274 Check fixed-capacity resource limits are enforced for every timeslot boundary.
+- [ ] CHK-275 Validate precedence constraints prevent child piece start before parent completion.
+- [ ] CHK-276 Confirm no piece exceeds machine shift windows unless overtime flag is explicit.
+- [ ] CHK-277 Verify blackout windows hard-block allocations even under high-priority load.
+- [ ] CHK-278 Ensure setup-time constraints are applied between incompatible consecutive piece families.
+- [ ] CHK-279 Check minimum run-length constraints are respected for batched piece groups.
+- [ ] CHK-280 Validate max lateness objective does not violate hard due-date constraints.
+- [ ] CHK-281 Confirm deterministic handling of zero-duration operations does not reorder timeline.
+- [ ] CHK-282 Verify frozen-horizon pieces remain immovable under replanning scenarios.
+- [ ] CHK-283 Ensure cross-resource exclusivity constraints prevent double-booking shared fixtures.
+- [ ] CHK-284 Check piece split/merge constraints follow configured policy with deterministic split points.
+- [ ] CHK-285 Validate alternative resource selection uses deterministic rank when costs tie.
+- [ ] CHK-286 Confirm cycle-time rounding does not create hidden capacity overcommit.
+- [ ] CHK-287 Verify schedule checksum changes only when input or constraint set changes.
+- [ ] CHK-288 Ensure deterministic handling of missing optional constraints uses documented defaults.
+- [ ] CHK-289 Check lock-step constraints keep synchronized pieces aligned within tolerance.
+- [ ] CHK-290 Validate solver timeout fallback returns deterministic partial schedule ordering.
+
+## Piece Timeline Integrity
+
+- Range: `CHK-291..CHK-310`
+- Owner: Scheduler Engine / QA Automation
+
+- [ ] CHK-291 Confirm each piece timeline has non-decreasing event timestamps end-to-end.
+- [ ] CHK-292 Verify piece start timestamp always precedes or equals finish timestamp.
+- [ ] CHK-293 Ensure timeline segments are contiguous when operation requires uninterrupted processing.
+- [ ] CHK-294 Check gaps in piece timeline are explicitly labeled with wait-reason codes.
+- [ ] CHK-295 Validate timeline timezone annotations are consistent across all piece events.
+- [ ] CHK-296 Confirm timeline recalculation preserves immutable historical event segments.
+- [ ] CHK-297 Verify piece timeline version increments on every schedule-affecting modification.
+- [ ] CHK-298 Ensure operation handoff timestamps match predecessor finish within configured tolerance.
+- [ ] CHK-299 Check piece cancellation inserts terminal timeline event and blocks further events.
+- [ ] CHK-300 Validate rework loops append events without corrupting original operation sequence.
+- [ ] CHK-301 Confirm timeline event IDs are unique per piece and globally traceable.
+- [ ] CHK-302 Verify late-start flags trigger when actual start exceeds planned start threshold.
+- [ ] CHK-303 Ensure timeline export preserves millisecond precision required by downstream QA.
+- [ ] CHK-304 Check piece pause/resume pairs are balanced with no orphan pause events.
+- [ ] CHK-305 Validate timeline merge from parallel stages preserves causal ordering by dependency.
+- [ ] CHK-306 Confirm timeline rollback restores prior consistent state after failed reschedule.
+- [ ] CHK-307 Verify no overlapping active intervals exist for a single-piece single-operation.
+- [ ] CHK-308 Ensure timeline integrity checks run before schedule publish gate.
+- [ ] CHK-309 Check generated Gantt intervals equal timeline-derived durations for each piece.
+- [ ] CHK-310 Validate timeline audit trail includes actor, source, and reason for edits.
+
+## Conflict Taxonomy Parity (JS/Python)
+
+- Range: `CHK-311..CHK-330`
+- Owner: Backend / QA Automation
+
+- [ ] CHK-311 Confirm JS and Python conflict type enums contain identical canonical codes.
+- [ ] CHK-312 Verify conflict severity mapping table is identical between JS and Python layers.
+- [ ] CHK-313 Ensure conflict deduplication keys are computed with parity across JS/Python.
+- [ ] CHK-314 Check conflict grouping logic yields same bucket counts in JS and Python.
+- [ ] CHK-315 Validate conflict message templates share same placeholders and semantics.
+- [ ] CHK-316 Confirm resource-overlap conflict detection boundaries match JS/Python inclusive rules.
+- [ ] CHK-317 Verify precedence-violation conflict detection triggers identically on edge timestamps.
+- [ ] CHK-318 Ensure due-date-miss conflict thresholds use same rounding and timezone handling.
+- [ ] CHK-319 Check capacity-breach conflict cardinality is equal for mirrored JS/Python fixtures.
+- [ ] CHK-320 Validate setup-incompatibility conflict classification parity for all family pairs.
+- [ ] CHK-321 Confirm missing-data conflict type codes map to same remediation category.
+- [ ] CHK-322 Verify conflict sorting order is deterministic and equivalent in JS/Python outputs.
+- [ ] CHK-323 Ensure conflict suppression rules apply the same precedence in both runtimes.
+- [ ] CHK-324 Check localized conflict labels resolve from same canonical code dictionary.
+- [ ] CHK-325 Validate unknown conflict fallback code is identical and non-breaking in both stacks.
+- [ ] CHK-326 Confirm conflict payload JSON schema is structurally equivalent JS vs Python.
+- [ ] CHK-327 Verify conflict hashing algorithm produces identical digest for same input data.
+- [ ] CHK-328 Ensure batched conflict pagination returns consistent ordering and page boundaries.
+- [ ] CHK-329 Check conflict counter metrics names and tags are parity-aligned JS/Python.
+- [ ] CHK-330 Validate archived conflict replay reproduces identical classifications in both runtimes.
+
+## Error Handling & Recovery
+
+- Range: `CHK-331..CHK-375`
+- Owner: Backend / Scheduler Engine / QA Automation
+
+- [ ] CHK-331 Confirm import validation errors include field, row, and canonical expected format.
+- [ ] CHK-332 Verify malformed timestamp errors return actionable remediation text and sample.
+- [ ] CHK-333 Ensure missing required constraint errors block publish with explicit blocker code.
+- [ ] CHK-334 Check deterministic solver failure emits stable error code independent of stack trace.
+- [ ] CHK-335 Validate constraint contradiction errors enumerate conflicting rules and involved pieces.
+- [ ] CHK-336 Confirm piece timeline corruption errors trigger automatic integrity scan rerun.
+- [ ] CHK-337 Verify conflict taxonomy mismatch errors identify JS/Python side and code diff.
+- [ ] CHK-338 Ensure recoverable import errors continue processing valid rows with quarantine report.
+- [ ] CHK-339 Check unrecoverable parser errors abort transaction and leave no partial schedule writes.
+- [ ] CHK-340 Validate API error responses conform to canonical envelope with correlation ID.
+- [ ] CHK-341 Confirm internal exceptions are sanitized to avoid leaking stack internals to clients.
+- [ ] CHK-342 Verify retries for transient datastore errors are bounded and idempotent.
+- [ ] CHK-343 Ensure timeout errors include operation stage and elapsed threshold metadata.
+- [ ] CHK-344 Check duplicate submission errors return deterministic idempotency-key guidance.
+- [ ] CHK-345 Validate permission errors distinguish read, plan, publish, and override scopes.
+- [ ] CHK-346 Confirm dependency service outage errors degrade gracefully with clear retry window.
+- [ ] CHK-347 Verify invalid enum errors list allowed canonical values in deterministic order.
+- [ ] CHK-348 Ensure batch import summary reports success, warning, and error counts correctly.
+- [ ] CHK-349 Check dead-letter queue entries capture original payload and canonical error code.
+- [ ] CHK-350 Validate rollback-on-failure logs include schedule version before and after rollback.
+- [ ] CHK-351 Verify canonicalization rejects mixed calendar systems and requests ISO-8601 input.
+- [ ] CHK-352 Confirm deterministic seed source is recorded in run metadata for replay.
+- [ ] CHK-353 Ensure piece timeline event generator is pure for same inputs and config.
+- [ ] CHK-354 Check JS/Python conflict fixtures cover DST transition edge-case schedules.
+- [ ] CHK-355 Validate import canonicalization handles BOM-prefixed CSV headers correctly.
+- [ ] CHK-356 Confirm deterministic scheduling with floating-point costs uses stable comparator epsilon.
+- [ ] CHK-357 Verify timeline integrity check catches negative duration after clock-shift adjustments.
+- [ ] CHK-358 Ensure conflict taxonomy parity tests include deprecated-to-new code migration mapping.
+- [ ] CHK-359 Check error classification separates user-correctable versus system-fault categories.
+- [ ] CHK-360 Validate canonical resource calendars are identical between planner and validator services.
+- [ ] CHK-361 Confirm deterministic replan after single piece edit changes only affected subgraph.
+- [ ] CHK-362 Verify piece genealogy links remain intact through split, merge, and rework.
+- [ ] CHK-363 Ensure JS/Python conflict serialization preserves numeric precision for thresholds.
+- [ ] CHK-364 Check import canonicalization normalizes newline variants in free-text notes.
+- [ ] CHK-365 Validate schedule constraint snapshots are immutable once attached to published run.
+- [ ] CHK-366 Confirm timeline integrity validator runs in CI against representative production fixtures.
+- [ ] CHK-367 Verify conflict parity CI gate fails on any enum, severity, or payload drift.
+- [ ] CHK-368 Ensure error monitoring alerts trigger on repeated canonicalization failure signatures.
+- [ ] CHK-369 Check publish pipeline blocks when unresolved critical conflicts exceed configured cap.
+- [ ] CHK-370 Validate canonicalization performance remains within SLA on maximum file size.
+- [ ] CHK-371 Confirm deterministic schedule hash is included in publish artifact manifest.
+- [ ] CHK-372 Verify piece timeline export/import round-trip preserves event order exactly.
+- [ ] CHK-373 Ensure JS/Python conflict parity report is attached to release QA evidence.
+- [ ] CHK-374 Check fatal error playbook link is included in production incident response payload.
+- [ ] CHK-375 Validate end-to-end QA run produces zero uncategorized conflicts and zero unknown errors.
+
+## Performance / Determinism / Stability
+
+- Range: `CHK-376..CHK-410`
+- Owner: Scheduler Engine / SRE / QA Automation
+
+- [ ] CHK-376 Verify end-to-end pipeline runtime stays within approved SLA at P95.
+- [ ] CHK-377 Confirm scheduling throughput meets target jobs per minute under nominal load.
+- [ ] CHK-378 Validate latency budget per stage is documented and currently satisfied.
+- [ ] CHK-379 Re-run identical input set twice and confirm byte-for-byte identical outputs.
+- [ ] CHK-380 Confirm deterministic ordering of scheduled tasks with stable tie-break rules.
+- [ ] CHK-381 Verify random seeds are fixed or disabled in production scheduling path.
+- [ ] CHK-382 Confirm time-zone normalization produces identical schedules across regions.
+- [ ] CHK-383 Validate clock-skew tolerance using simulated node drift within policy bounds.
+- [ ] CHK-384 Ensure retries do not duplicate scheduled work items or mutate ordering.
+- [ ] CHK-385 Confirm idempotency of schedule generation API for repeated request IDs.
+- [ ] CHK-386 Validate partitioning/sharding strategy yields deterministic cross-shard merges.
+- [ ] CHK-387 Measure cold-start performance and verify it stays under startup threshold.
+- [ ] CHK-388 Measure warm-path performance and confirm no regression from previous release.
+- [ ] CHK-389 Run peak-load test and verify no queue starvation across priority classes.
+- [ ] CHK-390 Run soak test and confirm memory growth remains bounded over 24h.
+- [ ] CHK-391 Confirm CPU utilization remains below agreed cap at peak expected demand.
+- [ ] CHK-392 Validate I/O contention does not exceed configured disk/network saturation limits.
+- [ ] CHK-393 Check database query plans for scheduler-critical paths are stable and indexed.
+- [ ] CHK-394 Verify cache hit ratio on scheduling metadata meets minimum threshold.
+- [ ] CHK-395 Confirm cache eviction policy cannot remove mandatory deterministic inputs mid-run.
+- [ ] CHK-396 Validate lock contention metrics remain below configured warning threshold.
+- [ ] CHK-397 Confirm distributed lock lease durations prevent split-brain schedule writes.
+- [ ] CHK-398 Verify failover to secondary node preserves schedule consistency and order.
+- [ ] CHK-399 Validate rollback execution time meets recovery-time objective.
+- [ ] CHK-400 Confirm recovery restores last committed schedule state without drift.
+- [ ] CHK-401 Run chaos kill test on worker node and verify automatic rescheduling correctness.
+- [ ] CHK-402 Inject transient network faults and confirm bounded retries with backoff.
+- [ ] CHK-403 Inject persistent dependency outage and verify graceful degradation mode.
+- [ ] CHK-404 Confirm circuit breakers trip and reset according to policy.
+- [ ] CHK-405 Validate dead-letter queue captures irrecoverable scheduling events with reasons.
+- [ ] CHK-406 Ensure poison-message handling prevents infinite retry loops.
+- [ ] CHK-407 Verify input schema validation blocks malformed jobs before scheduling.
+- [ ] CHK-408 Confirm null/empty optional fields have deterministic default behavior.
+- [ ] CHK-409 Validate boundary values for durations, capacities, and priorities.
+- [ ] CHK-410 Confirm overflow/underflow protections on time arithmetic and counters.
+
+## Reporting / Governance / Release Gates
+
+- Range: `CHK-411..CHK-500`
+- Owner: QA Automation / SRE / Product / Leadership
+
+- [ ] CHK-411 Verify duplicate upstream events are deduplicated consistently.
+- [ ] CHK-412 Validate late-arriving events trigger deterministic reconciliation workflow.
+- [ ] CHK-413 Confirm out-of-order events are reordered or rejected per documented rule.
+- [ ] CHK-414 Verify scheduler honors hard constraints before soft-optimization heuristics.
+- [ ] CHK-415 Confirm constraint solver terminates within maximum iteration/time limits.
+- [ ] CHK-416 Validate solver fallback path activates when optimal solution cannot be found.
+- [ ] CHK-417 Confirm fallback schedules are marked and auditable in reports.
+- [ ] CHK-418 Verify numeric precision settings prevent rounding drift between runs.
+- [ ] CHK-419 Validate stable serialization format for schedule artifacts across versions.
+- [ ] CHK-420 Confirm backward compatibility for previous artifact schema consumers.
+- [ ] CHK-421 Validate forward compatibility guardrails reject unsupported artifact versions cleanly.
+- [ ] CHK-422 Confirm artifact checksum generation is deterministic and reproducible.
+- [ ] CHK-423 Verify all produced artifacts are signed according to release policy.
+- [ ] CHK-424 Validate artifact metadata includes build ID, commit SHA, and environment.
+- [ ] CHK-425 Confirm artifact retention period and immutability settings meet governance rules.
+- [ ] CHK-426 Verify no sensitive data appears in schedule artifacts or debug bundles.
+- [ ] CHK-427 Validate PII redaction in logs, traces, and exported reports.
+- [ ] CHK-428 Confirm audit log records every schedule create/update/delete event.
+- [ ] CHK-429 Verify audit entries are tamper-evident and time-synchronized.
+- [ ] CHK-430 Validate RBAC prevents unauthorized schedule overrides in production.
+- [ ] CHK-431 Confirm privileged actions require approval workflow and are fully logged.
+- [ ] CHK-432 Verify service account permissions follow least-privilege policy.
+- [ ] CHK-433 Validate secret rotation does not interrupt scheduler operation.
+- [ ] CHK-434 Confirm TLS settings and certificate validity for all scheduler dependencies.
+- [ ] CHK-435 Verify dependency versions are pinned and vulnerability scan passes gate.
+- [ ] CHK-436 Validate SBOM is generated and attached to release artifacts.
+- [ ] CHK-437 Confirm policy-as-code checks pass for infrastructure and pipeline configs.
+- [ ] CHK-438 Verify config drift detection is enabled and currently clean.
+- [ ] CHK-439 Validate environment parity between staging and production scheduler settings.
+- [ ] CHK-440 Confirm feature flags default states match release plan.
+- [ ] CHK-441 Verify disabled flags have no side effects on deterministic behavior.
+- [ ] CHK-442 Validate canary deployment path executes with representative workload.
+- [ ] CHK-443 Confirm canary error/latency deltas stay within acceptance thresholds.
+- [ ] CHK-444 Verify automatic rollback triggers on canary gate violations.
+- [ ] CHK-445 Validate blue/green switch preserves in-flight schedule transactions.
+- [ ] CHK-446 Confirm maintenance window and release freeze constraints are respected.
+- [ ] CHK-447 Verify release notes include scheduler behavior changes and risk statements.
+- [ ] CHK-448 Validate runbook updates cover new failure modes and mitigations.
+- [ ] CHK-449 Confirm on-call ownership and escalation paths are current.
+- [ ] CHK-450 Verify dashboard coverage for throughput, latency, failures, and backlog.
+- [ ] CHK-451 Validate alert thresholds are actionable and mapped to SLOs.
+- [ ] CHK-452 Confirm alert deduplication suppresses storming during cascading failures.
+- [ ] CHK-453 Verify synthetic probes continuously validate schedule API health.
+- [ ] CHK-454 Validate trace sampling captures scheduler-critical transactions end-to-end.
+- [ ] CHK-455 Confirm log correlation IDs propagate across all pipeline stages.
+- [ ] CHK-456 Verify reporting job completes on schedule with no missing intervals.
+- [ ] CHK-457 Validate KPI reports reconcile with source-of-truth operational data.
+- [ ] CHK-458 Confirm variance report highlights drift from baseline determinism metrics.
+- [ ] CHK-459 Verify governance report includes approvals, exceptions, and policy waivers.
+- [ ] CHK-460 Validate exception waivers are time-bound and formally approved.
+- [ ] CHK-461 Confirm unresolved critical defects list is empty for release scope.
+- [ ] CHK-462 Verify medium/high defects have accepted risk sign-off before release.
+- [ ] CHK-463 Validate test coverage thresholds met for scheduler core modules.
+- [ ] CHK-464 Confirm mutation/regression tests pass for deterministic decision logic.
+- [ ] CHK-465 Verify contract tests pass for upstream/downstream integration interfaces.
+- [ ] CHK-466 Validate migration tests for schema changes include rollback verification.
+- [ ] CHK-467 Confirm data backfill scripts are idempotent and execution-time bounded.
+- [ ] CHK-468 Verify historical replay test reproduces known baseline schedules exactly.
+- [ ] CHK-469 Validate replay at scale does not violate runtime or memory thresholds.
+- [ ] CHK-470 Confirm cross-version replay compatibility for N-1 to N transition.
+- [ ] CHK-471 Verify scheduler pause/resume controls maintain state integrity.
+- [ ] CHK-472 Validate manual override workflow includes dual control and expiry.
+- [ ] CHK-473 Confirm override actions are reflected in downstream reporting lineage.
+- [ ] CHK-474 Verify lineage graph links input events to final schedule outputs.
+- [ ] CHK-475 Validate data quality checks pass for completeness, uniqueness, and freshness.
+- [ ] CHK-476 Confirm stale input detection blocks schedule publication when breached.
+- [ ] CHK-477 Verify publication gate requires successful validation of all mandatory checks.
+- [ ] CHK-478 Validate pre-release gate enforces zero critical alert condition.
+- [ ] CHK-479 Confirm release gate enforces SLO compliance over trailing verification window.
+- [ ] CHK-480 Verify post-deploy smoke suite passes before traffic ramp-up.
+- [ ] CHK-481 Validate progressive traffic ramp halts on error budget burn anomalies.
+- [ ] CHK-482 Confirm rollback package is tested and immediately deployable.
+- [ ] CHK-483 Verify business continuity plan tested for regional scheduler outage.
+- [ ] CHK-484 Validate RPO and RTO evidence is current and approved.
+- [ ] CHK-485 Confirm legal/compliance attestations are attached to release record.
+- [ ] CHK-486 Verify change-management ticket links all test evidence and approvals.
+- [ ] CHK-487 Validate release candidate hash matches approved build provenance.
+- [ ] CHK-488 Confirm no unapproved code or config drift since sign-off snapshot.
+- [ ] CHK-489 Verify release train dependency checks show no blocking incompatibilities.
+- [ ] CHK-490 Validate stakeholder sign-off from QA, SRE, and product owners.
+- [ ] CHK-491 Confirm communications plan prepared for release and incident scenarios.
+- [ ] CHK-492 Verify customer-impact assessment is documented and accepted.
+- [ ] CHK-493 Validate known limitations are documented with mitigation and monitoring.
+- [ ] CHK-494 Confirm final dry-run of go-live checklist completes without exceptions.
+- [ ] CHK-495 Verify no open Sev1/Sev2 incidents in dependent platforms.
+- [ ] CHK-496 Validate final risk score is within approved go-live threshold.
+- [ ] CHK-497 Confirm go/no-go meeting minutes captured with decision rationale.
+- [ ] CHK-498 Verify explicit go decision includes accountable approver identity.
+- [ ] CHK-499 Validate no-go trigger criteria are documented and operationally testable.
+- [ ] CHK-500 Confirm final production release gate status is GO with timestamped evidence.
+

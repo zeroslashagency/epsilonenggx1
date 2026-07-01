@@ -347,12 +347,12 @@ function DashboardPageContent() {
             </div>
 
 
-            {/* ROW A: KPI Strip - 6 Cards (Overview Widget) */}
+            {/* ROW A: KPI Strip - Live Cards (Overview Widget) */}
             {canViewOverview && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-fade-in">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-fade-in">
                 {loading ? (
                   <>
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                    {[1, 2, 3, 4].map((i) => (
                       <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-4 animate-pulse border border-gray-200 dark:border-gray-700">
                         <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
                         <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
@@ -365,11 +365,7 @@ function DashboardPageContent() {
                     {/* KPI Card 1: Total Employees */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-blue-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
                       <div className="flex items-start justify-between mb-2">
-                        <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                          <ArrowUp className="w-3 h-3" />
-                          <span>+2%</span>
-                        </div>
+                        <Users className="w-8 h-8 text-primary" />
                       </div>
                       <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
                         {stats.totalEmployees}
@@ -432,41 +428,6 @@ function DashboardPageContent() {
                       </div>
                     </div>
 
-                    {/* KPI Card 5: Overall Efficiency */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-yellow-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-                      <div className="flex items-start justify-between mb-2">
-                        <Zap className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
-                        <div className="flex items-center gap-1 text-xs text-green-600">
-                          <ArrowUp className="w-3 h-3" />
-                          <span>+5%</span>
-                        </div>
-                      </div>
-                      <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                        87%
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Overall Efficiency</div>
-                      <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full w-[87%] bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
-                      </div>
-                    </div>
-
-                    {/* KPI Card 6: Units Produced */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-indigo-200/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-                      <div className="flex items-start justify-between mb-2">
-                        <Target className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-                        <div className="flex items-center gap-1 text-xs text-green-600">
-                          <ArrowUp className="w-3 h-3" />
-                          <span>+12%</span>
-                        </div>
-                      </div>
-                      <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                        1,247
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Units Today</div>
-                      <div className="mt-2 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full w-[78%] bg-gradient-to-r from-indigo-500 to-indigo-600"></div>
-                      </div>
-                    </div>
                   </>
                 )}
               </div>

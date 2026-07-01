@@ -1,0 +1,482 @@
+{
+  "1": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "2": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "3": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "4": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "5": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "6": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "7": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "8": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "9": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "10": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "11": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "12": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "13": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "14": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "15": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "16": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "17": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "18": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "19": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "20": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "21": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "22": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "23": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "24": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "25": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "26": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "27": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "28": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "29": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "30": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "31": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "32": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "33": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "34": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "35": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "36": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "37": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "38": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "39": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "40": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "41": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "42": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "43": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "44": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "45": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "46": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "47": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "48": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "49": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "50": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Import parser resides in scheduler UI handler (non-exported); requires parser extraction for deterministic unit automation."
+  },
+  "51": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "52": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "53": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "54": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "55": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "56": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "57": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "58": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "59": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "60": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "61": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "62": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "63": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "64": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "65": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "66": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "67": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "68": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "69": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "70": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "71": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts validates parsed profile count/summary behavior"
+  },
+  "72": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "73": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "74": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "75": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "76": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "77": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "78": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "79": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "80": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "81": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "82": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "83": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "84": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "85": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "86": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "87": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "88": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "89": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "90": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "91": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "92": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "93": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "94": {
+    "status": "NOT_EXECUTED",
+    "evidence": ""
+  },
+  "95": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "96": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "97": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "98": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "99": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "100": {
+    "status": "PASS",
+    "evidence": "Jest: personnel-v2.test.ts and/or import-input.integration.test.ts"
+  },
+  "101": {
+    "status": "PASS",
+    "evidence": "out/chk001_120_extra/chk101_fixed_machine/operation_summary.csv"
+  },
+  "102": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk102_machine_fallback_eligible/operation_summary.csv"
+  },
+  "103": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes + fixture case02"
+  },
+  "104": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes test holiday blocking"
+  },
+  "105": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Related runs are valid, but explicit assertion not yet encoded in test harness."
+  },
+  "106": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk106_run_pause_window/operation_summary.csv"
+  },
+  "107": {
+    "status": "PASS",
+    "evidence": "out/chk001_120_extra/chk107_setup_pause/operation_summary.csv"
+  },
+  "108": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk106_run_pause_window/operation_summary.csv"
+  },
+  "109": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk109_due_miss/validation_report.json"
+  },
+  "110": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk110_due_hit/validation_report.json"
+  },
+  "111": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Related runs are valid, but explicit assertion not yet encoded in test harness."
+  },
+  "112": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Related runs are valid, but explicit assertion not yet encoded in test harness."
+  },
+  "113": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Related runs are valid, but explicit assertion not yet encoded in test harness."
+  },
+  "114": {
+    "status": "PARTIAL_NEEDS_ASSERTION",
+    "evidence": "Related runs are valid, but explicit assertion not yet encoded in test harness."
+  },
+  "115": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes setup non-overlap test"
+  },
+  "116": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes setup-run overlap prevention"
+  },
+  "117": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes single overlap blocked"
+  },
+  "118": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes double overlap allowed"
+  },
+  "119": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes triple-double capped"
+  },
+  "120": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes mixed single+double blocked"
+  }
+}

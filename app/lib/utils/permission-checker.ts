@@ -30,7 +30,7 @@ const resolveModuleKey = (
   moduleKey: string
 ) => {
   if (permissions?.[moduleKey]) return moduleKey
-  if ((moduleKey === 'web_user_attendance' || moduleKey === 'mobile_user_attendance') && permissions?.user_attendance) {
+  if (moduleKey === 'mobile_user_attendance' && permissions?.user_attendance) {
     return 'user_attendance'
   }
   return moduleKey
@@ -262,10 +262,9 @@ export function isSuperAdmin(userRole: string | null | undefined): boolean {
 }
 
 const hasAnyUserAttendanceAccess = (permissions: Record<string, PermissionModule> | null | undefined) =>
-  canView(permissions, 'web_user_attendance', 'Attendance: Overview') ||
-  canView(permissions, 'web_user_attendance', 'Attendance: Calendar') ||
-  canView(permissions, 'web_user_attendance', 'Attendance: Timeline') ||
-  canView(permissions, 'web_user_attendance', 'Attendance: History')
+  canView(permissions, 'mobile_user_attendance', 'Attendance: Weekly Streak') ||
+  canView(permissions, 'mobile_user_attendance', 'Attendance: Today Logs') ||
+  canView(permissions, 'mobile_user_attendance', 'Attendance: Recent History')
 
 /**
  * Attendance-specific permission checks

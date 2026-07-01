@@ -9,7 +9,7 @@ export const runtime = 'edge'
  * @security Requires Admin or Super Admin role
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { buildPermissionCodes } from '@/app/lib/features/auth/permission-mapping'
 import { validateRequestBody } from '@/app/lib/middleware/validation.middleware'
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
   if (authResult instanceof NextResponse) return authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
 
     // Get all roles
     const { data: roles, error: rolesError } = await supabase
@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
 
     // Validate request body
     const validation = await validateRequestBody(request, createRoleSchema)
@@ -380,7 +380,7 @@ export async function PUT(request: NextRequest) {
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
 
     // Validate request body
     const validation = await validateRequestBody(

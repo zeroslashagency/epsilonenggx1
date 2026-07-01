@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requireRole, requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { validateQueryParams } from '@/app/lib/middleware/validation.middleware'
 import { auditLogQuerySchema } from '@/app/lib/features/auth/schemas'
@@ -11,22 +11,22 @@ export async function GET(request: NextRequest) {
   // ✅ PERMISSION CHECK: Require system.audit permission
   const authResult = await requirePermission(request, 'system.audit')
   if (authResult instanceof NextResponse) return authResult
-  const user = authResult
 
   // Validate query parameters
   const validation = validateQueryParams(request, auditLogQuerySchema)
   if (!validation.success) return validation.response
-  
+
   const { page = 1, limit = 50, action, userId, startDate, endDate } = validation.data
 
   try {
-    const supabase = getSupabaseAdminClient()
-    
+    const supabase = getSupabaseForRequest(request)
+
     const offset = (page - 1) * limit
 
     let query = supabase
       .from('audit_logs')
-      .select(`
+      .select(
+        `
         id,
         actor_id,
         target_id,
@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
           email,
           full_name
         )
-      `)
+      `
+      )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -46,15 +47,15 @@ export async function GET(request: NextRequest) {
     if (action) {
       query = query.eq('action', action)
     }
-    
+
     if (userId) {
       query = query.or(`actor_id.eq.${userId},target_id.eq.${userId}`)
     }
-    
+
     if (startDate) {
       query = query.gte('created_at', startDate)
     }
-    
+
     if (endDate) {
       query = query.lte('created_at', endDate)
     }
@@ -64,9 +65,7 @@ export async function GET(request: NextRequest) {
     if (logsError) throw logsError
 
     // Get total count for pagination
-    let countQuery = supabase
-      .from('audit_logs')
-      .select('id', { count: 'exact', head: true })
+    let countQuery = supabase.from('audit_logs').select('id', { count: 'exact', head: true })
 
     if (action) countQuery = countQuery.eq('action', action)
     if (userId) countQuery = countQuery.or(`actor_id.eq.${userId},target_id.eq.${userId}`)
@@ -80,13 +79,15 @@ export async function GET(request: NextRequest) {
     // Get recent activity summary
     const { data: recentActivity, error: recentError } = await supabase
       .from('audit_logs')
-      .select(`
+      .select(
+        `
         action,
         created_at,
         actor:profiles!audit_logs_actor_id_fkey (
           full_name
         )
-      `)
+      `
+      )
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -101,16 +102,18 @@ export async function GET(request: NextRequest) {
           page,
           limit,
           total: count || 0,
-          totalPages: Math.ceil((count || 0) / limit)
-        }
-      }
+          totalPages: Math.ceil((count || 0) / limit),
+        },
+      },
     })
-
   } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch audit logs'
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch audit logs',
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -118,19 +121,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const authResult = await requireRole(request, ['Admin', 'Super Admin'])
   if (authResult instanceof NextResponse) return authResult
-  const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
     const body = await request.json()
-    
-    const {
-      actor_id,
-      target_id,
-      action,
-      meta_json = {},
-      ip
-    } = body
+
+    const { actor_id, target_id, action, meta_json = {}, ip } = body
 
     const { data: log, error: logError } = await supabase
       .from('audit_logs')
@@ -139,7 +135,7 @@ export async function POST(request: NextRequest) {
         target_id,
         action,
         meta_json,
-        ip
+        ip,
       })
       .select()
       .single()
@@ -149,13 +145,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: { log },
-      message: 'Audit log created successfully'
+      message: 'Audit log created successfully',
     })
-
   } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create audit log'
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create audit log',
+      },
+      { status: 500 }
+    )
   }
 }

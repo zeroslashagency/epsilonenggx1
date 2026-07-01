@@ -37,26 +37,14 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const period = searchParams.get('period') || 'today'
-    
-    const supabase = getSupabaseAdminClient()
-
-    // Return mock data for now - implement actual metrics logic later
-    const metrics = {
-      totalProduction: 0,
-      efficiency: 0,
-      quality: 0,
-      downtime: 0,
-      period
-    }
-
-    return NextResponse.json({ success: true, data: metrics })
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
-  }
+  // Production metrics aggregation is not implemented yet. Return an honest
+  // 501 instead of faking success with zeroed data.
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Not Implemented',
+      message: 'Production metrics aggregation is not implemented yet.',
+    },
+    { status: 501 }
+  )
 }

@@ -1,198 +1,124 @@
-// Mock content for replacement
 import { POST } from '../route'
 
-const mockDeleteUser = jest.fn(() => Promise.resolve({ error: null }))
-const mockUpdateUserById = jest.fn(() => Promise.resolve({ error: null }))
-const mockFrom = jest.fn(() => ({
-  update: jest.fn(() => ({
-    eq: jest.fn(() => Promise.resolve({ error: null })),
-  })),
-  delete: jest.fn(() => ({
-    eq: jest.fn(() => Promise.resolve({ error: null })),
-  })),
-  insert: jest.fn(() => Promise.resolve({ error: null })),
-}))
+// RPC mock — the route now calls getSupabaseForRequest(request).rpc('app_admin_delete_user', ...)
+const mockRpc = jest.fn(() => Promise.resolve({ data: 'deleted-uuid', error: null }))
 
-// Mock next/server to handle NextResponse.json
-// Mock next/server to handle NextResponse.json
 jest.mock('next/server', () => {
   return {
     NextResponse: class extends Response {
       static json(body: any, init?: ResponseInit) {
         return new Response(JSON.stringify(body), {
           ...init,
-          headers: {
-            ...init?.headers,
-            'Content-Type': 'application/json',
-          },
+          headers: { ...init?.headers, 'Content-Type': 'application/json' },
         })
       }
     },
-    // Alias NextRequest to standard Request for type compatibility if needed runtime
-    NextRequest: class extends Request { },
+    NextRequest: class extends Request {},
   }
 })
 
-// Mock the auth middleware
 jest.mock('@/app/lib/features/auth/auth.middleware', () => ({
-  requirePermission: jest.fn((request, permission) => {
-    // Mock authenticated user
-    return {
-      id: 'test-user-id',
-      email: 'admin@example.com',
-      role: 'Super Admin',
-    }
-  }),
+  requirePermission: jest.fn(() => ({
+    id: 'test-admin-id',
+    email: 'admin@example.com',
+    role: 'Super Admin',
+  })),
 }))
 
-// Mock CSRF protection
 jest.mock('@/app/lib/middleware/csrf-protection', () => ({
   requireCSRFToken: jest.fn(() => Promise.resolve(null)),
 }))
 
-// Mock Supabase client
 jest.mock('@/app/lib/services/supabase-client', () => ({
-  getSupabaseAdminClient: jest.fn(() => ({
-    auth: {
-      admin: {
-        deleteUser: mockDeleteUser,
-        updateUserById: mockUpdateUserById,
-      }
-    },
-    from: mockFrom,
-  })),
+  getSupabaseForRequest: jest.fn(() => ({ rpc: mockRpc })),
 }))
 
-describe('DELETE /api/admin/delete-user', () => {
+function makeRequest(body: unknown) {
+  return new Request('http://localhost:3000/api/admin/delete-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+describe('POST /api/admin/delete-user (RPC-based)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockDeleteUser.mockResolvedValue({ error: null })
-    mockUpdateUserById.mockResolvedValue({ error: null })
+    mockRpc.mockResolvedValue({ data: 'deleted-uuid', error: null })
   })
 
-  it('should delete user successfully', async () => {
-    const requestBody = {
+  it('deletes a user successfully via the RPC', async () => {
+    const response = await POST(makeRequest({
       userId: '123e4567-e89b-12d3-a456-426614174000',
       userEmail: 'test@example.com',
       userName: 'Test User',
-    }
-
-    const request = new Request('http://localhost:3000/api/admin/delete-user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    })
-
-    // No need to spy on json(), standard request has it.
-    // jest.spyOn(request, 'json').mockResolvedValue(requestBody) 
-    // But Request body is stream, need to init with body string.
-
-    // CASTING to any or NextRequest to satisfy route handler signature which expects NextRequest
-    const response = await POST(request as any)
+    }) as any)
     const data = await response.json()
 
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
+    expect(mockRpc).toHaveBeenCalledWith('app_admin_delete_user', {
+      target: '123e4567-e89b-12d3-a456-426614174000',
+    })
   })
 
-  it('should fallback to anonymization when auth hard-delete fails', async () => {
-    mockDeleteUser.mockResolvedValue({
-      error: { message: 'Database error deleting user' },
+  it('returns 403 when the DB gate rejects a non-admin caller', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: 'FORBIDDEN: admin privilege required', code: '42501' },
     })
 
-    const requestBody = {
+    const response = await POST(makeRequest({
       userId: '123e4567-e89b-12d3-a456-426614174001',
-      userEmail: 'fallback@example.com',
-      userName: 'Fallback User',
-    }
-
-    const request = new Request('http://localhost:3000/api/admin/delete-user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    })
-
-    const response = await POST(request as any)
+      userEmail: 'x@example.com',
+    }) as any)
     const data = await response.json()
 
-    expect(response.status).toBe(200)
-    expect(data.success).toBe(true)
-    expect(data.data.authDeletionMode).toBe('anonymized')
-    expect(mockUpdateUserById).toHaveBeenCalledTimes(1)
+    expect(response.status).toBe(403)
+    expect(data.success).toBe(false)
   })
 
-  it('should return 500 when both hard-delete and anonymization fail', async () => {
-    mockDeleteUser.mockResolvedValue({
-      error: { message: 'Database error deleting user' },
-    })
-    mockUpdateUserById.mockResolvedValue({
-      error: { message: 'Update failed' },
+  it('returns 409 when trying to delete the last Super Admin', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: 'CONFLICT: cannot delete the last Super Admin', code: 'P0001' },
     })
 
-    const requestBody = {
+    const response = await POST(makeRequest({
       userId: '123e4567-e89b-12d3-a456-426614174002',
-      userEmail: 'fallback-fail@example.com',
-      userName: 'Fallback Fail User',
-    }
-
-    const request = new Request('http://localhost:3000/api/admin/delete-user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    })
-
-    const response = await POST(request as any)
+      userEmail: 'super@example.com',
+    }) as any)
     const data = await response.json()
 
-    expect(response.status).toBe(500)
-    expect(data.error).toContain('Failed to delete auth user')
-    expect(data.details).toContain('Fallback anonymization also failed')
-    expect(mockUpdateUserById).toHaveBeenCalledTimes(1)
+    expect(response.status).toBe(409)
+    expect(data.error).toContain('last Super Admin')
   })
 
-  it('should reject request without userId', async () => {
-    const requestBody = {
-      userEmail: 'test@example.com',
-    }
-
-    const request = new Request('http://localhost:3000/api/admin/delete-user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
+  it('returns 409 on self-delete attempt', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: 'CONFLICT: cannot delete your own account', code: 'P0001' },
     })
 
-    const response = await POST(request as any)
+    const response = await POST(makeRequest({
+      userId: '123e4567-e89b-12d3-a456-426614174003',
+      userEmail: 'self@example.com',
+    }) as any)
     const data = await response.json()
 
+    expect(response.status).toBe(409)
+  })
+
+  it('rejects a request without userId', async () => {
+    const response = await POST(makeRequest({ userEmail: 'test@example.com' }) as any)
     expect(response.status).toBe(400)
-    expect(data.error).toBeDefined()
   })
 
-  it('should validate input with Zod schema', async () => {
-    const requestBody = {
+  it('rejects invalid uuid / email via Zod', async () => {
+    const response = await POST(makeRequest({
       userId: 'invalid-uuid',
       userEmail: 'invalid-email',
-    }
-
-    const request = new Request('http://localhost:3000/api/admin/delete-user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    })
-
-    const response = await POST(request as any)
-
-    // Should fail validation
+    }) as any)
     expect(response.status).toBeGreaterThanOrEqual(400)
   })
 })

@@ -74,32 +74,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const groups: { label: string; items: MenuItem[] }[] = []
     const isSuperAdmin = userRole === 'Super Admin' || userRole === 'super_admin'
 
-    const canUserAttendanceAttendance =
-      hasPermission('web_user_attendance', 'Attendance: Overview', 'view') ||
-      hasPermission('web_user_attendance', 'Attendance: Calendar', 'view') ||
-      hasPermission('web_user_attendance', 'Attendance: Timeline', 'view') ||
-      hasPermission('web_user_attendance', 'Attendance: History', 'view')
-
     const canUserAttendanceFir =
-      hasPermission('web_user_attendance', 'FIR: Dashboard', 'view') ||
-      hasPermission('web_user_attendance', 'FIR: Reports', 'view') ||
-      hasPermission('web_user_attendance', 'FIR: History', 'view') ||
-      hasPermission('web_user_attendance', 'FIR: Category', 'view')
-
-    const canUserAttendanceCalls =
-      hasPermission('web_user_attendance', 'Calls: Calls', 'view') ||
-      hasPermission('web_user_attendance', 'Calls: Call Logs', 'view') ||
-      hasPermission('web_user_attendance', 'Calls: Voice Record', 'view') ||
-      hasPermission('web_user_attendance', 'Calls: Call Logs GPS', 'view')
-
-    const canUserAttendanceDeviceMonitoring =
-      hasPermission('web_user_attendance', 'Device Monitoring: Overview', 'view') ||
-      hasPermission('web_user_attendance', 'Device Monitoring: Screen Time', 'view') ||
-      hasPermission('web_user_attendance', 'Device Monitoring: App Usage', 'view') ||
-      hasPermission('web_user_attendance', 'Device Monitoring: Network', 'view') ||
-      hasPermission('web_user_attendance', 'Device Monitoring: Storage', 'view') ||
-      hasPermission('web_user_attendance', 'Device Monitoring: Events', 'view') ||
-      hasPermission('web_user_attendance', 'Device Monitoring: Bluetooth', 'view')
+      hasPermission('mobile_user_attendance', 'FIR: Dashboard', 'view') ||
+      hasPermission('mobile_user_attendance', 'FIR: Reports', 'view') ||
+      hasPermission('mobile_user_attendance', 'FIR: History', 'view') ||
+      hasPermission('mobile_user_attendance', 'FIR: Category', 'view')
 
     // 1. MAIN Section
     const mainItems: MenuItem[] = []
@@ -114,9 +93,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
     if (isSuperAdmin || hasPermission('main_analytics', 'Analytics', 'view')) {
       mainItems.push({ id: 'analytics', label: 'Analytics', href: '/analytics', icon: TrendingUp })
-    }
-    if (isSuperAdmin || canUserAttendanceAttendance) {
-      mainItems.push({ id: 'attendance', label: 'Attendance', href: '/attendance', icon: Clock })
     }
     if (mainItems.length > 0) {
       groups.push({ label: 'MAIN', items: mainItems })

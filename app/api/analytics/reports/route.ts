@@ -36,25 +36,14 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const period = searchParams.get('period') || 'month'
-    const type = searchParams.get('type') || 'production'
-    
-    const supabase = getSupabaseAdminClient()
-
-    // Return mock data for now - implement actual analytics logic later
-    const reports = {
-      period,
-      type,
-      data: []
-    }
-
-    return NextResponse.json({ success: true, data: reports })
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
-  }
+  // Analytics report generation is not implemented yet. Return an honest
+  // 501 instead of faking success with an empty payload.
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Not Implemented',
+      message: 'Analytics report generation is not implemented yet.',
+    },
+    { status: 501 }
+  )
 }

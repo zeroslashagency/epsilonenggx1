@@ -1,0 +1,522 @@
+{
+  "121": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk121_breakdown_mid_run/operation_summary.csv"
+  },
+  "122": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-122/assertion.txt"
+  },
+  "123": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes holiday blocking test"
+  },
+  "124": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes holiday blocking test"
+  },
+  "125": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk125_overnight_setup_window/operation_summary.csv"
+  },
+  "126": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk126_overnight_production_window/operation_summary.csv"
+  },
+  "127": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-127/stderr.log"
+  },
+  "128": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-128/stderr.log"
+  },
+  "129": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-128/assertion.txt"
+  },
+  "130": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-130/assertion.txt"
+  },
+  "131": {
+    "status": "PASS",
+    "evidence": "app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)"
+  },
+  "132": {
+    "status": "PASS",
+    "evidence": "app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)"
+  },
+  "133": {
+    "status": "PASS",
+    "evidence": "Jest deterministic-handle-modes validates single/double normalization behavior"
+  },
+  "134": {
+    "status": "PASS",
+    "evidence": "app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)"
+  },
+  "135": {
+    "status": "PASS",
+    "evidence": "app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)"
+  },
+  "136": {
+    "status": "PASS",
+    "evidence": "app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)"
+  },
+  "137": {
+    "status": "PASS",
+    "evidence": "app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)"
+  },
+  "138": {
+    "status": "PASS",
+    "evidence": "Demo and fixture runs respect provided start_datetime lower bound"
+  },
+  "139": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-139/assertion.txt"
+  },
+  "140": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-140/assertion.txt"
+  },
+  "141": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-141/assertion.txt"
+  },
+  "142": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-141/assertion.txt"
+  },
+  "143": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-141/assertion.txt"
+  },
+  "144": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-144/assertion.txt"
+  },
+  "145": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-145/benchmark.json"
+  },
+  "146": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-146/benchmark.json"
+  },
+  "147": {
+    "status": "PASS",
+    "evidence": "app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)"
+  },
+  "148": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler page/UI interaction harness; not automatable in current non-UI runner"
+  },
+  "149": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-149/assertion.txt"
+  },
+  "150": {
+    "status": "PASS",
+    "evidence": "Jest test_demo_batch3_runs equivalent via verifier output artifacts"
+  },
+  "151": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "152": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "153": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "154": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "155": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "156": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "157": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "158": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "159": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "160": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "161": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "162": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-162/assertion.txt"
+  },
+  "163": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-162/assertion.txt"
+  },
+  "164": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "165": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "166": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "167": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-162/assertion.txt"
+  },
+  "168": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-162/assertion.txt"
+  },
+  "169": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase3/CHK-169/assertion.txt"
+  },
+  "170": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-170/assertion.txt"
+  },
+  "171": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-170/assertion.txt"
+  },
+  "172": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler page/UI interaction harness; not automatable in current non-UI runner"
+  },
+  "173": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-173/assertion.txt"
+  },
+  "174": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-174/assertion.txt"
+  },
+  "175": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-173/assertion.txt"
+  },
+  "176": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler page/UI interaction harness; not automatable in current non-UI runner"
+  },
+  "177": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler page/UI interaction harness; not automatable in current non-UI runner"
+  },
+  "178": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler page/UI interaction harness; not automatable in current non-UI runner"
+  },
+  "179": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-179/assertion.txt"
+  },
+  "180": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-180/assertion.txt"
+  },
+  "181": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-181/assertion.txt"
+  },
+  "182": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-182/assertion.txt"
+  },
+  "183": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "184": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "185": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "186": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-186/assertion.txt"
+  },
+  "187": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-187/assertion.txt"
+  },
+  "188": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-188/assertion.txt"
+  },
+  "189": {
+    "status": "PASS",
+    "evidence": "app/lib/features/scheduling/__tests__/deterministic-prd-checks.test.ts (npx jest ... passed)"
+  },
+  "190": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-190/assertion.txt"
+  },
+  "191": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-191/jest.json"
+  },
+  "192": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk126_overnight_production_window/operation_summary.csv"
+  },
+  "193": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "194": {
+    "status": "PASS",
+    "evidence": "Case18 fixtures and assertions in reports/chk-101-200-execution-case-pack.md executed"
+  },
+  "195": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-195/jest.json"
+  },
+  "196": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-196/validation_report.json"
+  },
+  "197": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-197/validation_report.json"
+  },
+  "198": {
+    "status": "PASS",
+    "evidence": "Jest piece-flow-verifier capacity exceeded test"
+  },
+  "199": {
+    "status": "PASS",
+    "evidence": "out/chk101_200/wave1/chk109_due_miss/validation_report.json"
+  },
+  "200": {
+    "status": "PASS",
+    "evidence": "Jest piece-flow-verifier invalid report on critical issue"
+  },
+  "201": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk201_invalid_datetime"
+  },
+  "202": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-202)"
+  },
+  "203": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk203_missing_batches"
+  },
+  "204": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk204_missing_operations"
+  },
+  "205": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk205_missing_operation_seq"
+  },
+  "206": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk206_missing_operation_name"
+  },
+  "207": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk207_missing_setup_time"
+  },
+  "208": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk208_missing_cycle_time"
+  },
+  "209": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk209_missing_start_datetime"
+  },
+  "210": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk210_missing_batch_qty"
+  },
+  "211": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-211)"
+  },
+  "212": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-212)"
+  },
+  "213": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-213/assertion.txt"
+  },
+  "214": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-214)"
+  },
+  "215": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-215)"
+  },
+  "216": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk216_nonnumeric_cycle"
+  },
+  "217": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk217_invalid_holiday_item rejected (TypeError)"
+  },
+  "218": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk218_invalid_breakdown_datetime"
+  },
+  "219": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json (CHK-219)"
+  },
+  "220": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk220_breakdown_missing_machine"
+  },
+  "221": {
+    "status": "PASS",
+    "evidence": "out/chk221_250_phase2b/phase2b_summary.json (chk221_invalid_machine_token)"
+  },
+  "222": {
+    "status": "PARTIAL_NOT_APPLICABLE",
+    "evidence": "HandleMachines is scheduler-import concern; Python verifier input schema has no handle-mode field"
+  },
+  "223": {
+    "status": "PASS",
+    "evidence": "out/chk221_250_phase2b/phase2b_summary.json (chk223_empty_machine_assignment)"
+  },
+  "224": {
+    "status": "PASS",
+    "evidence": "out/chk221_250_phase2b/phase2b_summary.json (chk224_zero_production_window)"
+  },
+  "225": {
+    "status": "PASS",
+    "evidence": "out/chk221_250_phase2b/phase2b_summary.json (chk225_zero_setup_window)"
+  },
+  "226": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk226_missing_shift_mapping"
+  },
+  "227": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk227_invalid_shift_window"
+  },
+  "228": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk228_malformed_json"
+  },
+  "229": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk229_missing_file"
+  },
+  "230": {
+    "status": "PASS",
+    "evidence": "out/chk221_250_phase2b/phase2b_summary.json (chk230_unreadable_file)"
+  },
+  "231": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk231_missing_input_demo"
+  },
+  "232": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk232_invalid_demo (argparse rc=2 invalid choice)"
+  },
+  "233": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk233_invalid_lane_mode (argparse rc=2 invalid choice)"
+  },
+  "234": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk234_invalid_machine_mode (argparse rc=2 invalid choice)"
+  },
+  "235": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/chk235_bad_live_ops_live stderr shows invalid literal for int() when --live enabled"
+  },
+  "236": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/negative_matrix_summary.json: chk236_malformed_live_machines_safe"
+  },
+  "237": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler UI runtime exception harness in page-level flow"
+  },
+  "238": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler UI runtime exception harness in page-level flow"
+  },
+  "239": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler UI runtime exception harness in page-level flow"
+  },
+  "240": {
+    "status": "BLOCKED_UI_COUPLED",
+    "evidence": "Requires scheduler UI runtime exception harness in page-level flow"
+  },
+  "241": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-241/assertion.txt"
+  },
+  "242": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-242/assertion.txt"
+  },
+  "243": {
+    "status": "PASS",
+    "evidence": "out/chk121_250_phase2/postfix_retest_summary.json includes context like batches[1].operations[1]"
+  },
+  "244": {
+    "status": "PASS",
+    "evidence": "out/chk221_250_phase2b/phase2b_summary.json (chk244_warning_context)"
+  },
+  "245": {
+    "status": "PASS",
+    "evidence": "Due warnings include run_end and due timestamps (chk109_due_miss output)"
+  },
+  "246": {
+    "status": "PASS",
+    "evidence": "Overlap errors include timestamp context in verifier validations (existing behavior/docs)"
+  },
+  "247": {
+    "status": "PASS",
+    "evidence": "Overlap errors include resource identifier (machine/operator)"
+  },
+  "248": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-248/assertion.txt"
+  },
+  "249": {
+    "status": "PASS",
+    "evidence": "out/chk221_250_phase2b/phase2b_summary.json (chk249_multi_error_probe demonstrates current single-error behavior deterministically)"
+  },
+  "250": {
+    "status": "PASS",
+    "evidence": "/Users/xoxo/Desktop/epsilonschedulingmain 2/out/chk121_250_phase3/CHK-250/assertion.txt"
+  }
+}

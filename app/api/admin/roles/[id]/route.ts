@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
  * @security Requires Admin or Super Admin role
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/app/lib/services/supabase-client'
+import { getSupabaseForRequest } from '@/app/lib/services/supabase-client'
 import { requirePermission } from '@/app/lib/features/auth/auth.middleware'
 import { buildPermissionCodes } from '@/app/lib/features/auth/permission-mapping'
 
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
     const roleId = params.id
 
     // Get role from database
@@ -193,7 +193,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
     const roleId = params.id
     const body = await request.json()
 
@@ -294,7 +294,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   const user = authResult
 
   try {
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseForRequest(request)
     const roleId = params.id
 
     // Delete the role
